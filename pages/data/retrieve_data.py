@@ -246,6 +246,10 @@ def getInformantData(columns = None, informants = None, varieties = None):
     # Exclude specified participants
     data = data[~data['InformantID'].isin(EXCLUDED_PARTICIPANTS)]
     
+    # Remove NameSchool column if it exists (privacy protection)
+    if 'NameSchool' in data.columns:
+        data = data.drop(columns=['NameSchool'])
+    
     float_columns = ['Age', 'YearsLivedOutside', 'YearsLivedInside', 'YearsLivedOtherEnglish', 'Ratio', 'YearsLivedInMainVariety', 'RatioMainVariety']
     data.loc[:,float_columns] = data.loc[:,float_columns].apply(pd.to_numeric, errors='coerce')
     variety_counts = data['MainVariety'].value_counts()
@@ -299,6 +303,10 @@ def getInformantDataGrammar(columns = None, participants = None, varieties = Non
     
     # Exclude specified participants
     data = data[~data['InformantID'].isin(EXCLUDED_PARTICIPANTS)]
+    
+    # Remove NameSchool column if it exists (privacy protection)
+    if 'NameSchool' in data.columns:
+        data = data.drop(columns=['NameSchool'])
     
     float_columns = ['Age', 'YearsLivedOutside', 'YearsLivedInside', 'YearsLivedOtherEnglish', 'Ratio', 'YearsLivedInMainVariety', 'RatioMainVariety']
     data.loc[:,float_columns] = data.loc[:,float_columns].apply(pd.to_numeric, errors='coerce')
@@ -398,6 +406,10 @@ def getLexicalData(imputed=False):
     # Exclude specified participants
     data = data[~data['InformantID'].isin(EXCLUDED_PARTICIPANTS)]
     
+    # Remove NameSchool column if it exists (privacy protection)
+    if 'NameSchool' in data.columns:
+        data = data.drop(columns=['NameSchool'])
+    
     return data
 
 
@@ -475,6 +487,10 @@ def getGrammarData(imputed=False,pairs=False, **kwargs):
     
     # Exclude specified participants
     data = data[~data['InformantID'].isin(EXCLUDED_PARTICIPANTS)]
+    
+    # Remove NameSchool column if it exists (privacy protection)
+    if 'NameSchool' in data.columns:
+        data = data.drop(columns=['NameSchool'])
     
     # delete all records where InformantID starts with "Unnamed"
 
@@ -569,6 +585,10 @@ def getAllData(imputed=False):
     
     # Exclude specified participants
     data = data[~data['InformantID'].isin(EXCLUDED_PARTICIPANTS)]
+    
+    # Remove NameSchool column if it exists (privacy protection)
+    if 'NameSchool' in data.columns:
+        data = data.drop(columns=['NameSchool'])
     
     return data
 

@@ -231,7 +231,7 @@ def generate_dynamic_presets(meta_df):
     
     # Dynamic presets from section column (Mode: prefix)
     if 'section' in meta_df.columns:
-        section_groups = meta_df.groupby('section')['question_code'].apply(list).to_dict()
+        section_groups = meta_df.groupby('section', observed=True)['question_code'].apply(list).to_dict()
         for section, codes in sorted(section_groups.items()):
             if section and pd.notna(section):
                 presets.append({
@@ -241,7 +241,7 @@ def generate_dynamic_presets(meta_df):
     
     # Dynamic presets from group_finegrained column (Group: prefix)
     if 'group_finegrained' in meta_df.columns:
-        group_groups = meta_df.groupby('group_finegrained')['question_code'].apply(list).to_dict()
+        group_groups = meta_df.groupby('group_finegrained', observed=True)['question_code'].apply(list).to_dict()
         for group, codes in sorted(group_groups.items()):
             if group and pd.notna(group) and group.strip():
                 presets.append({
@@ -251,7 +251,7 @@ def generate_dynamic_presets(meta_df):
     
     # Dynamic presets from feature_ewave column (eWAVE: prefix)
     if 'feature_ewave' in meta_df.columns:
-        ewave_groups = meta_df.groupby('feature_ewave')['question_code'].apply(list).to_dict()
+        ewave_groups = meta_df.groupby('feature_ewave', observed=True)['question_code'].apply(list).to_dict()
         for feature, codes in sorted(ewave_groups.items()):
             if feature and pd.notna(feature) and feature.strip():
                 presets.append({
@@ -349,46 +349,54 @@ UmapPlotContainer = dmc.Container([
 
         dmc.Grid(children=[
             dmc.GridCol(children=[
-                # Simplified: No Card wrapper, just Tabs
-                dmc.Tabs(
-                    [
-                        dmc.TabsList(
-                            [
-                                dmc.TabsTab("UMAP", value="umap-plot"),
-                                dmc.TabsTab("Group comparison", value="rf-plot"),
-                            ]
-                        ),
-                        dmc.TabsPanel(
-                            dcc.Graph(id="UMAPfig", figure=UMAP_Grammar_initialPlot, style={'height': '70vh'}, config={
-                                'toImageButtonOptions': {
-                                    'format': 'svg',
-                                    'filename': 'umap_plot',
-                                    'height': 600,
-                                    'width': 800,
-                                    'scale': 1
-                                }
-                            }),
-                            value="umap-plot"
-                        ),
-                        dmc.TabsPanel(
-                            dcc.Graph(id="RFPlotFig", figure=emptyFig, style={'height': '70vh'}, config={
-                                'toImageButtonOptions': {
-                                    'format': 'svg',
-                                    'filename': 'rf_plot',
-                                    'height': 600,
-                                    'width': 800,
-                                    'scale': 1
-                                }
-                            }),
-                            value="rf-plot"
-                        ),
+                # View toggle control
+                dmc.Group([
+                    dmc.SegmentedControl(
+                        id="umap-view-toggle",
+                        data=[
+                            {"value": "umap-plot", "label": "UMAP View"},
+                            {"value": "rf-plot", "label": "Group Comparison"},
+                        ],
+                        value="umap-plot",
+                        color="blue",
+                        size="sm",
+                        mb="sm"
+                    ),
+                ], justify="center"),
+                
+                # UMAP plot (conditional display)
+                html.Div(
+                    id="umap-plot-container",
+                    children=[
+                        dcc.Graph(id="UMAPfig", figure=UMAP_Grammar_initialPlot, style={'height': '70vh'}, config={
+                            'toImageButtonOptions': {
+                                'format': 'svg',
+                                'filename': 'umap_plot',
+                                'height': 600,
+                                'width': 800,
+                                'scale': 1
+                            }
+                        })
                     ],
-                    id='grammar-UMAP-main-tabs',
-                    color="blue",
-                    orientation="horizontal",
-                    variant="default",
-                    value="umap-plot"
-                )
+                    style={"display": "block"}
+                ),
+                
+                # RF plot (conditional display)
+                html.Div(
+                    id="rf-plot-container",
+                    children=[
+                        dcc.Graph(id="RFPlotFig", figure=emptyFig, style={'height': '70vh'}, config={
+                            'toImageButtonOptions': {
+                                'format': 'svg',
+                                'filename': 'rf_plot',
+                                'height': 600,
+                                'width': 800,
+                                'scale': 1
+                            }
+                        })
+                    ],
+                    style={"display": "none"}
+                ),
             ],span=12),
             # Commented out: Sociodemographic data card (Table and Age/Gender histogram)
             # dmc.GridCol(children=[
@@ -890,7 +898,7 @@ informantSelectionAccordion = dmc.AccordionItem(
                     variant="contained",
                     mb="xs"
                 ),
-                dmc.Tree(id='participantsTree', data=drawParticipantsTree(Informants), checkboxes=True, checked=Informants['InformantID'].tolist()),
+                dmc.Tree(id='participantsTree', data=drawParticipantsTree(Informants), checkboxes=True, checked=[]),
                 # --- Nested Accordion for filters ---
                 dmc.Accordion(
                     children=[
@@ -1064,7 +1072,7 @@ itemSelectionAccordion = dmc.AccordionItem(
                                 id='grammarItemsTree',
                                 data=drawGrammarItemsTree(grammarMeta,pairs=False), 
                                 checkboxes=True, 
-                                checked=GrammarItemsCols,
+                                checked=[],
 
                             )
                         ], 
@@ -1276,17 +1284,17 @@ SettingsGrammarAnalysis = dmc.Container([
         dmc.SegmentedControl(
             id="grammar-plot-type",
             data=[
-                {"value": "item", "label": "Item Plot"},
                 {"value": "umap", "label": "UMAP"},
+                {"value": "item", "label": "Item Plot"},
             ],
-            value="item",
+            value="umap",
             fullWidth=True,
             color="blue",
             size="sm"
         ),
         dmc.Text(
             id="plot-type-description",
-            children="Visualize grammatical item frequencies across participants",
+            children="Explore participant similarity using UMAP dimensionality reduction",
             size="xs",
             c="dimmed"
         )
@@ -1304,10 +1312,10 @@ SettingsGrammarAnalysis = dmc.Container([
                 loaderProps={"color": "blue", "type": "dots", "size": "xl"},
             ),
             dmc.Button(
-                'Render Item Plot',
+                'Render UMAP Plot',
                 id='render-grammar-plot',
                 size="md",
-                leftSection=DashIconify(icon="tabler:chart-bar", width=20),
+                leftSection=DashIconify(icon="tabler:radar", width=20),
                 color="blue",
                 fullWidth=True,
                 disabled=False,
@@ -1318,18 +1326,18 @@ SettingsGrammarAnalysis = dmc.Container([
     html.Div(id="umap-group-buttons", children=[
         dmc.Group(children=[
             dmc.Button('Add group', id='Umap-add-group', disabled=True),
-            dmc.Button('Clear groups', id='Umap-clear-groups'),
+            dmc.Button('Clear groups', id='Umap-clear-groups', disabled=True),
         ],
         grow=True,
         wrap="nowrap",
         mb="md"),
         dmc.Group(children=[
-            dmc.Button('Compare selected groups', id='render-rf-plot'),
+            dmc.Button('Compare selected groups', id='render-rf-plot', loading=False, disabled=True),
         ],
         grow=True,
         wrap="nowrap",
         mb="md"),
-    ], style={"display": "none"}),  # Hidden by default
+    ]),  # Visible by default (UMAP is default now)
     
     # Common accordions (always visible)
     dmc.Accordion(children=[
@@ -1348,7 +1356,7 @@ SettingsGrammarAnalysis = dmc.Container([
         ], 
         variant="contained",
         radius="md"),
-    ]),  # Visible by default (no style attribute needed)
+    ], style={"display": "none"}),  # Hidden by default (UMAP is default now)
     
     html.Div(id="umap-settings-container", children=[
         dmc.Accordion(children=[
@@ -1357,7 +1365,7 @@ SettingsGrammarAnalysis = dmc.Container([
         ], 
         variant="contained",
         radius="md"),
-    ], style={"display": "none"}),  # Hidden by default
+    ]),  # Visible by default (UMAP is default now)
     
     # Collapsible Advanced Actions Section (Moved to bottom)
     dmc.Accordion(
@@ -1542,10 +1550,10 @@ grammarAnalysisC = dmc.Grid([
                     dmc.TabsPanel(
                         # Unified plot container that shows either Item Plot or UMAP based on plot type
                         html.Div(id="grammar-unified-plot-container", children=[
-                            # Item Plot Container (visible by default)
-                            html.Div(id="item-plot-display", children=[ItemPlotContainer], style={"display": "block"}),
-                            # UMAP Plot Container (hidden by default)
-                            html.Div(id="umap-plot-display", children=[UmapPlotContainer], style={"display": "none"}),
+                            # Item Plot Container (hidden by default - UMAP is default now)
+                            html.Div(id="item-plot-display", children=[ItemPlotContainer], style={"display": "none"}),
+                            # UMAP Plot Container (visible by default - UMAP is default now)
+                            html.Div(id="umap-plot-display", children=[UmapPlotContainer], style={"display": "block"}),
                         ]),
                         value="plot-view"
                     ),
@@ -1596,8 +1604,8 @@ layout = html.Div([
 
     customSetWarningModal, 
     dcc.Store(id="UMAPgroup", storage_type="memory",data=0),
-    dcc.Store(id="UMAPparticipants",storage_type="memory",data=Informants['InformantID']), # fill those two cache lists with initial data (i.e. initial plot shows all participants)
-    dcc.Store(id="UMAPitems",storage_type="memory",data=GrammarItemsCols),
+    dcc.Store(id="UMAPparticipants",storage_type="memory",data=[]), # Start empty - no auto-selection
+    dcc.Store(id="UMAPitems",storage_type="memory",data=[]), # Start empty - no auto-selection
     dcc.Store(id="UMAPGroupsForRF",storage_type="memory",data={"dataframe":pd.DataFrame().to_dict("records")}),
     dcc.Store(id="grammar_plots_UMAP",storage_type="memory",data=None),
     dcc.Store(id="grammar_plots_item",storage_type="memory",data=itemPlot_Grammar_initialPlot),
@@ -1605,6 +1613,8 @@ layout = html.Div([
     dcc.Store(id="leiden-cluster-data", storage_type="memory"),
     dcc.Store(id="leiden-cluster-figure", storage_type="memory"),
     dcc.Store(id="umap-hoverinfo-store", storage_type="memory"),  # New store for hoverinfo
+    dcc.Store(id="umap-render-trigger", storage_type="memory"),  # Trigger for background UMAP computation
+    dcc.Store(id="umap-render-settings", storage_type="memory", data={"pairs": False, "use_imputed": True}),  # Store settings used for UMAP render (for RF plot consistency)
     
     # Settings persistence stores
     dcc.Store(id="saved-item-settings", storage_type="local"),
@@ -1716,60 +1726,71 @@ def create_info_notification(message, color="orange", autoClose=2000):
 ##############
 
 # Consolidated loading state management for render buttons
-# Note: Leiden button excluded as the Leiden tab is currently commented out
+# Note: UMAP and RF plot loading states are now managed by dedicated callbacks
+# This callback only handles item plot loading and RF button disabled state
 @callback(
     [
-        Output('render-UMAP-plot', 'loading', allow_duplicate=True),
-        Output('render-rf-plot', 'loading', allow_duplicate=True),
         Output('render-item-plot', 'loading', allow_duplicate=True),
-        Output('render-UMAP-plot', 'disabled', allow_duplicate=True),
         Output('render-rf-plot', 'disabled', allow_duplicate=True),
     ],
     [
-        Input('render-UMAP-plot', 'n_clicks'),
-        Input('render-rf-plot', 'n_clicks'),
         Input('render-item-plot', 'n_clicks'),
         Input('UMAPfig', 'figure'),
         Input('RFPlotFig', 'figure'),
         Input('ItemFig', 'figure'),
     ],
+    [State('UMAPGroupsForRF', 'data')],
     prevent_initial_call=True
 )
-def manage_render_button_loading_states(*args):
+def manage_render_button_loading_states(item_click, umap_fig, rf_fig, item_fig, groups_data):
     """
-    Consolidated callback to manage loading states for render buttons.
-    When a button is clicked, set its loading=True and disable other UMAP/RF buttons.
-    When a figure updates, set corresponding loading=False and re-enable buttons.
+    Manage item plot loading state and RF button disabled state.
+    
+    Note: UMAP and RF plot loading states are now managed by dedicated callbacks
+    for better immediate feedback.
+    
+    Special handling for render-rf-plot button:
+    - Only enable if UMAPfig contains actual data (not the empty initial plot)
+    - Check if figure has data traces and if group count allows comparison
     """
     triggered = ctx.triggered_id
     
-    # Default states: no loading, buttons enabled
-    umap_loading = False
-    rf_loading = False
+    # Default states
     item_loading = False
-    umap_disabled = False
     rf_disabled = False
     
-    # Handle button clicks (start loading)
-    if triggered == 'render-UMAP-plot':
-        umap_loading = True
-        rf_disabled = True  # Disable RF while UMAP is running
-    elif triggered == 'render-rf-plot':
-        rf_loading = True
-        umap_disabled = True  # Disable UMAP while RF is running
-    elif triggered == 'render-item-plot':
+    # Handle item plot button click (start loading)
+    if triggered == 'render-item-plot':
         item_loading = True
     
-    # Handle figure updates (stop loading and re-enable buttons)
-    elif triggered in ['UMAPfig', 'RFPlotFig', 'ItemFig']:
-        # All loading states set to False by default
-        # Re-enable all buttons when figures update
-        umap_disabled = False
-        rf_disabled = False
+    # Handle figure updates (stop loading and manage RF button state)
+    elif triggered == 'UMAPfig':
+        # Check if this is a real UMAP plot (has data) or the empty initial plot
+        is_real_umap = False
+        if umap_fig and 'data' in umap_fig:
+            # Real UMAP plots have at least one trace with actual data points
+            for trace in umap_fig['data']:
+                if 'x' in trace and len(trace.get('x', [])) > 0:
+                    is_real_umap = True
+                    break
+        
+        # Only enable RF button if we have a real UMAP plot
+        # Also check group count: disable if exactly 1 group
+        if is_real_umap:
+            groups_df = pd.DataFrame(groups_data.get("dataframe", []))
+            num_groups = len(groups_df)
+            rf_disabled = (num_groups == 1)
+        else:
+            # Empty/initial plot - keep RF button disabled
+            rf_disabled = True
+            
+    elif triggered in ['RFPlotFig', 'ItemFig']:
+        # Clear item loading when item figure updates
+        item_loading = False
     else:
-        return no_update, no_update, no_update, no_update, no_update
+        return no_update, no_update
     
-    return umap_loading, rf_loading, item_loading, umap_disabled, rf_disabled
+    return item_loading, rf_disabled
 
 # Callback to disable group informants and item sorting dropdowns when correlation matrix is selected
 @callback(
@@ -1807,6 +1828,7 @@ def update_participants_selection(select_all_clicks, deselect_all_clicks):
      Output('umap-group-buttons', 'style'),
      Output('Umap-add-group', 'disabled', allow_duplicate=True),
      Output('Umap-clear-groups', 'disabled', allow_duplicate=True),
+     Output('render-rf-plot', 'disabled', allow_duplicate=True),
      Output('render-grammar-plot', 'children'),
      Output('render-grammar-plot', 'leftSection'),
      Output('plot-type-description', 'children')],
@@ -1825,24 +1847,44 @@ def toggle_plot_type_ui(plot_type):
             {"display": "none"},   # umap group buttons
             True,                  # disable add group
             True,                  # disable clear groups
+            True,                  # disable compare groups
             "Render Item Plot",    # button text
             DashIconify(icon="tabler:chart-bar", width=20),  # button icon
             "Visualize grammatical item frequencies across participant groups"  # description
         )
     else:  # plot_type == 'umap'
         # Show UMAP settings and display, hide item plot
+        # Buttons are always enabled - errors handled via notifications
         return (
             {"display": "none"},   # item settings
             {"display": "block"},  # umap settings
             {"display": "none"},   # item plot display
             {"display": "block"},  # umap plot display
             {"display": "block"},  # umap group buttons
-            True,                  # disable add group (will be enabled after selection)
-            False,                 # enable clear groups
+            False,                 # enable add group (errors handled via notifications)
+            False,                 # enable clear groups (errors handled via notifications)
+            False,                 # enable compare groups (errors handled via notifications)
             "Render UMAP Plot",    # button text
             DashIconify(icon="tabler:radar", width=20),  # button icon
             "Explore participant similarity using UMAP dimensionality reduction"  # description
         )
+
+# Callback to manage imputed data switch based on plot type
+@callback(
+    [Output('use-imputed-data-switch', 'disabled'),
+     Output('use-imputed-data-switch', 'checked', allow_duplicate=True)],
+    Input('grammar-plot-type', 'value'),
+    State('use-imputed-data-switch', 'checked'),
+    prevent_initial_call=True
+)
+def manage_imputed_data_switch(plot_type, current_checked):
+    """Disable and force to True for UMAP, enable for item plot"""
+    if plot_type == 'umap':
+        # UMAP always uses imputed data
+        return True, True  # disabled=True, checked=True
+    else:  # plot_type == 'item'
+        # Item plot can toggle - keep current value
+        return False, current_checked  # disabled=False, checked=current_checked
 
 # Callback to manage loading state during rendering
 @callback(
@@ -2039,6 +2081,10 @@ def export_data(n_clicks, participants, items, pairs, use_imputed):
         items=items,  # Fixed: changed from columns=items to items=items
         pairs=pairs
     )
+    
+    # Remove NameSchool column if it exists (privacy protection)
+    if 'NameSchool' in data.columns:
+        data = data.drop(columns=['NameSchool'])
     
     # Generate filename
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -2482,8 +2528,7 @@ def restore_settings(n_clicks, plot_type, item_settings, umap_settings):
 # Unified render callback that routes to item plot or UMAP based on plot type
 @callback(
     [Output('render-item-plot', 'n_clicks', allow_duplicate=True),
-     Output('render-UMAP-plot', 'n_clicks', allow_duplicate=True),
-     Output("notify-container", "children", allow_duplicate=True)],
+     Output('render-UMAP-plot', 'n_clicks', allow_duplicate=True)],
     Input('render-grammar-plot', 'n_clicks'),
     [State('grammar-plot-type', 'value'),
      State('render-item-plot', 'n_clicks'),
@@ -2493,25 +2538,14 @@ def restore_settings(n_clicks, plot_type, item_settings, umap_settings):
 def unified_render_button(btn_clicks, plot_type, item_clicks, umap_clicks):
     """Route render button click to appropriate plot type"""
     if btn_clicks is None:
-        return no_update, no_update, no_update
-    
-    notification = dmc.Notification(
-        id="my-notification",
-        title="Info",
-        message=f"Rendering {plot_type.upper()} plot, please wait.",
-        color="blue",
-        loading=True,
-        action="show",
-        autoClose=2000,
-        position="top-right"
-    )
+        return no_update, no_update
     
     if plot_type == 'item':
         # Trigger item plot render by incrementing its n_clicks
-        return (item_clicks or 0) + 1, no_update, notification
+        return (item_clicks or 0) + 1, no_update
     else:  # plot_type == 'umap'
         # Trigger UMAP plot render by incrementing its n_clicks
-        return no_update, (umap_clicks or 0) + 1, notification
+        return no_update, (umap_clicks or 0) + 1
 
 # Deleted: Callback to show/hide deselect button based on tab - outer tabs removed, always show button
 # The button is now always available since grammarAnalysisC is directly visible
@@ -2563,111 +2597,58 @@ def update_grammar_items_selection(select_all_clicks, deselect_all_clicks, pairs
         return []
     return no_update
 
-# Deleted: Tab content callback - outer tabs removed, grammarAnalysisC shown directly
-
-# Commented out: callback to display selected data for auxiliary plots (Table and Age/Gender histogram)
-# @callback(	
-#     [Output('AuxPlotFig', 'figure'),Output('AuxPlotTable', 'children')],
-#     Input('UMAPfig', 'selectedData'),
-#     [State('UMAPparticipants','data'),State('UMAPitems','data')]
-# )
-# def display_selected_data(selectedData, participants, items):
-#     # call is used to render the auxiliary plots, i.e. age & gender distribution of selected points in UMAP
-#     if selectedData is None:
-#         auxPlots= getAuxiliaryPlot(Informants,participants=participants,items=items)
-#         dt = getAuxiliaryTable(Informants,participants=participants)
-#         # if no data is selected, use all data points for the auxiliary plots
-#         #auxPlots = dcc.Graph(id="UMAPauxfig", figure=auxPlots)
-#         # retrieve those from user cache
-#         return auxPlots, dt
-#     else:
-#         #selectedData = selectedData['points']
-#         ids = [point.get('id') for point in selectedData['points']]
-#         auxPlots= getAuxiliaryPlot(Informants,participants=ids,items=items)
-#         #auxPlots = dcc.Graph(id="UMAPauxfig", figure=auxPlots)
-#         dt = getAuxiliaryTable(Informants,participants=ids)
-#         # if data is selected, update auxiliary plots based on user selection
-#         return auxPlots, dt
 
 
-# using second callback to disable buttons
-# "running=" does not appear to be working?
-# maybe it's dmc?
-@callback(
-    [Output('render-UMAP-plot', 'loading', allow_duplicate=True),Output('Umap-add-group', 'disabled', allow_duplicate=True),Output('Umap-clear-groups', 'disabled', allow_duplicate=True),Output('render-rf-plot', 'disabled', allow_duplicate=True),Output("notify-container", "children", allow_duplicate=True)],
-    [Input('grammar_running', 'data')], prevent_initial_call=True
-)
-def disable_render_button(running):
-    # if one of the buttons is clicked, , show notification
 
-    if not running:
-        notification = dmc.Notification(
-                        id="my-notification",
-                        title="Info",
-                        message="UMAP plot complete.",
-                        color="green",
-                        loading=False,
-                        action="show",
-                        autoClose=2000,
-                        position="top-right"
-                        #icon=DashIconify(icon="akar-icons:circle-check"),
-                )
-        return running, running, running, running, notification
-    else:
-        # if the button is clicked, disable the buttons
-        return running, running, running, running, no_update
-# using second callback to disable buttons
-# "running=" does not appear to be working?
-# maybe it's dmc?
-@callback(
-    Output("notify-container", "children", allow_duplicate=True),
-    [Input('render-UMAP-plot','n_clicks'),Input('render-rf-plot','n_clicks')], prevent_initial_call=True
-)
-def show_render_notifcation(UMAPrender, RFrender):
-    # if one of the buttons is clicked, , show notification
-
-    if not UMAPrender and not RFrender:
-        # if no button was clicked, do not show notification
-        return no_update
-    else:
-        notification = dmc.Notification(
-                        id="my-notification",
-                        title="Info",
-                        message="Rendering new plot, please wait.",
-                        color="orange",
-                        loading=True,
-                        action="show",
-                        autoClose=2000,
-                        position="top-right"
-                        #icon=DashIconify(icon="akar-icons:circle-check"),
-                )
-        return notification
-
-# callback to update umap plot with groupings
+# Callback 1: Fast group management (Add Group, Clear Groups)
 @callback(	
-    [Output('grammar_plots_UMAP', 'data'),Output('UMAPgroup', 'data'),Output('render-UMAP-plot','loading'),Output('Umap-add-group', 'disabled'),Output('Umap-clear-groups', 'disabled'),Output('UMAPparticipants','data'),Output('UMAPitems','data'),Output('UMAPGroupsForRF', 'data'),Output('render-rf-plot', 'disabled', allow_duplicate=True),Output("notify-container", "children", allow_duplicate=True),Output("confirm-custom-modal", "opened")],
-    [Input('Umap-add-group', 'n_clicks'),Input('Umap-clear-groups', 'n_clicks'),Input('render-UMAP-plot','n_clicks'),Input('modal-ok-button', 'n_clicks'),Input('modal-cancel-button', 'n_clicks')],
-    [State('UMAPfig', 'selectedData'),State('grammar_plots_UMAP', 'data'),State("UMAPgroup", "data"),State("participantsTree", "checked"),State("grammarItemsTree", "checked"),State('UMAPparticipants','data'),State('UMAPitems','data'),State('UMAP_neighbours','value'),State('UMAP_mindist','value'),State('UMAPfig','figure'),State("grammar_running","data"),State('grammar-items-preset', 'value'), State('umap-distance-metric-dropdown', 'value'), State('umap-standardize-checkbox', 'checked'),State('umap-densemap-checkbox', 'checked'),State('grammar-type-switch', 'checked'), State('use-imputed-data-switch', 'checked')], 
-    prevent_initial_call=True,background=True,running=[(Output("grammar_running","data"),True,False)]
+    [Output('grammar_plots_UMAP', 'data', allow_duplicate=True),
+    Output('UMAPgroup', 'data', allow_duplicate=True),
+    Output('UMAPGroupsForRF', 'data', allow_duplicate=True),
+    Output("notify-container", "children", allow_duplicate=True)],
+    [Input('Umap-add-group', 'n_clicks'),
+    Input('Umap-clear-groups', 'n_clicks')],
+    [State('UMAPfig', 'selectedData'),
+    State('grammar_plots_UMAP', 'data'),
+    State("UMAPgroup", "data"),
+    State('UMAPfig','figure')],
+    prevent_initial_call=True
 )
-def updateGroupsUMAP(BTNaddgroup, BTNcleargroup,BTNrenderPlot, modal_ok, modal_cancel,selectedData, figure,  data, selected_informants, items, participantsCache, itemsCache, n_neighbours, min_dist,displayedFigure,running_state, preset, distance_metric, standardize_participant_ratings, densemap, pairs, use_imputed):
-    # need longer callback here as outputs can only be references in one callback, hence the need to split the callback
-    button_clicked = ctx.triggered_id # which buttonw as clicked
-    # reset all groups without rerendering the plot
+def manage_umap_groups(BTNaddgroup, BTNcleargroup, selectedData, figure, data, displayedFigure):
+    """Handle fast group operations without re-rendering UMAP"""
+    button_clicked = ctx.triggered_id
+    
+    # Clear all groups
     if button_clicked == 'Umap-clear-groups':
         if (BTNcleargroup == 0 or BTNcleargroup is None):
-            return figure, data, False, False, False, no_update, no_update, no_update, False, no_update, False
+            return no_update, no_update, no_update, no_update
         newFig = displayedFigure
         for x in range(len(newFig['data'])):
             newFig['data'][x]['marker']['symbol'] = 0
         groupsCache = getColorGroupingsFromFigure(displayedFigure)
-        return newFig, 0, False, False, False, no_update, no_update, groupsCache, False, no_update, False
-    # add group without rerendering the plot
+        return newFig, 0, groupsCache, no_update
+    
+    # Add group
     elif button_clicked == 'Umap-add-group':
         if (BTNaddgroup == 0 or BTNaddgroup is None):
-            return no_update, no_update, False, False, False, no_update, no_update, no_update, False, no_update, False
+            return no_update, no_update, no_update, no_update
+        
+        # Check if selectedData exists and has points
+        if selectedData is None or 'points' not in selectedData or len(selectedData['points']) == 0:
+            notification = dmc.Notification(
+                id="my-notification",
+                title="No Selection",
+                message="Please select participants in the UMAP plot using the lasso or box select tool.",
+                color="orange",
+                loading=False,
+                action="show",
+                autoClose=4000,
+                position="top-right"
+            )
+            return no_update, no_update, no_update, notification
+        
+        # Proceed with adding group
         if len(selectedData['points']) > 0:
-            currentGroup = data
             curve_numbers = set([point['curveNumber'] for point in selectedData['points']])
             newFig = displayedFigure
             for x in curve_numbers:
@@ -2685,89 +2666,196 @@ def updateGroupsUMAP(BTNaddgroup, BTNcleargroup,BTNrenderPlot, modal_ok, modal_c
                 # Assign back as lists (Plotly expects lists)
                 newFig['data'][x]['marker']['symbol'] = marker_symbol.tolist()
                 newFig['data'][x]['marker']['opacity'] = marker_opacity.tolist()
-            if(data==14): # reset groups if maximum is reached
+            
+            if(data==14):  # reset groups if maximum is reached
                 data = 0
             else:
                 data = data + 1
             groupsCache = getGroupingsFromFigure(displayedFigure)
-            return newFig, data, False, False, False, no_update, no_update, groupsCache, False, no_update, False
-        else:
-            return no_update, no_update, False, False, False, no_update, no_update, no_update, False, no_update, False
-    # rerender plot with seletected data
-    elif button_clicked == 'render-UMAP-plot':
-        if (BTNrenderPlot == 0 or BTNrenderPlot is None or running_state):
-            while running_state: # if a background callback is running, wait, once it's finished, plot should be updated.
-                raise PreventUpdate
-        
-            if figure is None or len(figure.get('data', [])) == 0:
-                data = 0
-                return no_update, no_update, False, False, False, no_update, no_update, no_update, False, no_update, False
-            else:
-                groupsCache = getColorGroupingsFromFigure(figure)
-                return figure, no_update, False, False, False, no_update, items, groupsCache, False, no_update, False
-        
-        # Check if precomputed UMAP plot exists instead of checking for "Custom"
-        import os
-        import hashlib
-        
-        def _hash_list(lst):
-            return hashlib.md5(str(sorted(lst)).encode()).hexdigest() if lst else "all"
-        
-        # Normalize tree selections using helper function
-        selected_informants, items = normalize_tree_selection(selected_informants, items)
-        
-        # Modal disabled - proceed directly to rendering
-        
-        data = 0 # reset groups when plot is rerendered
-        
-        # Use cached UMAP plot generation for better performance
-        figure = get_cached_umap_plot(
-            participants=selected_informants,
-            items=items,
-            n_neighbours=n_neighbours,
-            min_dist=min_dist,
-            distance_metric=distance_metric,
-            standardize=standardize_participant_ratings,
-            densemap=densemap,
-            pairs=pairs
-        )
-        groupsCache = getColorGroupingsFromFigure(figure)
-        return figure, data, False, False, False, selected_informants, items, groupsCache, False, no_update, False
-    elif button_clicked == 'modal-cancel-button':
-        return no_update,no_update,no_update,no_update,no_update,no_update,no_update,no_update,no_update,no_update, False
-    elif button_clicked == 'modal-ok-button':
-        if (BTNrenderPlot == 0 or BTNrenderPlot is None or running_state):
-            while running_state: # if a background callback is running, wait, once it's finished, plot should be updated.
-                raise PreventUpdate
-        
-            if figure is None or len(figure.get('data', [])) == 0:
-                data = 0
-            else:
-                groupsCache = getColorGroupingsFromFigure(figure)
-                return figure, no_update, False, False, False, selected_informants, items, groupsCache, False, no_update, False
+            return newFig, data, groupsCache, no_update
+    
+    return no_update, no_update, no_update, no_update
 
-        data = 0 # reset groups when plot is rerendered
+
+# Callback 2: Initiate UMAP rendering (set loading states immediately)
+@callback(
+    [Output('render-UMAP-plot', 'loading', allow_duplicate=True),
+     Output('Umap-add-group', 'disabled', allow_duplicate=True),
+     Output('Umap-clear-groups', 'disabled', allow_duplicate=True),
+     Output('render-rf-plot', 'disabled', allow_duplicate=True),
+     Output('umap-render-trigger', 'data'),
+     Output("confirm-custom-modal", "opened"),
+     Output('umap-view-toggle', 'value', allow_duplicate=True),
+     Output('render-loading-overlay', 'visible', allow_duplicate=True),
+     Output('render-grammar-plot', 'disabled', allow_duplicate=True),
+     Output("notify-container", "children", allow_duplicate=True)],  # Add notification output
+    [Input('render-UMAP-plot','n_clicks'),
+     Input('modal-ok-button', 'n_clicks'),
+     Input('modal-cancel-button', 'n_clicks')],
+    [State('grammar_plots_UMAP', 'data'),
+     State("grammar_running","data"),
+     State("participantsTree", "checked"),
+     State("grammarItemsTree", "checked")],
+    prevent_initial_call=True
+)
+def initiate_umap_rendering(BTNrenderPlot, modal_ok, modal_cancel, figure, running_state, participants, items):
+    """Set loading states immediately when render is clicked"""
+    button_clicked = ctx.triggered_id
+    
+    if button_clicked == 'modal-cancel-button':
+        return no_update, no_update, no_update, no_update, no_update, False, no_update, no_update, no_update, no_update
+    
+    if button_clicked in ['render-UMAP-plot', 'modal-ok-button']:
+        # Validation: Check minimum selections (handle None case)
+        if not participants or len(participants) < 10:
+            notification = dmc.Notification(
+                id="my-notification",
+                title="Insufficient Participants",
+                message=f"Please select at least 10 participants for UMAP. Currently selected: {len(participants) if participants else 0}",
+                color="orange",
+                loading=False,
+                action="show",
+                autoClose=5000,
+                position="top-right"
+            )
+            return False, no_update, no_update, no_update, no_update, False, no_update, False, False, notification
         
-        # Normalize tree selections using helper function
-        selected_informants, items = normalize_tree_selection(selected_informants, items)
-            
-        # Use cached UMAP plot generation for better performance  
-        figure = get_cached_umap_plot(
-            participants=selected_informants,
-            items=items,
-            n_neighbours=n_neighbours,
-            min_dist=min_dist,
-            distance_metric=distance_metric,
-            standardize=standardize_participant_ratings,
-            densemap=densemap,
-            pairs=pairs
+        if not items or len(items) < 5:
+            notification = dmc.Notification(
+                id="my-notification",
+                title="Insufficient Grammar Items",
+                message=f"Please select at least 5 grammar items for UMAP. Currently selected: {len(items) if items else 0}",
+                color="orange",
+                loading=False,
+                action="show",
+                autoClose=5000,
+                position="top-right"
+            )
+            return False, no_update, no_update, no_update, no_update, False, no_update, False, False, notification
+        
+        # If already running, prevent duplicate trigger
+        if running_state:
+            return no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update
+        
+        # Validation passed - show rendering notification
+        notification = dmc.Notification(
+            id="my-notification",
+            title="Info",
+            message="Rendering UMAP plot, please wait.",
+            color="blue",
+            loading=True,
+            action="show",
+            autoClose=2000,
+            position="top-right"
         )
-        groupsCache = getColorGroupingsFromFigure(figure)
-        return figure, data, False, False, False, selected_informants, items, groupsCache, False, no_update, False
-    else:
+        
+        # Immediately set loading states (this happens instantly)
+        # Modal is disabled, so always proceed with rendering
+        import time
+        trigger_data = {'timestamp': time.time(), 'button': button_clicked}
+        return True, True, True, True, trigger_data, False, 'umap-plot', no_update, no_update, notification  # Switch to UMAP view
+    
+    return no_update, no_update, no_update, no_update, no_update, False, no_update, no_update, no_update, no_update
+
+
+# Callback 3: Background UMAP computation
+@callback(	
+    [Output('grammar_plots_UMAP', 'data', allow_duplicate=True),
+    Output('UMAPgroup', 'data', allow_duplicate=True),
+    Output('UMAPparticipants','data'),
+    Output('UMAPitems','data'),
+    Output('UMAPGroupsForRF', 'data', allow_duplicate=True),
+    Output('umap-render-settings', 'data')],  # Store settings for RF plot consistency
+    Input('umap-render-trigger', 'data'),
+    [State("participantsTree", "checked"),
+    State("grammarItemsTree", "checked"),
+    State('UMAP_neighbours','value'),
+    State('UMAP_mindist','value'),
+    State('grammar-items-preset', 'value'), 
+    State('umap-distance-metric-dropdown', 'value'), 
+    State('umap-standardize-checkbox', 'checked'),
+    State('umap-densemap-checkbox', 'checked'),
+    State('grammar-type-switch', 'checked'), 
+    State('use-imputed-data-switch', 'checked')], 
+    prevent_initial_call=True,
+    background=True,
+    running=[(Output("grammar_running","data"),True,False)]
+)
+def compute_umap_background(trigger_data, selected_informants, items, n_neighbours, 
+                           min_dist, preset, distance_metric, 
+                           standardize_participant_ratings, densemap, pairs, use_imputed):
+    """Compute UMAP in background - this is the slow operation"""
+    if trigger_data is None:
         raise PreventUpdate
-    # if no button was clicked, do not update anything
-    return no_update, no_update, False, False, False, no_update, no_update, no_update, False, no_update, False
+    
+    import hashlib
+    
+    def _hash_list(lst):
+        return hashlib.md5(str(sorted(lst)).encode()).hexdigest() if lst else "all"
+    
+    # Normalize tree selections using helper function
+    selected_informants, items = normalize_tree_selection(selected_informants, items)
+    
+    # Reset group counter when plot is re-rendered
+    data = 0
+    
+    # Use cached UMAP plot generation for better performance
+    figure = get_cached_umap_plot(
+        participants=selected_informants,
+        items=items,
+        n_neighbours=n_neighbours,
+        min_dist=min_dist,
+        distance_metric=distance_metric,
+        standardize=standardize_participant_ratings,
+        densemap=densemap,
+        pairs=pairs
+    )
+    groupsCache = getColorGroupingsFromFigure(figure)
+    
+    # Store the settings used for this UMAP render
+    render_settings = {
+        "pairs": pairs,
+        "use_imputed": use_imputed
+    }
+    
+    return figure, data, selected_informants, items, groupsCache, render_settings
+
+
+# Callback 4: Handle UMAP completion (clear loading states)
+@callback(
+    [Output('render-UMAP-plot', 'loading', allow_duplicate=True),
+     Output('Umap-add-group', 'disabled', allow_duplicate=True),
+     Output('Umap-clear-groups', 'disabled', allow_duplicate=True),
+     Output('render-rf-plot', 'disabled', allow_duplicate=True)],
+    Input('grammar_plots_UMAP', 'data'),
+    State('grammar_plots_UMAP', 'data'),
+    prevent_initial_call=True
+)
+def handle_umap_completion(new_figure, figure_state):
+    """Clear loading states when UMAP computation completes"""
+    # Only respond to actual new plots (not initial state or group modifications)
+    if new_figure is None or len(new_figure.get('data', [])) == 0:
+        # No real UMAP plot yet, keep buttons in appropriate state
+        return False, False, False, False
+    
+    # UMAP plot is ready - enable all buttons
+    return False, False, False, False
+
+
+# Callback to toggle between UMAP and RF plot views
+@callback(
+    [Output('umap-plot-container', 'style'),
+     Output('rf-plot-container', 'style')],
+    Input('umap-view-toggle', 'value'),
+    prevent_initial_call=True
+)
+def toggle_umap_rf_view(selected_view):
+    """Show/hide UMAP or RF plot based on toggle selection"""
+    if selected_view == 'umap-plot':
+        return {"display": "block"}, {"display": "none"}
+    else:  # rf-plot
+        return {"display": "none"}, {"display": "block"}
+
 
 @callback(
     Output('UMAPfig', 'figure',allow_duplicate=True),
@@ -2778,41 +2866,76 @@ def set_umapfig_from_store(fig_data):
     if fig_data is not None:
         fig = go.Figure(fig_data)
         return fig
+    # Return initial empty plot (not a real UMAP plot yet)
     return UMAP_Grammar_initialPlot
+
+
+# Set loading state immediately when RF plot button is clicked
+@callback(
+    Output('render-rf-plot', 'loading', allow_duplicate=True),
+    Input('render-rf-plot', 'n_clicks'),
+    prevent_initial_call=True
+)
+def set_rf_plot_loading(n_clicks):
+    """Set loading state immediately when RF plot render is clicked"""
+    if n_clicks:
+        return True
+    return no_update
+
+
+# Clear loading state when RF plot finishes OR when error notification is shown
+@callback(
+    Output('render-rf-plot', 'loading', allow_duplicate=True),
+    [Input('RFPlotFig', 'figure'),
+     Input('notify-container', 'children')],
+    prevent_initial_call=True
+)
+def clear_rf_plot_loading(figure, notification):
+    """Clear loading state when RF plot completes or error occurs"""
+    return False
 
 
 @callback(
     [Output('RFPlotFig','figure'),
-     Output('render-UMAP-plot','loading',allow_duplicate=True),
      Output('Umap-add-group', 'disabled',allow_duplicate=True),
      Output('Umap-clear-groups', 'disabled',allow_duplicate=True),
      Output('render-rf-plot', 'disabled',allow_duplicate=True),
-     Output('render-rf-plot', 'loading',allow_duplicate=True),
      Output("notify-container", "children",allow_duplicate=True), 
-     Output('grammar-UMAP-main-tabs', 'value')],
+     Output('umap-view-toggle', 'value', allow_duplicate=True)],  # Auto-switch to RF view
     Input('render-rf-plot','n_clicks'),
-    [State('UMAPGroupsForRF','data'),State('UMAPitems','data'),State('UMAPgroup','data'),State('RF_avg_range','value'),State('UMAPfig','figure'),State('UMAPparticipants','data'),State('grammar-type-switch','checked'),State('use-imputed-data-switch', 'checked'),State('rf-use-zscores','checked')],
+    [State('UMAPGroupsForRF','data'),
+    State('UMAPitems','data'),
+    State('UMAPgroup','data'),
+    State('RF_avg_range','value'),
+    State('UMAPfig','figure'),
+    State('UMAPparticipants','data'),
+    State('umap-render-settings', 'data'),  # Use stored settings instead of UI state
+    State('rf-use-zscores','checked')],
     prevent_initial_call=True
 )
-def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,visible_participants,pairs,use_imputed,use_zscores):
+def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,visible_participants,render_settings,use_zscores):
     # Set default value for split_by_variety since checkbox was removed
     split_by_variety = False
     
+    # Extract settings from the stored UMAP render settings
+    pairs = render_settings.get('pairs', False)
+    use_imputed = render_settings.get('use_imputed', True)
+    
     button_clicked = ctx.triggered_id
     if button_clicked == 'render-rf-plot' and BTN is not None:
+        # Check if exactly 1 group is selected
         if(UMAPgroup==1):
             notification = dmc.Notification(
                     id="my-notification",
-                    title="Info",
-                    message="Please select more than one group. If no group is selected, varieties will be used as groups.",
+                    title="Invalid Group Selection",
+                    message="Please select at least two groups for comparison, or select no groups to compare varieties.",
                     color="orange",
                     loading=False,
                     action="show",
                     autoClose=5000,
                     position="top-right"
-                    #icon=DashIconify(icon="akar-icons:circle-check"),
             )
-            return no_update, False, False, False, False, False, notification, no_update
+            return no_update, False, False, False, notification, no_update
         df = pd.DataFrame(groups['dataframe'])
         if("id" in df.columns):
             # rename column id to ids
@@ -2832,7 +2955,7 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,visible_participa
                     autoClose=5000,
                     position="top-right"
                 )
-                return no_update, False, False, False, False, False, notification, no_update
+                return no_update, False, False, False, notification, no_update
 
         #data = retrieve_data
         # retrieve grammar data, add items from session cache
@@ -2865,7 +2988,7 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,visible_participa
         df = data.copy()
         df = df.melt(id_vars=['group'], value_vars=columns, var_name='item')
         plotDF = (
-            df.groupby(['group', 'item'])
+            df.groupby(['group', 'item'], observed=True)
             .agg(count=('value', 'count'), mean=('value', 'mean'), std=('value', 'std'))
             .reset_index()
         )
@@ -2877,8 +3000,8 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,visible_participa
 
         # to do: merge meta info here for hoverinfo in plot
         RFPlot = get_cached_rf_plot(plotDF, importanceRatings, value_range, pairs=pairs, split_by_variety=split_by_variety)
-        return RFPlot, False, False, False, False, False, notification, 'rf-plot'
-    return no_update,no_update,no_update,no_update,no_update,no_update, no_update, no_update
+        return RFPlot, False, False, False, notification, 'rf-plot'
+    return no_update, no_update, no_update, no_update, no_update, no_update
 
 # apply filter to participant selection tree
 @callback(
@@ -2996,6 +3119,8 @@ def updateGrammarItemsTree(wo_button,curr_button,prob_button,itemTree):
 
 @callback(
     [Output('ItemFig','figure'),
+     Output('render-loading-overlay', 'visible', allow_duplicate=True),
+     Output('render-grammar-plot', 'disabled', allow_duplicate=True),
      Output("notify-container", "children",allow_duplicate=True)],
     Input('render-item-plot','n_clicks'),
     [State('participantsTree','checked'),State('grammarItemsTree','checked'),State('items-group-by','value'),State('items-sort-by','value'),State('items-plot-mode','value'),State('grammar-type-switch','checked'),State('use-imputed-data-switch', 'checked')],
@@ -3004,8 +3129,44 @@ def updateGrammarItemsTree(wo_button,curr_button,prob_button,itemTree):
 def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imputed):
     button_clicked = ctx.triggered_id
     if button_clicked == 'render-item-plot' and BTN is not None:
-        # to do: group here, then pass DF on to trainRF - need the grouping in getRFplot again
-        notification = create_info_notification("Rendering new plot, please wait.")
+        # Validation: Check minimum selections (handle None case)
+        if not informants or len(informants) < 10:
+            notification = dmc.Notification(
+                id="my-notification",
+                title="Insufficient Participants",
+                message=f"Please select at least 10 participants. Currently selected: {len(informants) if informants else 0}",
+                color="orange",
+                loading=False,
+                action="show",
+                autoClose=5000,
+                position="top-right"
+            )
+            return no_update, False, False, notification
+        
+        if not items or len(items) < 1:
+            notification = dmc.Notification(
+                id="my-notification",
+                title="No Items Selected",
+                message="Please select at least 1 grammar item.",
+                color="orange",
+                loading=False,
+                action="show",
+                autoClose=5000,
+                position="top-right"
+            )
+            return no_update, False, False, notification
+        
+        # Validation passed - show rendering notification
+        notification = dmc.Notification(
+            id="my-notification",
+            title="Info",
+            message="Rendering Item plot, please wait.",
+            color="blue",
+            loading=True,
+            action="show",
+            autoClose=2000,
+            position="top-right"
+        )
 
         # Use lazy data loading - only get data when needed
         if use_imputed:
@@ -3023,8 +3184,8 @@ def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imput
         # Check if split_by_variety mode is selected
         split_by_variety = (plot_mode == "split_by_variety")
         itemPlot = getItemPlot(informants, items,groupby=groupby,sortby=sortby,pairs=pairs,use_imputed=use_imputed,plot_mode=plot_mode,split_by_variety=split_by_variety)
-        return itemPlot, notification
-    return no_update,no_update
+        return itemPlot, no_update, no_update, notification
+    return no_update, no_update, no_update, no_update
 
 # Save rendered plots to session storage for persistence
 @callback(
@@ -3453,7 +3614,7 @@ def run_leiden_clustering(n_clicks, selected_informants, selected_items, resolut
         )
         
         # Create cluster statistics table
-        cluster_stats = results_df.groupby('cluster').agg({
+        cluster_stats = results_df.groupby('cluster', observed=True).agg({
             'InformantID': 'count',
             'MainVariety': lambda x: x.mode().iloc[0] if len(x.mode()) > 0 else 'Mixed',
             'Gender': lambda x: x.mode().iloc[0] if len(x.mode()) > 0 else 'Mixed'
@@ -3618,27 +3779,11 @@ def update_grammar_items_tree(type_switch_checked):
     if not type_switch_checked:
         # Individual items, use the full grammarMeta
         meta = grammarMeta.copy(deep=True)
-        checked_items = GrammarItemsCols
+        checked_items = []  # Start empty, no auto-selection
     else:
         meta = grammarMetaPairs.copy(deep=True)
         # Mode difference, use pairs
-        checked_items = GrammarItemsColsPairs
+        checked_items = []  # Start empty, no auto-selection
     pairs = type_switch_checked
     tree_data = drawGrammarItemsTree(meta, pairs=pairs)
     return tree_data, checked_items
-
-# Client-side callback to enable/disable "Add group" button based on UMAP plot selection
-clientside_callback(
-    """
-    function(selectedData) {
-        if (selectedData && selectedData.points && selectedData.points.length > 0) {
-            return false;  // Enable the button (disabled=false)
-        } else {
-            return true;   // Disable the button (disabled=true)
-        }
-    }
-    """,
-    Output('Umap-add-group', 'disabled', allow_duplicate=True),
-    Input('UMAPfig', 'selectedData'),
-    prevent_initial_call=True
-)

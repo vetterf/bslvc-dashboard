@@ -406,7 +406,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
         )
     else:
         fig = go.Figure()
-        fig.update_layout(title='UMAP: Informant similarity')
+        
 
 
     # else:
@@ -581,7 +581,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
         raise ValueError(f"Missing required columns in data: {missing_cols}")
     # Filter by mean range
     if not pairs:
-        df = df.groupby('item').filter(lambda x: x['mean'].between(value_range[0], value_range[1]).all()).reset_index(drop=True)
+        df = df.groupby('item', observed=True).filter(lambda x: x['mean'].between(value_range[0], value_range[1]).all()).reset_index(drop=True)
     if df.empty:
         fig = go.Figure()
         fig.add_annotation(
@@ -1329,8 +1329,8 @@ def getAuxiliaryTable(Informants,participants):
 
 def getMetaTable(data):
     #data = data
-    # filter out columns Standard_variety and "Control Item"
-    data = data.drop(columns=[col for col in ['Standard_variety', 'Control Item'] if col in data.columns])
+    # filter out columns Standard_variety, "Control Item", and "Related Item"
+    data = data.drop(columns=[col for col in ['standard_variety', 'control_item', 'related_item'] if col in data.columns])
     data.columns = [col.replace('_', ' ') for col in data.columns]
     
     # Add button and helper text for table features
@@ -1350,6 +1350,9 @@ def getMetaTable(data):
         ),
     ], mb=10, style={"backgroundColor": "#f8f9fa", "padding": "8px", "borderRadius": "4px", "border": "1px solid #e9ecef"})
     
+    # Define which columns should have category filters (set filter) vs text filters
+    category_columns = ['section', 'feature', 'group ewave', 'group finegrained', 'variant detail', 'feature ewave']
+    
     table = dag.AgGrid(
                     id="grammar-items-table",
                     rowData=data.to_dict("records"),
@@ -1357,7 +1360,7 @@ def getMetaTable(data):
                         {
                             "field": col, 
                             "headerName": col.replace("Item", "Item ID") if col == "Item" else col,
-                            "filter": "agTextColumnFilter", 
+                            "filter": "agSetColumnFilter" if col in category_columns else "agTextColumnFilter",
                             "sortable": True,
                             "resizable": True,
                             "minWidth": 80 if col == "Item" else 120,
@@ -1365,7 +1368,11 @@ def getMetaTable(data):
                             "cellStyle": {"textAlign": "left"},
                             "headerTooltip": f"Click to sort by {col}. Use filter below to search.",
                             "wrapText": True if col in ["Sentence", "Context"] else False,
-                            "autoHeight": True if col in ["Sentence", "Context"] else False
+                            "autoHeight": True if col in ["Sentence", "Context"] else False,
+                            "filterParams": {
+                                "buttons": ["reset", "apply"],
+                                "closeOnApply": True
+                            } if col in category_columns else {}
                         } 
                         for col in data.columns
                     ],
@@ -2355,10 +2362,10 @@ def getMainVarietiesPlot(informants):
         )
         
         # Recalculate counts grouped by MainVariety and Year
-        grouped_counts = data.groupby(['MainVariety', 'Year']).size().reset_index(name='counts')
+        grouped_counts = data.groupby(['MainVariety', 'Year'], observed=True).size().reset_index(name='counts')
         
         # Calculate overall frequency of each variety for sorting
-        overall_counts = grouped_counts.groupby('MainVariety')['counts'].sum().reset_index()
+        overall_counts = grouped_counts.groupby('MainVariety', observed=True)['counts'].sum().reset_index()
         overall_counts = overall_counts.sort_values(by='counts', ascending=False)
         
         # Ensure years are ordered
@@ -2601,16 +2608,16 @@ def getCategoryHistogramPlot(informants, ColName="PrimarySchool", GroupOther=Tru
             data[ColName] = data[ColName].str.strip().str.capitalize()
 
         if GenderDistribution:
-            col_counts = data.groupby([ColName,'Gender']).size().reset_index(name='counts')
+            col_counts = data.groupby([ColName,'Gender'], observed=True).size().reset_index(name='counts')
             col_counts.columns = [ColName, 'Gender', 'counts']
             # group catergories with fewer than 10 occurrences per Gender into "Other
             if GroupOther:
                 col_counts[ColName] = col_counts[ColName].apply(
                     lambda x: x if ((col_counts[col_counts[ColName] == x]['counts'].sum() >= 10) | (x == 'NA') | (x == 'ND')) else 'Other'
                 )
-            col_counts = col_counts.groupby([ColName,'Gender'], as_index=False)['counts'].sum()
+            col_counts = col_counts.groupby([ColName,'Gender'], as_index=False, observed=True)['counts'].sum()
             # calculate overall frequency of each category for sorting
-            overall_counts = col_counts.groupby(ColName)['counts'].sum().reset_index()
+            overall_counts = col_counts.groupby(ColName, observed=True)['counts'].sum().reset_index()
             overall_counts = overall_counts.sort_values(by='counts', ascending=False)
             col_counts = col_counts.merge(overall_counts, on=ColName, suffixes=('', '_total'))
             col_counts = col_counts.sort_values(by=['counts_total','Gender'], ascending=[False,True])
