@@ -849,11 +849,10 @@ informantSelectionAccordion = dmc.AccordionItem(
                     dmc.Button("Select All", id='select-all-participants', size="xs", variant="outline"),
                     dmc.Button("Deselect All", id='deselect-all-participants', size="xs", variant="outline"),
                     dmc.Button(
-                        "Deselect selection", 
+                        "Deselect Selection", 
                         id='deselect-selected-participants', 
                         size="xs", 
                         variant="outline",
-                        color="orange",
                         disabled=True,
                         style={"display": "none"}  # Initially hidden
                     )
@@ -868,10 +867,10 @@ informantSelectionAccordion = dmc.AccordionItem(
                                     dmc.Stack(gap="xs", children=[
                                         dmc.Text("Variety:", size="xs", fw=600, c="dimmed"),
                                         dmc.Group(children=[
-                                            dmc.Button("ENL", id='batch-select-enl', size="xs", variant="light", color="blue"),
-                                            dmc.Button("ESL", id='batch-select-esl', size="xs", variant="light", color="green"),
-                                            dmc.Button("EFL", id='batch-select-efl', size="xs", variant="light", color="orange"),
-                                            dmc.Button("Balanced", id='batch-select-equal-per-variety', size="xs", variant="light", color="indigo"),
+                                            dmc.Button("ENL", id='batch-select-enl', size="xs", variant="light"),
+                                            dmc.Button("ESL", id='batch-select-esl', size="xs", variant="light"),
+                                            dmc.Button("EFL", id='batch-select-efl', size="xs", variant="light"),
+                                            dmc.Button("Balanced Per Variety", id='batch-select-equal-per-variety', size="xs", variant="light"),
                                         ], gap="xs", mb="xs"),
                                         dmc.Text("Age:", size="xs", fw=600, c="dimmed"),
                                         dmc.Group(children=[
@@ -882,12 +881,12 @@ informantSelectionAccordion = dmc.AccordionItem(
                                         ], gap="xs", mb="xs"),
                                         dmc.Text("Gender:", size="xs", fw=600, c="dimmed"),
                                         dmc.Group(children=[
-                                            dmc.Button("Female", id='batch-select-female', size="xs", variant="light", color="pink"),
-                                            dmc.Button("Male", id='batch-select-male', size="xs", variant="light", color="cyan"),
+                                            dmc.Button("Female", id='batch-select-female', size="xs", variant="light"),
+                                            dmc.Button("Male", id='batch-select-male', size="xs", variant="light"),
                                         ], gap="xs", mb="xs"),
                                         dmc.Group(children=[
-                                            dmc.Button("Balanced", id='batch-select-balanced', size="xs", variant="light", color="violet"),
-                                            dmc.Button("Balanced per variety", id='batch-select-balanced-per-variety', size="xs", variant="light", color="grape"),
+                                            dmc.Button("Balanced", id='batch-select-balanced', size="xs", variant="light"),
+                                            dmc.Button("Balanced Per Variety", id='batch-select-balanced-per-variety', size="xs", variant="light"),
                                         ], gap="xs", mb="xs"),
                                     ])
                                 ),
@@ -972,7 +971,7 @@ informantSelectionAccordion = dmc.AccordionItem(
                                         ]),
                                         dmc.MultiSelect(
                                             id="multiselect-grammar-filter-mainvariety",
-                                            label="Main variety:",
+                                            label="Main Variety:",
                                             size="xs",
                                             data=[{"label": v, "value": v} for v in sorted(Informants["MainVariety"].dropna().unique())],
                                             value=sorted(Informants["MainVariety"].dropna().unique()),
@@ -1013,28 +1012,9 @@ itemSelectionAccordion = dmc.AccordionItem(
                 ),
                 dmc.AccordionPanel(
                     dmc.Stack(gap='md',children=[
-
-                        dmc.Switch(
-                            id="grammar-type-switch",
-                            label="Use item difference (spoken-written)",
-                            description="Use difference between item pairs, instead of raw ratings",
-                            checked=False,
-                            persistence=persist_UI,
-                            persistence_type=persistence_type,
-                            size="sm",
-                        ),
-                        dmc.Switch(
-                            id="use-imputed-data-switch",
-                            label="Use imputed data",
-                            description="Toggle between imputed and raw data. UMAP always uses imputed data.",
-                            checked=True,
-                            persistence=persist_UI,
-                            persistence_type=persistence_type,
-                            size="sm",
-                        ),
                         dmc.Stack(
                         children=[
-                            dmc.Select(label="Select a preset:",
+                            dmc.Select(label="Select a Preset:",
                             placeholder="All",
                             id="grammar-items-preset",
                             value="All",
@@ -1042,21 +1022,8 @@ itemSelectionAccordion = dmc.AccordionItem(
                             allowDeselect=False,
                             size="xs",
                             persistence=persist_UI,persistence_type=persistence_type),
-                            dmc.Group(children=[
-                                dmc.Button("Toggle written-only",
-                                    id="grammar_toggle_written_only",
-                                    size="xs",
-                                    variant="light"
-                                ),
-                                dmc.Button("Toggle currency/unit",
-                                    id="grammar_toggle_currency",
-                                    size="xs",
-                                    variant="light"
-                                ),
-                            ], gap="xs"),
-                            dmc.Button("Deselect problematic items",
+                            dmc.Button("Deselect Problematic Items",
                                 id="grammar_deselect_problematic",
-                                color="red",
                                 variant="outline",
                                 size="xs"
                             ),
@@ -1078,7 +1045,57 @@ itemSelectionAccordion = dmc.AccordionItem(
                         ], 
                         # Use a wrapper div with custom CSS class
                         className="grammar-tree-wrapper",
-                        ),  
+                        ),
+                        # Advanced item options sub-accordion
+                        dmc.Accordion(
+                            children=[
+                                dmc.AccordionItem(
+                                    [
+                                        dmc.AccordionControl(
+                                            dmc.Text("Advanced Options", size="xs", fw=500)
+                                        ),
+                                        dmc.AccordionPanel(
+                                            dmc.Stack(gap='sm', children=[
+                                                dmc.Switch(
+                                                    id="grammar-type-switch",
+                                                    label="Use item difference (spoken-written)",
+                                                    description="Use difference between item pairs, instead of raw ratings",
+                                                    checked=False,
+                                                    persistence=persist_UI,
+                                                    persistence_type=persistence_type,
+                                                    size="sm",
+                                                ),
+                                                dmc.Switch(
+                                                    id="use-imputed-data-switch",
+                                                    label="Use imputed data",
+                                                    description="Toggle between imputed and raw data. UMAP always uses imputed data.",
+                                                    checked=True,
+                                                    persistence=persist_UI,
+                                                    persistence_type=persistence_type,
+                                                    size="sm",
+                                                ),
+                                                dmc.Group(children=[
+                                                    dmc.Button("Toggle Written-Only",
+                                                        id="grammar_toggle_written_only",
+                                                        size="xs",
+                                                        variant="light"
+                                                    ),
+                                                    dmc.Button("Toggle Currency/Unit",
+                                                        id="grammar_toggle_currency",
+                                                        size="xs",
+                                                        variant="light"
+                                                    ),
+                                                ], gap="xs"),
+                                            ])
+                                        ),
+                                    ],
+                                    value="advanced-item-options",
+                                ),
+                            ],
+                            variant="contained",
+                            radius="md",
+                            value=[],  # Closed by default
+                        ),
                     ])
                 ),
             ],
@@ -1224,24 +1241,28 @@ umapGroupCompAccordion = dmc.AccordionItem(
                 dmc.AccordionPanel(
                     dmc.Stack(gap='md',children=[
                         dmc.Stack(gap="xs", children=[
-                            dmc.Text("Average rating filter:", size="xs", fw=600, c="dimmed"),
-                            dmc.Text("Only display items where all groups fall within range:", size="xs"),
-                            dmc.RangeSlider(
-                                id="RF_avg_range",
-                                value=[0,5],
-                                min=0,
-                                max=5,
-                                step=0.25,
-                                minRange=1,
-                                size="xs",
-                                marks=[
-                                    {"value": 0, "label": "No-one"},
-                                    {"value": 1, "label": "Few"},
-                                    {"value": 2, "label": "Some"},
-                                    {"value": 3, "label": "Many"},
-                                    {"value": 4, "label": "Most"},
-                                    {"value": 5, "label": "Everyone"},
-                                ]
+                            dmc.Text("Filter by Average Rating:", size="xs", fw=600, c="dimmed"),
+                            dmc.Text("Show only items where all groups rate within this range", size="xs", c="dimmed"),
+                            dmc.Box(
+                                dmc.RangeSlider(
+                                    id="RF_avg_range",
+                                    value=[0,5],
+                                    min=0,
+                                    max=5,
+                                    step=0.25,
+                                    minRange=1,
+                                    size="xs",
+                                    marks=[
+                                        {"value": 0, "label": "No-one"},
+                                        {"value": 1, "label": "Few"},
+                                        {"value": 2, "label": "Some"},
+                                        {"value": 3, "label": "Many"},
+                                        {"value": 4, "label": "Most"},
+                                        {"value": 5, "label": "Everyone"},
+                                    ]
+                                ),
+                                px="xs",  # Add horizontal padding to prevent edge labels from clipping
+                                mb="md"  # Add bottom margin to prevent overlap
                             ),
                         ]),
                         dmc.Checkbox(
@@ -1325,14 +1346,14 @@ SettingsGrammarAnalysis = dmc.Container([
         # UMAP-specific buttons (shown only when plot type is UMAP)
     html.Div(id="umap-group-buttons", children=[
         dmc.Group(children=[
-            dmc.Button('Add group', id='Umap-add-group', disabled=True),
-            dmc.Button('Clear groups', id='Umap-clear-groups', disabled=True),
+            dmc.Button('Add Group', id='Umap-add-group', variant="outline", disabled=True),
+            dmc.Button('Clear Groups', id='Umap-clear-groups', variant="outline", disabled=True),
         ],
         grow=True,
         wrap="nowrap",
         mb="md"),
         dmc.Group(children=[
-            dmc.Button('Compare selected groups', id='render-rf-plot', loading=False, disabled=True),
+            dmc.Button('Compare Selected Groups', id='render-rf-plot', variant="outline", loading=False, disabled=True),
         ],
         grow=True,
         wrap="nowrap",
@@ -1392,7 +1413,6 @@ SettingsGrammarAnalysis = dmc.Container([
                                     id='export-data-button',
                                     size="xs",
                                     variant="light",
-                                    color="teal",
                                     leftSection=DashIconify(icon="tabler:table-export", width=14),
                                     fullWidth=True
                                 ),
@@ -1403,7 +1423,6 @@ SettingsGrammarAnalysis = dmc.Container([
                                     id='copy-settings-button',
                                     size="xs",
                                     variant="light",
-                                    color="violet",
                                     leftSection=DashIconify(icon="tabler:copy", width=14),
                                     fullWidth=True
                                 ),
@@ -1412,7 +1431,6 @@ SettingsGrammarAnalysis = dmc.Container([
                                     id='paste-settings-button',
                                     size="xs",
                                     variant="light",
-                                    color="violet",
                                     leftSection=DashIconify(icon="tabler:clipboard", width=14),
                                     fullWidth=True
                                 ),
@@ -1915,15 +1933,17 @@ def manage_loading_state(n_clicks, item_fig, umap_fig, plot_type):
      Output('participants-badge', 'children'),
      Output('items-badge', 'children')],
     [Input('participantsTree', 'checked'),
-     Input('grammarItemsTree', 'checked')],
+     Input('grammarItemsTree', 'checked'),
+     Input('grammar-type-switch', 'checked')],
     prevent_initial_call=False
 )
-def update_quick_stats(selected_participants, selected_items):
+def update_quick_stats(selected_participants, selected_items, use_pairs):
     """Update the quick stats panel with current selection info and badge counts"""
     n_participants = len(selected_participants) if selected_participants else 0
     n_items = len(selected_items) if selected_items else 0
     total_participants = len(Informants)
-    total_items = len(GrammarItemsCols)
+    # Update total_items based on the grammar-type-switch state
+    total_items = len(GrammarItemsColsPairs) if use_pairs else len(GrammarItemsCols)
     
     # Update badges with format "selected/total"
     participant_badge = f"{n_participants}/{total_participants}"

@@ -169,9 +169,9 @@ navbar = dmc.AppShellNavbar(
             ),
             dmc.NavLink(
                 label="Getting Started",
-                href="/getting-started",
                 leftSection=get_icon(icon="tabler:rocket"),
-                active="partial",
+                disabled=True,
+                style={"color": "gray", "cursor": "not-allowed"},
             ),
             dmc.Divider(label="Data & Analysis", labelPosition="left", mt="md", mb="xs"),
             dmc.NavLink(
@@ -188,28 +188,44 @@ navbar = dmc.AppShellNavbar(
             ),
             dmc.NavLink(
                 label="Lexical Sets",
-                href="/lexical",
                 leftSection=get_icon(icon="tabler:book-2"),
-                active="partial",
+                disabled=True,
+                style={"color": "gray", "cursor": "not-allowed"},
             ),
             dmc.Divider(label="About", labelPosition="left", mt="md", mb="xs"),
             dmc.NavLink(
-                label="About the Project",
-                href="/about-project",
+                label="About the Dashboard",
                 leftSection=get_icon(icon="tabler:info-square"),
-                active="partial",
+                disabled=True,
+                style={"color": "gray", "cursor": "not-allowed"},
             ),
             dmc.NavLink(
                 label="How to Cite",
-                href="/how-to-cite",
                 leftSection=get_icon(icon="tabler:quote"),
-                active="partial",
+                disabled=True,
+                style={"color": "gray", "cursor": "not-allowed"},
             ),
             dmc.NavLink(
                 label="Terms of Use",
-                href="/terms-of-use",
                 leftSection=get_icon(icon="tabler:license"),
-                active="partial",
+                disabled=True,
+                style={"color": "gray", "cursor": "not-allowed"},
+            ),
+            dmc.Divider(label="External resources", labelPosition="left", mt="md", mb="xs"),
+            dmc.Anchor(
+                dmc.NavLink(
+                    label="BSLVC Project Homepage",
+                    leftSection=get_icon(icon="tabler:external-link"),
+                ),
+                href="https://www.uni-bamberg.de/en/eng-ling/forschung/the-bslvc-project-dfg-funded/",
+                target="_blank",
+                underline=False,
+            ),
+            dmc.NavLink(
+                label="OSF Repository",
+                leftSection=get_icon(icon="tabler:database-export"),
+                disabled=True,
+                style={"color": "gray", "cursor": "not-allowed"},
             ),
             ],
             p="md"
@@ -259,7 +275,54 @@ app_shell = dmc.AppShell(
                 bg="#f8f8f8"),
         navbar,
         dmc.AppShellMain(page_container),
-        dmc.AppShellFooter("Footer", h=30)
+        dmc.AppShellFooter(
+            dmc.Group(
+                [
+                    dmc.Text([
+                        "Copyright © 2025 by ",
+                        dmc.Anchor(
+                            "Fabian Vetter",
+                            href="https://www.uni-bamberg.de/en/eng-ling/staff/fabian-vetter/",
+                            target="_blank",
+                            c="blue"
+                        ),
+                        " | Licensed under ",
+                        dmc.Anchor(
+                            "CC BY-SA 4.0",
+                            href="https://creativecommons.org/licenses/by-sa/4.0/",
+                            target="_blank",
+                            c="blue"
+                        ),
+                        " | ",
+                        dmc.Anchor(
+                            "Chair of English Linguistics",
+                            href="https://www.uni-bamberg.de/en/eng-ling/",
+                            target="_blank",
+                            c="blue"
+                        ),
+                        " @ ",
+                        dmc.Anchor(
+                            "University of Bamberg",
+                            href="https://www.uni-bamberg.de",
+                            target="_blank",
+                            c="blue"
+                        ),
+                        " | ",
+                        dmc.Anchor(
+                            "DFG Grant: 548274092",
+                            href="https://www.dfg.de/en",
+                            target="_blank",
+                            c="blue"
+                        )
+                    ], size="sm", c="dimmed")
+                ],
+                justify="center",
+                align="center",
+                h="100%"
+            ),
+            h=40,
+            px="md"
+        )
     ],
     header={"height": 50},
     padding="xl",
