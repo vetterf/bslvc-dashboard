@@ -1263,14 +1263,14 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
         yaxis_title='Mean ratings',
         template='simple_white')
     
-    fig.update_yaxes(title_text="Average rating", secondary_y=False,fixedrange=True,range=[0,5.1])
     if not pairs:
         fig.update_yaxes(
             title_text="Average rating",
             secondary_y=False,
             fixedrange=True,
             tickvals=[0, 1, 2, 3, 4, 5],
-            ticktext=[Rating_map[str(i)] for i in range(6)]
+            ticktext=[Rating_map[str(i)] for i in range(6)],
+            range=[0, 5.1]
         )
     else:
         fig.update_yaxes(
@@ -1278,7 +1278,8 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
             secondary_y=False,
             fixedrange=True,
             tickvals=[-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
-            ticktext=[Rating_map[str(i)] for i in range(-5, 5)]
+            ticktext=[Rating_map[str(i)] for i in range(-5, 6)],
+            range=[-5.1, 5.1]
         )
     return fig
 
@@ -1832,25 +1833,17 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                 )
             )
             
-            # Add repeated x-axis labels every 5 items as annotations
+            # Add vertical grid lines at tick positions instead of repeated labels
             if len(unique_items) > 5:
-                for item_idx in range(0, len(unique_items), 5):
-                    # Calculate y position for this set of items
-                    y_pos = item_idx * (len(unique_groups) + 2)
-                    
-                    # Add rating labels as annotations every 5 items
-                    for rating_val, rating_label in Rating_map.items():
-                        fig.add_annotation(
-                            x=float(rating_val),
-                            y=y_pos,
-                            text=rating_label,
-                            showarrow=False,
-                            yshift=15,  # Position above the line
-                            font=dict(size=10, color="gray"),
-                            bgcolor="white",
-                            bordercolor="lightgray",
-                            borderwidth=1
-                        )
+                for rating_val in [0, 1, 2, 3, 4, 5]:
+                    fig.add_vline(
+                        x=rating_val,
+                        line_width=1,
+                        line_dash="dot",
+                        line_color="lightgray",
+                        opacity=0.5,
+                        layer="below"
+                    )
         # Update primary x-axis with all rating labels (swapped) - always show all labels for split by variety
         if not pairs:
             Rating_map={'0':'No-one','1':'Few','2':'Some','3':'Many','4':'Most','5':'Everyone'}
@@ -2226,8 +2219,6 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                     row=2, col=1
                 )
     
-    fig.update_yaxes(title_text="Average rating", secondary_y=False,fixedrange=True,range=[0,5.1])
-    fig.update_yaxes(title_text="RF importance", secondary_y=True,fixedrange=True)   
     if not pairs:
         # Always show all rating labels when sorting by mean or for better readability
         fig.update_yaxes(
@@ -2245,8 +2236,9 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
             fixedrange=True,
             tickvals=[-5,-4,-3,-2,-1, 0, 1, 2, 3, 4, 5],
             ticktext=['Written only','-4','-3','-2','-1','Neutral','1','2','3','4','Spoken only'],
-            range=[-5,5]
+            range=[-5.2, 5.2]
         )
+    fig.update_yaxes(title_text="RF importance", secondary_y=True,fixedrange=True)
 
     return fig
 

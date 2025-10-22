@@ -24,61 +24,13 @@ except:
     LexicalItemsCols = []
     HAS_LEXICAL = False
 
-# Feature group descriptions (manually curated)
-FEATURE_GROUPS_MANUAL = {
-    'Subjunctive': {
-        'description': 'Constructions involving subjunctive mood, including present and past subjunctive forms in conditional and subordinate clauses.',
-        'items': ['A10','B20','B21','B7','I23','L24','N1','N4','N5','D2','D7','E17','I13','K5','N14','F2','G19','K24']
-    },
-    'Gender attribution': {
-        'description': 'Patterns of gender assignment and pronoun usage, including variation in animate and inanimate noun reference.',
-        'items': ['A14','A18','B16','E10','F9','G16','G17','H2','K6','L10']
-    },
-    'Comparative strategies': {
-        'description': 'Different ways of expressing comparison, including morphological (e.g., -er) and periphrastic (e.g., more) forms.',
-        'items': ['A12','A21','B12','B15','C11','C16','E14','E2','E8','F11','G20','G9','H25','I15','I24','J11','J7','K12','L21','L4','M11','M17','M25']
-    },
-    'Coordinated subjects': {
-        'description': 'Agreement patterns and word order in constructions with multiple subjects joined by conjunctions.',
-        'items': ['J24','D23','D5','G25','H22','N13','B4']
-    },
-    'Agreement/concord': {
-        'description': 'Subject-verb agreement and noun-modifier concord patterns, including variation in number and person agreement.',
-        'items': ['B13','B17','E1','E5','J12','K13','M3','M6','N9','F10','G4','H23','M15','N23','C6','D12','D8','F4','I25','I7','J25','M14','A23','K15','A5','C17','E18','H15','J15','J16','K21','M1','N10']
-    },
-    '(Invariant) question tags': {
-        'description': 'Use of tag questions at the end of statements, including invariant forms (e.g., "innit") and standard variable forms.',
-        'items': ['H7','A8','C3','D9','E23','F22','G24','G3','I16','K2','K4a','K4b','N21']
-    },
-    'Levelling': {
-        'description': 'Reduction of morphological distinctions, such as leveling of verb forms, pronouns, or other grammatical categories.',
-        'items': ['E21','A17','C4','D10','F21','F5','G12','G22','H13','H19','M4','N2','F3','J19']
-    },
-    'Negation': {
-        'description': 'Different negation strategies, including negative concord, placement of negation, and use of negative markers.',
-        'items': ['J19','A2','A3','B19','C18','E11','E16','H6','I21','I5','J18','J6','L11','N15','N7']
-    },
-    'Articles': {
-        'description': 'Use and omission of definite and indefinite articles, including contexts where article usage varies across varieties.',
-        'items': ['B5','C15','D13','D14','D20','F14','F17','G1','G10','G14','G26','H26','H3','I12','I26','I8','J13','J26','K26','L26','N18','N19','N8']
-    },
-    'Prepositions': {
-        'description': 'Variation in prepositional usage, including choice of preposition, omission, and use of different prepositional phrases.',
-        'items': ['G13','G15','H14','I11','I6','J10','J17','J2','J8','L15','L17','L22','L5','L8','M16','M21','M23','M7','M8','N12']
-    }
-}
-
 def generate_dynamic_feature_groups():
     """Generate feature groups dynamically from grammar metadata, similar to grammar.py"""
     groups = {
-        'manual': {},
         'mode': {},
         'group': {},
         'ewave': {}
     }
-    
-    # Add manual groups
-    groups['manual'] = FEATURE_GROUPS_MANUAL
     
     # Dynamic groups from section column (Mode)
     if 'section' in grammarMeta.columns:
@@ -311,8 +263,8 @@ def create_participants_map():
         both_count = len([id for id in variety_informants if id in grammar_ids and id in lexical_ids])
         lexical_only_count = len([id for id in variety_informants if id in lexical_ids and id not in grammar_ids])
         total_count = len(variety_informants)
-        data_type = 'Grammar + Lexical' if both_count > 0 else 'Lexical only'
-        color = '#1f77b4' if both_count > 0 else '#2ca02c'  # Blue for Grammar+Lexical, Green for Lexical only
+        data_type = 'Grammar + Lexical' if both_count >= 10 else 'Lexical only'
+        color = '#1f77b4' if both_count >= 10 else '#2ca02c'  # Blue for Grammar+Lexical (10+), Green for Lexical only
         
         coords = variety_coords[variety]
         markers.append({
@@ -406,9 +358,12 @@ def create_participants_year_table():
     # Sort alphabetically by variety (index)
     year_variety_pivot = year_variety_pivot.sort_index()
     
-    # Sort year columns chronologically
-    year_cols = sorted(year_variety_pivot.columns, key=lambda x: float(x))
-    year_variety_pivot = year_variety_pivot[year_cols]
+    # Create complete year range from 2008 to present
+    current_year = 2025  # Or use datetime.now().year if you want it dynamic
+    all_years = list(range(2008, current_year + 1))
+    
+    # Reindex to include all years, filling missing years with 0
+    year_variety_pivot = year_variety_pivot.reindex(columns=all_years, fill_value=0)
     
     # Calculate breakdown for each variety-year combination
     hover_data = []
@@ -433,15 +388,16 @@ def create_participants_year_table():
             row_hover.append(hover_text)
         hover_data.append(row_hover)
     
-    # Create a heatmap visualization instead of a table with many zeros
+    # Create a heatmap visualization with white background for zeros
     fig = px.imshow(
         year_variety_pivot,
         labels=dict(x="Year", y="Variety", color="Participants"),
         x=year_variety_pivot.columns.astype(str),
         y=year_variety_pivot.index,
-        color_continuous_scale='Blues',
+        color_continuous_scale=[[0, 'white'], [0.001, 'rgb(247,251,255)'], [1, 'rgb(8,48,107)']],  # White for 0, then Blues
         aspect='auto',
-        height=max(300, len(year_variety_pivot) * 30)
+        height=max(300, len(year_variety_pivot) * 30),
+        zmin=0
     )
     
     # Add text annotations and custom hover
@@ -687,17 +643,15 @@ def create_feature_groups_accordion():
             styles={"item": {"maxHeight": "60vh", "overflowY": "auto"}}
         )
     
-    # Merge manual curated groups and linguistic groups
+    # Use linguistic groups from metadata
     merged_groups = {}
-    if FEATURE_GROUPS['manual']:
-        merged_groups.update(FEATURE_GROUPS['manual'])
     if FEATURE_GROUPS['group']:
         merged_groups.update(FEATURE_GROUPS['group'])
     
-    # Create tabs for each category (Mode removed, Curated + Linguistic merged)
+    # Create tabs for each category
     tabs = []
     
-    # Merged curated and linguistic groups
+    # Linguistic groups
     if merged_groups:
         tabs.append(
             dmc.TabsPanel(
@@ -720,24 +674,25 @@ def create_feature_groups_accordion():
             dmc.TabsList([
                 dmc.TabsTab(
                     dmc.Group([
-                        DashIconify(icon="tabler:book", width=16),
-                        dmc.Text("Feature Groups", size="sm"),
-                        dmc.Badge(str(len(merged_groups)), size="sm", variant="light")
-                    ], gap="xs"),
-                    value="linguistic"
-                ),
-                dmc.TabsTab(
-                    dmc.Group([
                         DashIconify(icon="tabler:world", width=16),
                         dmc.Text("eWAVE Features", size="sm"),
                         dmc.Badge(str(len(FEATURE_GROUPS['ewave'])), size="sm", variant="light")
                     ], gap="xs"),
                     value="ewave"
                 ),
+                dmc.TabsTab(
+                    dmc.Group([
+                        DashIconify(icon="tabler:book", width=16),
+                        dmc.Text("Feature Groups", size="sm"),
+                        dmc.Badge(str(len(merged_groups)), size="sm", variant="light")
+                    ], gap="xs"),
+                    value="linguistic"
+                ),
+
             ]),
             *tabs
         ],
-        value="linguistic",
+        value="ewave",
         variant="outline",
         color="blue"
     )
@@ -993,10 +948,10 @@ def create_grammar_coverage_plot():
             icon=DashIconify(icon="tabler:info-circle")
         )
     
-    # Calculate coverage per feature group and variety (using manually curated groups)
+    # Calculate coverage per feature group and variety (using group_finegrained groups)
     coverage_data = []
     
-    for group_name, group_info in FEATURE_GROUPS['manual'].items():
+    for group_name, group_info in FEATURE_GROUPS['group'].items():
         for variety in sorted(Informants['MainVariety'].unique()):
             # Get informants for this variety
             variety_informants = Informants[Informants['MainVariety'] == variety]['InformantID'].unique()
@@ -1045,7 +1000,7 @@ def create_grammar_coverage_plot():
         color='Variety',
         barmode='group',
         template='simple_white',
-        height=max(400, len(FEATURE_GROUPS['manual']) * 40),
+        height=max(400, len(FEATURE_GROUPS['group']) * 40),
         hover_data=['Items Covered']
     )
     
@@ -1262,7 +1217,7 @@ layout = dmc.Container([
         ], variant="separated", radius="md", multiple=True, value=["overview"]),
         
     ], gap="lg")
-], size="xl", py="xl")
+], fluid=True, style={"maxWidth": "1600px", "margin": "0 auto", "paddingLeft": "20px", "paddingRight": "20px"})
 
 
 # Callback for downloading lexical table

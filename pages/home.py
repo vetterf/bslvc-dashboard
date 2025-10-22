@@ -159,4 +159,4 @@ dmc.Text(
     
    
     
-], fluid=True, style={"maxWidth": "1400px", "margin": "0 auto"})
+], fluid=True, style={"maxWidth": "1600px", "margin": "0 auto", "paddingLeft": "20px", "paddingRight": "20px"})

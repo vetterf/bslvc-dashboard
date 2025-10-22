@@ -214,7 +214,7 @@ def generate_dynamic_presets(meta_df):
     presets.extend([
         {'label':'All','value':GrammarItemsCols},
         {'label':'Custom','value':[]},
-        {'label':'Top 15 spoken','value':['A8','B1','B14','B22','C12','D4','D6','D22','E11','E12','E15','E19','F2','F20','F22']},
+        {'label':'Top 15 spoken','value':['A8','B14','B22','C12','D1','D4','D22','E11','E12','E18','E19','F22','F2','F12','F20']}, # ['F22','D4','B22','F20','D22','E12','E11','A8','F12','C12','F2','E19','D1','E18','B14']
         # {'label':'Gender attribution','value':['A14','A18','B16','E10','F9','G16','G17','H2','K6','L10']},
         # # Keep existing manually curated presets
         # {'label':'Subjunctive','value':['A10','B20','B21','B7','I23','L24','N1','N4','N5','D2','D7','E17','I13','K5','N14','F2','G19','K24']},
@@ -848,14 +848,6 @@ informantSelectionAccordion = dmc.AccordionItem(
                 dmc.Group(children=[
                     dmc.Button("Select All", id='select-all-participants', size="xs", variant="outline"),
                     dmc.Button("Deselect All", id='deselect-all-participants', size="xs", variant="outline"),
-                    dmc.Button(
-                        "Deselect Selection", 
-                        id='deselect-selected-participants', 
-                        size="xs", 
-                        variant="outline",
-                        disabled=True,
-                        style={"display": "none"}  # Initially hidden
-                    )
                 ], mb="xs"),
                 # Batch Operations - Quick Selection
                 dmc.Accordion(
@@ -1194,9 +1186,9 @@ itemPlotSettingsAccordion = dmc.AccordionItem([
                 value="normal",
                 data=[
                     {"value":"normal","label":"Mean (95% CI)"},
-                    {"value":"split_by_variety","label":"Split by variety"},
+                    {"value":"split_by_variety","label":"Mean (95% CI - split varieties)"},
                     {"value":"diverging","label":"Diverging stacked bars"},
-                    {"value":"informant_boxplot","label":"Informant mean (boxplot)"},
+                    {"value":"informant_boxplot","label":"Informant mean of selected items (boxplot)"},
                     {"value":"correlation_matrix","label":"Correlation matrix"},
                 ],
                 size="xs",
@@ -1348,6 +1340,25 @@ SettingsGrammarAnalysis = dmc.Container([
         dmc.Group(children=[
             dmc.Button('Add Group', id='Umap-add-group', variant="outline", disabled=True),
             dmc.Button('Clear Groups', id='Umap-clear-groups', variant="outline", disabled=True),
+        ],
+        grow=True,
+        wrap="nowrap",
+        mb="md"),
+        dmc.Group(children=[
+            dmc.Button(
+                "Select Only Lasso Selection", 
+                id='select-only-lasso-participants', 
+                variant="outline",
+                disabled=True,
+                leftSection=DashIconify(icon="tabler:lasso", width=16),
+            ),
+            dmc.Button(
+                "Deselect Lasso Selection", 
+                id='deselect-selected-participants', 
+                variant="outline",
+                disabled=True,
+                leftSection=DashIconify(icon="tabler:lasso-off", width=16),
+            ),
         ],
         grow=True,
         wrap="nowrap",
@@ -2161,9 +2172,9 @@ clientside_callback(
             pairs: pairs,
             use_imputed: use_imputed,
             item_plot_settings: {
-                group_by: group_by,
-                sort_by: sort_by,
-                plot_mode: plot_mode
+                group_by: group_by || "variety",
+                sort_by: sort_by || "mean",
+                plot_mode: plot_mode || "normal"
             },
             umap_settings: {
                 n_neighbors: n_neighbors,
@@ -2570,17 +2581,36 @@ def unified_render_button(btn_clicks, plot_type, item_clicks, umap_clicks):
 # Deleted: Callback to show/hide deselect button based on tab - outer tabs removed, always show button
 # The button is now always available since grammarAnalysisC is directly visible
 
-# Callback to enable/disable the "Deselect selection" button based on UMAP selection
+# Callback to enable/disable the lasso selection buttons based on UMAP selection
 @callback(
-    Output('deselect-selected-participants', 'disabled'),
+    [Output('deselect-selected-participants', 'disabled'),
+     Output('select-only-lasso-participants', 'disabled')],
     Input('UMAPfig', 'selectedData'),
     prevent_initial_call=False
 )
-def toggle_deselect_button_state(selectedData):
+def toggle_lasso_buttons_state(selectedData):
     if selectedData and selectedData.get('points') and len(selectedData['points']) > 0:
-        return False  # Enable button
+        return False, False  # Enable both buttons
     else:
-        return True   # Disable button
+        return True, True   # Disable both buttons
+
+# Callback to handle "Select Only Lasso Selection" button click
+@callback(
+    Output('participantsTree', 'checked', allow_duplicate=True),
+    Input('select-only-lasso-participants', 'n_clicks'),
+    State('UMAPfig', 'selectedData'),
+    prevent_initial_call=True
+)
+def select_only_lasso_participants(n_clicks, selectedData):
+    if n_clicks and selectedData and selectedData.get('points'):
+        # Get IDs of selected points
+        selected_ids = [point.get('id') for point in selectedData['points']]
+        
+        # Return only the selected IDs
+        if selected_ids:
+            return selected_ids
+    
+    return no_update
 
 # Callback to handle "Deselect selection" button click
 @callback(
