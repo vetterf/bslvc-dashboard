@@ -358,12 +358,9 @@ def create_participants_year_table():
     # Sort alphabetically by variety (index)
     year_variety_pivot = year_variety_pivot.sort_index()
     
-    # Create complete year range from 2008 to present
-    current_year = 2025  # Or use datetime.now().year if you want it dynamic
-    all_years = list(range(2008, current_year + 1))
-    
-    # Reindex to include all years, filling missing years with 0
-    year_variety_pivot = year_variety_pivot.reindex(columns=all_years, fill_value=0)
+    # Sort year columns chronologically
+    year_cols = sorted(year_variety_pivot.columns, key=lambda x: float(x))
+    year_variety_pivot = year_variety_pivot[year_cols]
     
     # Calculate breakdown for each variety-year combination
     hover_data = []
@@ -388,16 +385,15 @@ def create_participants_year_table():
             row_hover.append(hover_text)
         hover_data.append(row_hover)
     
-    # Create a heatmap visualization with white background for zeros
+    # Create a heatmap visualization instead of a table with many zeros
     fig = px.imshow(
         year_variety_pivot,
         labels=dict(x="Year", y="Variety", color="Participants"),
         x=year_variety_pivot.columns.astype(str),
         y=year_variety_pivot.index,
-        color_continuous_scale=[[0, 'white'], [0.001, 'rgb(247,251,255)'], [1, 'rgb(8,48,107)']],  # White for 0, then Blues
+        color_continuous_scale='Blues',
         aspect='auto',
-        height=max(300, len(year_variety_pivot) * 30),
-        zmin=0
+        height=max(300, len(year_variety_pivot) * 30)
     )
     
     # Add text annotations and custom hover
@@ -419,6 +415,7 @@ def create_participants_year_table():
     )
     
     return fig
+
 
 
 def create_age_gender_histogram():
