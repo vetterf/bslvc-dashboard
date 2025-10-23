@@ -212,8 +212,6 @@ def generate_dynamic_presets(meta_df):
     
     # Base presets
     presets.extend([
-        {'label':'All','value':GrammarItemsCols},
-        {'label':'Custom','value':[]},
         {'label':'Top 15 spoken','value':['A8','B14','B22','C12','D1','D4','D22','E11','E12','E18','E19','F22','F2','F12','F20']}, # ['F22','D4','B22','F20','D22','E12','E11','A8','F12','C12','F2','E19','D1','E18','B14']
         # {'label':'Gender attribution','value':['A14','A18','B16','E10','F9','G16','G17','H2','K6','L10']},
         # # Keep existing manually curated presets
@@ -317,7 +315,60 @@ initial_hoverinfo = construct_initial_hoverinfo(UMAP_Grammar_initialPlot)
 # presets
 # Dynamically generated from meta table
 item_presets = generate_dynamic_presets(grammarMeta)
-labels_dict = [{'label': preset['label'], 'value': preset['label']} for preset in item_presets]
+
+# Build MultiSelect data with proper grouping structure for dmc.MultiSelect
+# We categorize presets into: Manual, Mode, Group, and eWAVE feature groups
+def build_preset_multiselect_data(presets):
+    # Organize presets into groups
+    groups = {
+        'Manual presets': [],
+        'Mode presets': [],
+        'Group presets': [],
+        'eWAVE feature groups': [],
+        'Other': []
+    }
+    
+    for p in presets:
+        label = p.get('label')
+        value = p.get('label')
+        item = {'label': label, 'value': value}
+        
+        # Categorize into appropriate group
+        if label.startswith('Mode:'):
+            groups['Mode presets'].append(item)
+        elif label.startswith('Group:'):
+            groups['Group presets'].append(item)
+        elif label.startswith('eWAVE:'):
+            groups['eWAVE feature groups'].append(item)
+        else:
+            # Everything else goes to Manual presets (e.g., "Top 15 spoken")
+            groups['Manual presets'].append(item)
+    
+    # Build the grouped data structure for dmc.MultiSelect
+    data = []
+    for group_name in ['Manual presets', 'Mode presets', 'Group presets', 'eWAVE feature groups', 'Other']:
+        if groups[group_name]:  # Only add non-empty groups
+            data.append({
+                'group': group_name,
+                'items': groups[group_name]
+            })
+    
+    return data
+
+labels_dict = build_preset_multiselect_data(item_presets)
+
+# Helper to expand a list of selected preset labels into a unioned list of item codes
+def expand_presets_to_items(selected_preset_labels, presets_list):
+    if not selected_preset_labels:
+        return []
+    
+    selected_items = []
+    for lbl in selected_preset_labels:
+        match = next((p for p in presets_list if p['label'] == lbl), None)
+        if match:
+            selected_items.extend(match.get('value', []))
+    # Return unique sorted list
+    return sorted(list(set(selected_items)))
 
 
 
@@ -1004,27 +1055,16 @@ itemSelectionAccordion = dmc.AccordionItem(
                 ),
                 dmc.AccordionPanel(
                     dmc.Stack(gap='md',children=[
-                        dmc.Stack(
-                        children=[
-                            dmc.Select(label="Select a Preset:",
-                            placeholder="All",
-                            id="grammar-items-preset",
-                            value="All",
-                            data=labels_dict,
-                            allowDeselect=False,
-                            size="xs",
-                            persistence=persist_UI,persistence_type=persistence_type),
+                        # Select All / Deselect All buttons at the top
+                        dmc.Group(children=[
+                            dmc.Button("Select All", id='select-all-grammar-items', size="xs", variant="outline"),
+                            dmc.Button("Deselect All", id='deselect-all-grammar-items', size="xs", variant="outline"),
                             dmc.Button("Deselect Problematic Items",
                                 id="grammar_deselect_problematic",
                                 variant="outline",
                                 size="xs"
                             ),
-                        ], gap="xs"),
-                        # better: include drop-down with presets
-                        dmc.Group(children=[
-                            dmc.Button("Select All", id='select-all-grammar-items', size="xs", variant="outline"),
-                            dmc.Button("Deselect All", id='deselect-all-grammar-items', size="xs", variant="outline"),
-                        ], mb="xs"),
+                                                    ], mb="xs"),
                         html.Div([
                             dcc.Store(id="grammar-tree-css", data={}),  # Dummy store for CSS
                             dmc.Tree(
@@ -1034,10 +1074,23 @@ itemSelectionAccordion = dmc.AccordionItem(
                                 checked=[],
 
                             )
-                        ], 
-                        # Use a wrapper div with custom CSS class
+                        ],
+                        
                         className="grammar-tree-wrapper",
                         ),
+                        dmc.MultiSelect(label="Select a Preset:",
+                            placeholder="Select one or more presets",
+                            id="grammar-items-preset",
+                            value=[],
+                            data=labels_dict,
+                            searchable=True,
+                            clearable=True,
+                            nothingFoundMessage="Nothing found...",
+                            #clearSearchOnChange=False, only supported in newer version of DMC.
+                            size="xs",
+                            style={"flex": 1},
+                            persistence=persist_UI,persistence_type=persistence_type),
+                        # Use a wrapper div with custom CSS class
                         # Advanced item options sub-accordion
                         dmc.Accordion(
                             children=[
@@ -2147,11 +2200,73 @@ def filter_grammar_items_table(n_clicks, items, pairs):
         # For individual items, filter by 'question_code' column
         filtered = meta[meta['question_code'].isin(items)]
     
-    # Drop columns and rename as in getMetaTable
-    filtered = filtered.drop(columns=[col for col in ['Standard_variety', 'Control Item'] if col in filtered.columns])
-    filtered.columns = [col.replace('_', ' ') for col in filtered.columns]
+    # Apply the same column selection and renaming as in getMetaTable
+    column_mapping = {
+        'group_finegrained': 'Group',
+        'feature_ewave': 'eWAVE',
+        'group_ewave': 'eWAVE Area',
+        'item': 'Item',
+        'question_code': 'Item Code',
+        'feature': 'Feature',
+        'section': 'Section'
+    }
+    
+    # Select and reorder columns (same as getMetaTable)
+    selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'question_code', 'feature', 'section']
+    # Only select columns that exist in filtered data
+    available_columns = [col for col in selected_columns if col in filtered.columns]
+    filtered = filtered[available_columns].copy()
+    
+    # Rename columns
+    filtered = filtered.rename(columns=column_mapping)
     
     return filtered.to_dict("records")
+
+@callback(
+    Output('grammar-items-table', 'rowData', allow_duplicate=True),
+    Input('show-all-grammar-items-table', 'n_clicks'),
+    prevent_initial_call=True
+)
+def show_all_grammar_items_table(n_clicks):
+    """Reset table to show all items"""
+    if not n_clicks:
+        return no_update
+    
+    # Get all grammar meta data and apply the same transformations as getMetaTable
+    meta = retrieve_data.getGrammarMeta()
+    
+    # Apply the same column selection and renaming as in getMetaTable
+    column_mapping = {
+        'group_finegrained': 'Group',
+        'feature_ewave': 'eWAVE',
+        'group_ewave': 'eWAVE Area',
+        'item': 'Item',
+        'question_code': 'Item Code',
+        'feature': 'Feature',
+        'section': 'Section'
+    }
+    
+    # Select and reorder columns (same as getMetaTable)
+    selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'question_code', 'feature', 'section']
+    # Only select columns that exist in meta data
+    available_columns = [col for col in selected_columns if col in meta.columns]
+    meta = meta[available_columns].copy()
+    
+    # Rename columns
+    meta = meta.rename(columns=column_mapping)
+    
+    return meta.to_dict("records")
+
+@callback(
+    Output("grammar-items-table", "dashGridOptions"),
+    Input("grammar-items-quick-filter", "value")
+)
+def update_grammar_items_quick_filter(filter_value):
+    """Update quick filter text for grammar items table"""
+    from dash import Patch
+    newFilter = Patch()
+    newFilter['quickFilterText'] = filter_value
+    return newFilter
 
 # Clientside callback to copy settings to clipboard (100% client-side for security)
 clientside_callback(
@@ -2832,7 +2947,7 @@ def initiate_umap_rendering(BTNrenderPlot, modal_ok, modal_cancel, figure, runni
     running=[(Output("grammar_running","data"),True,False)]
 )
 def compute_umap_background(trigger_data, selected_informants, items, n_neighbours, 
-                           min_dist, preset, distance_metric, 
+                           min_dist, selected_presets, distance_metric, 
                            standardize_participant_ratings, densemap, pairs, use_imputed):
     """Compute UMAP in background - this is the slow operation"""
     if trigger_data is None:
@@ -2843,8 +2958,16 @@ def compute_umap_background(trigger_data, selected_informants, items, n_neighbou
     def _hash_list(lst):
         return hashlib.md5(str(sorted(lst)).encode()).hexdigest() if lst else "all"
     
-    # Normalize tree selections using helper function
-    selected_informants, items = normalize_tree_selection(selected_informants, items)
+    # If presets were selected, expand them to item codes
+    preset_items = None
+    if selected_presets and isinstance(selected_presets, (list, tuple)):
+        preset_items = expand_presets_to_items(selected_presets, item_presets)
+
+    # Normalize tree selections using helper function. If preset_items is provided, use those instead of tree items
+    if preset_items:
+        selected_informants, items = normalize_tree_selection(selected_informants, preset_items)
+    else:
+        selected_informants, items = normalize_tree_selection(selected_informants, items)
     
     # Reset group counter when plot is re-rendered
     data = 0
@@ -2963,7 +3086,7 @@ def clear_rf_plot_loading(figure, notification):
     State('rf-use-zscores','checked')],
     prevent_initial_call=True
 )
-def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,visible_participants,render_settings,use_zscores):
+def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants,render_settings,use_zscores):
     # Set default value for split_by_variety since checkbox was removed
     split_by_variety = False
     
@@ -2973,6 +3096,33 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,visible_participa
     
     button_clicked = ctx.triggered_id
     if button_clicked == 'render-rf-plot' and BTN is not None:
+        # Regenerate groups from the current figure state
+        # Use getGroupingsFromFigure for lasso groups (with symbols) or getColorGroupingsFromFigure for varieties
+        if UMAPgroup != 0:
+            # User has created groups with lasso tool - extract symbols
+            groups = getGroupingsFromFigure(figure)
+        else:
+            # No lasso groups - use variety-based coloring
+            groups = getColorGroupingsFromFigure(figure)
+        
+        # Extract only visible participants from the figure (those not hidden via Plotly legend)
+        visible_participant_ids = []
+        if figure and 'data' in figure:
+            for trace in figure['data']:
+                # Check if trace is visible (not hidden via legend click)
+                # visible can be True, False, or 'legendonly'
+                is_visible = trace.get('visible', True)
+                if is_visible is True or is_visible == True:  # Explicitly visible
+                    if 'ids' in trace:
+                        trace_ids = trace['ids']
+                        if isinstance(trace_ids, list):
+                            visible_participant_ids.extend(trace_ids)
+                        else:
+                            visible_participant_ids.append(trace_ids)
+        
+        # Use items from UMAP render (stored), not current tree selection
+        items = items  # Already comes from UMAPitems State
+        
         # Check if exactly 1 group is selected
         if(UMAPgroup==1):
             notification = dmc.Notification(
@@ -2991,21 +3141,25 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,visible_participa
             # rename column id to ids
             df.rename(columns={"id":"ids"},inplace=True)
         
-        # Filter df to only include visible participants
-        if visible_participants is not None and visible_participants != []:
-            df = df[df['ids'].isin(visible_participants)]
-            if len(df) == 0:
-                notification = dmc.Notification(
-                    id="my-notification",
-                    title="Warning",
-                    message="No visible participants in selected groups. Please adjust your participant filter.",
-                    color="orange",
-                    loading=False,
-                    action="show",
-                    autoClose=5000,
-                    position="top-right"
-                )
-                return no_update, False, False, False, notification, no_update
+        # Filter to only include participants that were in the UMAP render AND are currently visible in the plot
+        if umap_participants is not None and umap_participants != []:
+            df = df[df['ids'].isin(umap_participants)]
+        
+        if visible_participant_ids:
+            df = df[df['ids'].isin(visible_participant_ids)]
+            
+        if len(df) == 0:
+            notification = dmc.Notification(
+                id="my-notification",
+                title="Warning",
+                message="No visible participants in selected groups. Please adjust your participant filter or unhide traces in the plot.",
+                color="orange",
+                loading=False,
+                action="show",
+                autoClose=5000,
+                position="top-right"
+            )
+            return no_update, False, False, False, notification, no_update
 
         #data = retrieve_data
         # retrieve grammar data, add items from session cache
@@ -3152,7 +3306,7 @@ def updateGrammarItemsTree(wo_button,curr_button,prob_button,itemTree):
             items = list(set(itemTree)-set(unit_items))
         return items
     elif (button_clicked == 'grammar_deselect_problematic'):
-        problematic_items = ['M19', 'J23', 'C14', 'A4', 'E22', 'D12', 'E6']
+        problematic_items = ['M19', 'J23', 'C14', 'A4', 'E22', 'D12', 'E6','C21','H4']
         # Remove problematic items from current selection
         items = list(set(itemTree) - set(problematic_items))
         return items
@@ -3280,27 +3434,24 @@ def restore_plots_on_type_change(plot_type, saved_item_plot, saved_umap_plot):
     [State('grammarItemsTree', 'checked')],
     prevent_initial_call=True
 )
-def update_item_tree_based_on_select(checked_items,selected_preset, current_items):
+def update_item_tree_based_on_select(checked_items,selected_presets, current_items):
     # check which input triggered the callback
     button_clicked = ctx.triggered_id
     
-    # if it was grammarItemsTree, return "Custom"
+    # if it was grammarItemsTree, clear the preset multiselect
     if button_clicked == 'grammarItemsTree':
-        # If the tree is changed, set the preset to "Custom"
-        current_preset = get_matching_preset(checked_items,item_presets)
-        return checked_items, current_preset
-    if selected_preset is None or selected_preset == "Custom":
+        # If the tree is changed manually, clear the preset selection
+        return checked_items, []
+    
+    # If no presets selected, do nothing
+    if not selected_presets:
         return current_items, no_update
 
-    # Find the preset in item_presets that matches the selected value
-    matching_preset = next((preset for preset in item_presets if preset['label'] == selected_preset), None)
-
-    if matching_preset:
-        # Return the items associated with the selected preset
-        return matching_preset['value'], no_update
-    else:
-        # If no matching preset is found, return no_update
-        return current_items, no_update
+    # Expand all selected presets to a union of item codes
+    selected_list = selected_presets if isinstance(selected_presets, (list, tuple)) else [selected_presets]
+    union_items = expand_presets_to_items(selected_list, item_presets)
+    # Update the tree checked items to reflect the union of preset items
+    return union_items, no_update
 
 
 # Auto-update sociodemographic plots when tab is selected (with smart caching)

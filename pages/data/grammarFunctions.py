@@ -1329,13 +1329,34 @@ def getAuxiliaryTable(Informants,participants):
     return table
 
 def getMetaTable(data):
-    #data = data
-    # filter out columns Standard_variety, "Control Item", and "Related Item"
-    data = data.drop(columns=[col for col in ['standard_variety', 'control_item', 'related_item'] if col in data.columns])
-    data.columns = [col.replace('_', ' ') for col in data.columns]
+    # Select only specific columns in the desired order and rename them
+    column_mapping = {
+        'group_finegrained': 'Group',
+        'feature_ewave': 'eWAVE',
+        'group_ewave': 'eWAVE Area',
+        'item': 'Item',
+        'question_code': 'Item Code',
+        'feature': 'Feature',
+        'section': 'Section'
+    }
+    
+    # Select and reorder columns
+    selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'question_code', 'feature','section']
+    data = data[selected_columns].copy()
+    
+    # Rename columns
+    data = data.rename(columns=column_mapping)
     
     # Add button and helper text for table features
     controls = dmc.Group([
+        
+        dmc.TextInput(
+            id="grammar-items-quick-filter",
+            placeholder="Quick search across all columns...",
+            leftSection=DashIconify(icon="tabler:search", width=14),
+            style={"width": "300px"},
+            size="xs"
+        ),
         dmc.Button(
             "Show only selected items",
             id="filter-grammar-items-table",
@@ -1343,6 +1364,14 @@ def getMetaTable(data):
             variant="light",
             color="blue",
             leftSection=DashIconify(icon="tabler:filter", width=14),
+        ),
+        dmc.Button(
+            "Show all",
+            id="show-all-grammar-items-table",
+            size="xs",
+            variant="light",
+            color="blue",
+            leftSection=DashIconify(icon="tabler:table", width=14),
         ),
         dmc.Text(
             "💡 Click headers to sort • Drag column borders to resize • Use filter boxes below headers to search.", 
@@ -1352,7 +1381,7 @@ def getMetaTable(data):
     ], mb=10, style={"backgroundColor": "#f8f9fa", "padding": "8px", "borderRadius": "4px", "border": "1px solid #e9ecef"})
     
     # Define which columns should have category filters (set filter) vs text filters
-    category_columns = ['section', 'feature', 'group ewave', 'group finegrained', 'variant detail', 'feature ewave']
+    category_columns = ['Group', 'eWAVE', 'eWAVE Area', 'Feature']
     
     table = dag.AgGrid(
                     id="grammar-items-table",
@@ -1360,16 +1389,12 @@ def getMetaTable(data):
                     columnDefs=[
                         {
                             "field": col, 
-                            "headerName": col.replace("Item", "Item ID") if col == "Item" else col,
+                            "headerName": col,
                             "filter": "agSetColumnFilter" if col in category_columns else "agTextColumnFilter",
                             "sortable": True,
                             "resizable": True,
-                            "minWidth": 80 if col == "Item" else 120,
-                            "flex": 1,
                             "cellStyle": {"textAlign": "left"},
                             "headerTooltip": f"Click to sort by {col}. Use filter below to search.",
-                            "wrapText": True if col in ["Sentence", "Context"] else False,
-                            "autoHeight": True if col in ["Sentence", "Context"] else False,
                             "filterParams": {
                                 "buttons": ["reset", "apply"],
                                 "closeOnApply": True
@@ -1381,8 +1406,6 @@ def getMetaTable(data):
                         "filter": "agTextColumnFilter",
                         "sortable": True,
                         "resizable": True,
-                        "minWidth": 100,
-                        "flex": 1,
                         "headerTooltip": "Click header to sort, drag borders to resize, use filter below to search"
                     },
                     className="ag-theme-quartz compact",

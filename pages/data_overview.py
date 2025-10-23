@@ -549,23 +549,33 @@ def create_grammar_items_table():
     if 'eWAVE Group' in table_data.columns:
         columnDefs.append({'field': 'eWAVE Group', 'width': 150})
     
-    return dag.AgGrid(
-        id='grammar-items-table',
-        rowData=table_data.to_dict('records'),
-        columnDefs=columnDefs,
-        defaultColDef={
-            'sortable': True,
-            'filter': True,
-            'resizable': True,
-            'wrapText': True
-        },
-        dashGridOptions={
-            'pagination': True,
-            'paginationPageSize': 20,
-            'domLayout': 'normal'
-        },
-        style={'height': '600px'}
-    )
+    # Return a container with quick filter and table
+    return dmc.Stack([
+        dmc.TextInput(
+            id="grammar-features-quick-filter",
+            placeholder="Quick search across all columns...",
+            leftSection=DashIconify(icon="tabler:search", width=14),
+            style={"width": "300px"},
+            size="xs"
+        ),
+        dag.AgGrid(
+            id='grammar-items-overview-table',
+            rowData=table_data.to_dict('records'),
+            columnDefs=columnDefs,
+            defaultColDef={
+                'sortable': True,
+                'filter': True,
+                'resizable': True,
+                'wrapText': True
+            },
+            dashGridOptions={
+                'pagination': True,
+                'paginationPageSize': 20,
+                'domLayout': 'normal'
+            },
+            style={'height': '600px'}
+        )
+    ], gap="xs")
 
 
 def create_feature_groups_accordion():
@@ -1232,3 +1242,15 @@ def download_lexical_table(n_clicks):
             df = df.drop(columns=['NameSchool'])
         return dcc.send_data_frame(df.to_csv, "lexical_items_means.csv", index=False)
     return None
+
+# Callback for grammar features table quick filter
+@callback(
+    Output("grammar-items-overview-table", "dashGridOptions"),
+    Input("grammar-features-quick-filter", "value")
+)
+def update_grammar_features_quick_filter(filter_value):
+    """Update quick filter text for grammar features table"""
+    from dash import Patch
+    newFilter = Patch()
+    newFilter['quickFilterText'] = filter_value
+    return newFilter
