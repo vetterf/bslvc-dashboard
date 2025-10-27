@@ -405,7 +405,7 @@ UmapPlotContainer = dmc.Container([
                     dmc.SegmentedControl(
                         id="umap-view-toggle",
                         data=[
-                            {"value": "umap-plot", "label": "UMAP View"},
+                            {"value": "umap-plot", "label": "Participant Similarity Plot"},
                             {"value": "rf-plot", "label": "Group Comparison"},
                         ],
                         value="umap-plot",
@@ -1059,11 +1059,11 @@ itemSelectionAccordion = dmc.AccordionItem(
                         dmc.Group(children=[
                             dmc.Button("Select All", id='select-all-grammar-items', size="xs", variant="outline"),
                             dmc.Button("Deselect All", id='deselect-all-grammar-items', size="xs", variant="outline"),
-                            dmc.Button("Deselect Problematic Items",
+                            dmc.Button("Deselect Problematic",
                                 id="grammar_deselect_problematic",
                                 variant="outline",
                                 size="xs"
-                            ),
+                            )
                                                     ], mb="xs"),
                         html.Div([
                             dcc.Store(id="grammar-tree-css", data={}),  # Dummy store for CSS
@@ -1114,7 +1114,7 @@ itemSelectionAccordion = dmc.AccordionItem(
                                                     id="use-imputed-data-switch",
                                                     label="Use imputed data",
                                                     description="Toggle between imputed and raw data. UMAP always uses imputed data.",
-                                                    checked=True,
+                                                    checked=False,
                                                     persistence=persist_UI,
                                                     persistence_type=persistence_type,
                                                     size="sm",
@@ -1243,6 +1243,7 @@ itemPlotSettingsAccordion = dmc.AccordionItem([
                     {"value":"diverging","label":"Diverging stacked bars"},
                     {"value":"informant_boxplot","label":"Informant mean of selected items (boxplot)"},
                     {"value":"correlation_matrix","label":"Correlation matrix"},
+                    {"value":"missing_values_heatmap","label":"Missing values heatmap"},
                 ],
                 size="xs",
                 allowDeselect=False,
@@ -1347,11 +1348,12 @@ SettingsGrammarAnalysis = dmc.Container([
     
     # Simplified Analysis Type Selector
     dmc.Stack([
+        dmc.Text("Analysis Type:", size="sm", fw=500, mb="xs"),
         dmc.SegmentedControl(
             id="grammar-plot-type",
             data=[
-                {"value": "umap", "label": "UMAP"},
-                {"value": "item", "label": "Item Plot"},
+                {"value": "umap", "label": "Participant Similarity"},
+                {"value": "item", "label": "Item Ratings"},
             ],
             value="umap",
             fullWidth=True,
@@ -1360,7 +1362,7 @@ SettingsGrammarAnalysis = dmc.Container([
         ),
         dmc.Text(
             id="plot-type-description",
-            children="Explore participant similarity using UMAP dimensionality reduction",
+            children="Apply dimensionality reduction (UMAP) to explore how similar participants are to each other based on their grammar ratings",
             size="xs",
             c="dimmed"
         )
@@ -1378,10 +1380,10 @@ SettingsGrammarAnalysis = dmc.Container([
                 loaderProps={"color": "blue", "type": "dots", "size": "xl"},
             ),
             dmc.Button(
-                'Render UMAP Plot',
+                'Render Plot',
                 id='render-grammar-plot',
                 size="md",
-                leftSection=DashIconify(icon="tabler:radar", width=20),
+                leftSection=DashIconify(icon="tabler:chart-line", width=20),
                 color="blue",
                 fullWidth=True,
                 disabled=False,
@@ -1882,7 +1884,9 @@ def manage_render_button_loading_states(item_click, umap_fig, rf_fig, item_fig, 
 )
 def disable_controls_for_correlation_matrix(plot_mode):
     if plot_mode == "correlation_matrix":
-        return True, True  # Disable both dropdowns
+        return True, True  # Disable both dropdowns for correlation matrix
+    elif plot_mode == "missing_values_heatmap":
+        return True, False  # Disable group-by, enable sort-by for missing values heatmap
     return False, False  # Enable both dropdowns
 
 # Deleted: 8 individual loading state callbacks replaced by consolidated manage_render_button_loading_states callback above
@@ -1911,8 +1915,6 @@ def update_participants_selection(select_all_clicks, deselect_all_clicks):
      Output('Umap-add-group', 'disabled', allow_duplicate=True),
      Output('Umap-clear-groups', 'disabled', allow_duplicate=True),
      Output('render-rf-plot', 'disabled', allow_duplicate=True),
-     Output('render-grammar-plot', 'children'),
-     Output('render-grammar-plot', 'leftSection'),
      Output('plot-type-description', 'children')],
     Input('grammar-plot-type', 'value'),
     prevent_initial_call=True
@@ -1930,9 +1932,7 @@ def toggle_plot_type_ui(plot_type):
             True,                  # disable add group
             True,                  # disable clear groups
             True,                  # disable compare groups
-            "Render Item Plot",    # button text
-            DashIconify(icon="tabler:chart-bar", width=20),  # button icon
-            "Visualize grammatical item frequencies across participant groups"  # description
+            "Compare how different groups rate grammatical items"  # description
         )
     else:  # plot_type == 'umap'
         # Show UMAP settings and display, hide item plot
@@ -1946,9 +1946,7 @@ def toggle_plot_type_ui(plot_type):
             False,                 # enable add group (errors handled via notifications)
             False,                 # enable clear groups (errors handled via notifications)
             False,                 # enable compare groups (errors handled via notifications)
-            "Render UMAP Plot",    # button text
-            DashIconify(icon="tabler:radar", width=20),  # button icon
-            "Explore participant similarity using UMAP dimensionality reduction"  # description
+            "Apply dimensionality reduction (UMAP) to explore how similar participants are to each other based on their grammar ratings"  # description
         )
 
 # Callback to manage imputed data switch based on plot type

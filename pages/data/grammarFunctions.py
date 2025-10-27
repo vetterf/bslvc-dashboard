@@ -1383,6 +1383,17 @@ def getMetaTable(data):
     # Define which columns should have category filters (set filter) vs text filters
     category_columns = ['Group', 'eWAVE', 'eWAVE Area', 'Feature']
     
+    # Define column widths and flex for better initial sizing
+    column_config = {
+        'Group': {'minWidth': 180, 'flex': 1},
+        'eWAVE': {'minWidth': 120, 'flex': 1},
+        'eWAVE Area': {'minWidth': 150, 'flex': 1},
+        'Item': {'minWidth': 400, 'flex': 3},  # Longest content
+        'Item Code': {'minWidth': 100, 'flex': 0.5},
+        'Feature': {'minWidth': 200, 'flex': 2},
+        'Section': {'minWidth': 100, 'flex': 0.5}
+    }
+    
     table = dag.AgGrid(
                     id="grammar-items-table",
                     rowData=data.to_dict("records"),
@@ -1393,6 +1404,8 @@ def getMetaTable(data):
                             "filter": "agSetColumnFilter" if col in category_columns else "agTextColumnFilter",
                             "sortable": True,
                             "resizable": True,
+                            "minWidth": column_config.get(col, {}).get('minWidth', 100),
+                            "flex": column_config.get(col, {}).get('flex', 1),
                             "cellStyle": {"textAlign": "left"},
                             "headerTooltip": f"Click to sort by {col}. Use filter below to search.",
                             "filterParams": {
@@ -1409,7 +1422,7 @@ def getMetaTable(data):
                         "headerTooltip": "Click header to sort, drag borders to resize, use filter below to search"
                     },
                     className="ag-theme-quartz compact",
-                    columnSize="autoSize",
+                    columnSize="sizeToFit",
                     style={"height": "80vh"},
                     dashGridOptions={
                         "suppressMenuHide": True,
@@ -1895,6 +1908,10 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
     # Handle correlation matrix mode
     if plot_mode == "correlation_matrix":
         return create_correlation_matrix_plot(df, items, balanced_informants, pairs, use_imputed)
+    
+    # Handle missing values heatmap mode
+    if plot_mode == "missing_values_heatmap":
+        return create_missing_values_heatmap(items, balanced_informants, pairs, sortby, use_imputed)
     
     # Handle split by variety mode
     if plot_mode == "split_by_variety":
@@ -4249,6 +4266,147 @@ def create_correlation_matrix_plot(df, items, informants, pairs=False, use_imput
         yaxis_title="Grammar Items",
         height=max(600, len(sorted_items) * 25),
         width=max(600, len(sorted_items) * 25),
+        template="simple_white"
+    )
+    
+    # Rotate x-axis labels for better readability
+    fig.update_xaxes(tickangle=45)
+    
+    return fig
+
+
+def create_missing_values_heatmap(items, informants, pairs=False, sortby="mean", use_imputed=False):
+    """Create a heatmap showing percentage of missing values per variety and item
+    
+    Args:
+        items: List of grammar items to analyze
+        informants: List of participant IDs
+        pairs: Whether to use item pairs
+        sortby: Sorting method ('mean', 'sd', 'alpha')
+        use_imputed: Whether to use imputed data (typically False to show actual missing values)
+    """
+    import plotly.graph_objects as go
+    import numpy as np
+    
+    # Get data based on use_imputed parameter
+    df_wide = retrieve_data.getGrammarData(imputed=use_imputed, items=items, participants=informants, pairs=pairs)
+    
+    if df_wide.empty:
+        return getEmptyPlot("No data available for missing values heatmap")
+    
+    # Get meta data for item information
+    if not pairs:
+        meta = retrieve_data.getGrammarMeta()
+        item_col = 'question_code'
+    else:
+        meta = retrieve_data.getGrammarMeta(type='item_pairs')
+        item_col = 'item_pair'
+    
+    # Select only the grammar item columns
+    item_columns = [col for col in df_wide.columns if col in items]
+    
+    if len(item_columns) == 0:
+        return getEmptyPlot("No items found in data")
+    
+    # Get varieties
+    varieties = sorted(df_wide['MainVariety'].unique())
+    
+    if len(varieties) == 0:
+        return getEmptyPlot("No varieties found in data")
+    
+    # Calculate missing percentage for each variety-item combination
+    missing_data = []
+    for variety in varieties:
+        variety_df = df_wide[df_wide['MainVariety'] == variety]
+        missing_row = []
+        for item in item_columns:
+            if item in variety_df.columns:
+                total_count = len(variety_df)
+                missing_count = variety_df[item].isna().sum() + len(variety_df[item]=="ND")
+                missing_percentage = (missing_count / total_count * 100) if total_count > 0 else 0
+            else:
+                missing_percentage = 100  # If item not in data, treat as 100% missing
+            missing_row.append(missing_percentage)
+        missing_data.append(missing_row)
+    
+    # Convert to numpy array for heatmap
+    missing_array = np.array(missing_data).T  # Transpose so items are on y-axis
+    
+    # Sort items based on sortby parameter
+    if sortby == "alpha":
+        # Natural sorting for item labels like A1, A2, ..., A10, A11, etc.
+        import re
+        def natural_key(s):
+            return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', str(s))]
+        sorted_indices = sorted(range(len(item_columns)), key=lambda i: natural_key(item_columns[i]))
+    elif sortby == "sd":
+        # Sort by standard deviation of missing percentages across varieties
+        std_values = np.std(missing_array, axis=1)
+        sorted_indices = np.argsort(std_values)[::-1]  # Descending order
+    else:  # sortby == "mean" or default
+        # Sort by mean missing percentage across varieties
+        mean_values = np.mean(missing_array, axis=1)
+        sorted_indices = np.argsort(mean_values)  # Ascending order
+    
+    # Apply sorting
+    sorted_items = [item_columns[i] for i in sorted_indices]
+    sorted_missing_array = missing_array[sorted_indices, :]
+    
+    # Create hover text with item information
+    hover_text = []
+    for i, item in enumerate(sorted_items):
+        hover_row = []
+        meta_row = meta[meta[item_col] == item]
+        if not meta_row.empty:
+            variant_detail = meta_row['variant_detail'].iloc[0] if 'variant_detail' in meta.columns else ""
+            sentence = meta_row['item'].iloc[0] if 'item' in meta.columns else ""
+            feature = meta_row['feature'].iloc[0] if 'feature' in meta.columns else ""
+        else:
+            variant_detail = ""
+            sentence = ""
+            feature = ""
+        
+        for j, variety in enumerate(varieties):
+            missing_pct = sorted_missing_array[i, j]
+            variety_df = df_wide[df_wide['MainVariety'] == variety]
+            total_participants = len(variety_df)
+            missing_participants = int(variety_df[item].isna().sum()) if item in variety_df.columns else total_participants
+            
+            hover_text_cell = (
+                f"<b>Item:</b> {item}<br>"
+                f"<b>Feature:</b> {feature}<br>"
+                f"<b>Sentence:</b> {sentence}<br>"
+                f"<b>Variety:</b> {variety}<br>"
+                f"<b>Missing:</b> {missing_pct:.1f}%<br>"
+                f"<b>Participants:</b> {missing_participants}/{total_participants}"
+            )
+            hover_row.append(hover_text_cell)
+        hover_text.append(hover_row)
+    
+    # Create the heatmap
+    fig = go.Figure(data=go.Heatmap(
+        z=sorted_missing_array,
+        x=varieties,
+        y=sorted_items,
+        colorscale='Reds',
+        zmin=0,
+        zmax=100,
+        text=np.round(sorted_missing_array, 1),
+        texttemplate="%{text}%",
+        textfont={"size": 9},
+        hovertemplate="%{customdata}<extra></extra>",
+        customdata=hover_text,
+        colorbar=dict(title="Missing %")
+    ))
+    
+    # Update title to reflect whether imputed data is used
+    data_type = "Imputed Data" if use_imputed else "Raw Data"
+    fig.update_layout(
+        title=f"Missing Values Heatmap - {data_type} (% of participants with missing data)",
+        xaxis_title="Variety",
+        yaxis_title="Grammar Items",
+        height=max(600, len(sorted_items) * 20),
+        width=max(800, len(varieties) * 60),
         template="simple_white"
     )
     
