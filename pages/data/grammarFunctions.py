@@ -4322,7 +4322,7 @@ def create_missing_values_heatmap(items, informants, pairs=False, sortby="mean",
         for item in item_columns:
             if item in variety_df.columns:
                 total_count = len(variety_df)
-                missing_count = variety_df[item].isna().sum() + len(variety_df[item]=="ND")
+                missing_count = variety_df[item].isna().sum() + (variety_df[item] == "ND").sum()
                 missing_percentage = (missing_count / total_count * 100) if total_count > 0 else 0
             else:
                 missing_percentage = 100  # If item not in data, treat as 100% missing
@@ -4370,7 +4370,7 @@ def create_missing_values_heatmap(items, informants, pairs=False, sortby="mean",
             missing_pct = sorted_missing_array[i, j]
             variety_df = df_wide[df_wide['MainVariety'] == variety]
             total_participants = len(variety_df)
-            missing_participants = int(variety_df[item].isna().sum()) if item in variety_df.columns else total_participants
+            missing_participants = int(variety_df[item].isna().sum() + (variety_df[item] == "ND").sum()) if item in variety_df.columns else total_participants
             
             hover_text_cell = (
                 f"<b>Item:</b> {item}<br>"
