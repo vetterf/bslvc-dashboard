@@ -313,8 +313,9 @@ app_shell = dmc.AppShell(
                             href="https://www.dfg.de/en",
                             target="_blank",
                             c="blue"
-                        )
-                    ], size="sm", c="dimmed")
+                        ),
+                        " | v0.1.1"
+                    ], size="sm", c="dimmed"),
                 ],
                 justify="center",
                 align="center",
@@ -498,4 +499,4 @@ def handle_cache_invalidation(search, cache_status):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run(debug=True)

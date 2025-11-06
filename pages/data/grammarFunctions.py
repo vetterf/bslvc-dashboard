@@ -1258,7 +1258,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
 
     # Customize layout
     fig.update_layout(
-        title='Mean with 95% Confidence Intervals',
+        title='Mean (95% CI)',
         xaxis_title='Grammatical items',
         yaxis_title='Mean ratings',
         template='simple_white')
@@ -1279,7 +1279,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
             fixedrange=True,
             tickvals=[-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
             ticktext=[Rating_map[str(i)] for i in range(-5, 6)],
-            range=[-5.1, 5.1]
+            range=[-5.5, 5.5]
         )
     return fig
 
@@ -1328,57 +1328,112 @@ def getAuxiliaryTable(Informants,participants):
     # distribution of age and gender
     return table
 
-def getMetaTable(data):
-    # Select only specific columns in the desired order and rename them
-    column_mapping = {
-        'group_finegrained': 'Group',
-        'feature_ewave': 'eWAVE',
-        'group_ewave': 'eWAVE Area',
-        'item': 'Item',
-        'question_code': 'Item Code',
-        'feature': 'Feature',
-        'section': 'Section'
-    }
-    
-    # Select and reorder columns
-    selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'question_code', 'feature','section']
-    data = data[selected_columns].copy()
-    
-    # Rename columns
-    data = data.rename(columns=column_mapping)
+def getMetaTable(data, pairs=False, preset_data=None):
+    if pairs:
+        # For item pairs, filter to only show items with twins and format appropriately
+        # Filter out rows without a twin item (question_code_written should not be empty)
+        data = data[data['question_code_written'].notna() & (data['question_code_written'] != '')].copy()
+        
+        # Create combined item code column (e.g., "A1 - G21")
+        data['combined_item_code'] = data['question_code'] + ' - ' + data['question_code_written']
+        
+        # Column mapping for pairs
+        column_mapping = {
+            'group_finegrained': 'Group',
+            'feature_ewave': 'eWAVE',
+            'group_ewave': 'eWAVE Area',
+            'item': 'Item',
+            'combined_item_code': 'Item Code',
+            'feature': 'Feature',
+            'section': 'Section'
+        }
+        
+        # Select and reorder columns
+        selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'combined_item_code', 'feature', 'section']
+        data = data[selected_columns].copy()
+        
+        # Rename columns
+        data = data.rename(columns=column_mapping)
+    else:
+        # Original behavior for non-pairs mode
+        # Select only specific columns in the desired order and rename them
+        column_mapping = {
+            'group_finegrained': 'Group',
+            'feature_ewave': 'eWAVE',
+            'group_ewave': 'eWAVE Area',
+            'item': 'Item',
+            'question_code': 'Item Code',
+            'feature': 'Feature',
+            'section': 'Section'
+        }
+        
+        # Select and reorder columns
+        selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'question_code', 'feature','section']
+        data = data[selected_columns].copy()
+        
+        # Rename columns
+        data = data.rename(columns=column_mapping)
     
     # Add button and helper text for table features
-    controls = dmc.Group([
-        
-        dmc.TextInput(
-            id="grammar-items-quick-filter",
-            placeholder="Quick search across all columns...",
-            leftSection=DashIconify(icon="tabler:search", width=14),
-            style={"width": "300px"},
-            size="xs"
-        ),
-        dmc.Button(
-            "Show only selected items",
-            id="filter-grammar-items-table",
+    controls = dmc.Stack([
+        dmc.Group([
+            dmc.TextInput(
+                id="grammar-items-quick-filter",
+                placeholder="Quick search across all columns...",
+                leftSection=DashIconify(icon="tabler:search", width=14),
+                style={"width": "300px"},
+                size="xs"
+            ),
+            dmc.Button(
+                "Show only selected items",
+                id="filter-grammar-items-table",
+                size="xs",
+                variant="light",
+                color="blue",
+                leftSection=DashIconify(icon="tabler:filter", width=14),
+            ),
+            dmc.Button(
+                "Clear filters",
+                id="show-all-grammar-items-table",
+                size="xs",
+                variant="light",
+                color="gray",
+                leftSection=DashIconify(icon="tabler:filter-off", width=14),
+            ),
+            dmc.Button(
+                "Select rows in tree",
+                id="select-rows-in-tree-button",
+                size="xs",
+                variant="filled",
+                color="green",
+                leftSection=DashIconify(icon="tabler:check", width=14),
+            ),
+            dmc.Button(
+                "Deselect rows in tree",
+                id="deselect-rows-in-tree-button",
+                size="xs",
+                variant="filled",
+                color="red",
+                leftSection=DashIconify(icon="tabler:x", width=14),
+            ),
+        ], gap="xs"),
+        dmc.MultiSelect(
+            id="grammar-items-preset-filter",
+            label="Filter by Preset",
+            placeholder="Select presets to filter table...",
+            data=preset_data if preset_data else [],
+            searchable=True,
+            clearable=True,
             size="xs",
-            variant="light",
-            color="blue",
-            leftSection=DashIconify(icon="tabler:filter", width=14),
-        ),
-        dmc.Button(
-            "Show all",
-            id="show-all-grammar-items-table",
-            size="xs",
-            variant="light",
-            color="blue",
-            leftSection=DashIconify(icon="tabler:table", width=14),
+            maxDropdownHeight=300,
+            style={"width": "100%"}
         ),
         dmc.Text(
-            "💡 Click headers to sort • Drag column borders to resize • Use filter boxes below headers to search.", 
+            "💡 Click rows to select • Click headers to sort • Use filter boxes below headers to search.", 
             size="sm", c="dimmed", 
             style={"fontStyle": "italic"}
         ),
-    ], mb=10, style={"backgroundColor": "#f8f9fa", "padding": "8px", "borderRadius": "4px", "border": "1px solid #e9ecef"})
+    ], gap="xs", mb=10, style={"backgroundColor": "#f8f9fa", "padding": "8px", "borderRadius": "4px", "border": "1px solid #e9ecef"})
     
     # Define which columns should have category filters (set filter) vs text filters
     category_columns = ['Group', 'eWAVE', 'eWAVE Area', 'Feature']
@@ -1434,7 +1489,9 @@ def getMetaTable(data):
                         "suppressColumnVirtualisation": True,
                         "enableBrowserTooltips": True,
                         "tooltipShowDelay": 500,
-                        "wrapHeaderText": True
+                        "wrapHeaderText": True,
+                        "rowSelection": "multiple",
+                        "suppressRowClickSelection": False
                     }
                     )
     
@@ -1820,7 +1877,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                 ticktext=x_labels,
                 # No angle rotation needed for y-axis labels
             ),
-            title='Mean with 95% Confidence Intervals (Split by Variety - Rotated)',
+            title='Mean (95% CI)',
             xaxis_title='Mean ratings',  # Swapped: x-axis shows ratings
             yaxis_title='Items by Group',  # Swapped: y-axis shows items
             template='simple_white',
@@ -1847,7 +1904,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                 showgrid=False,
                 zeroline=False
             ),
-            title='Mean with 95% Confidence Intervals',
+            title='Mean (95% CI)',
             xaxis_title='Mean ratings',
             yaxis_title='Items by Group',
             template='simple_white',
@@ -1880,6 +1937,32 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                         opacity=0.5,
                         layer="below"
                     )
+        else:
+            # Add secondary x-axis at top for pairs as well
+            Rating_map = {'-5': 'Written only', '-4':'-4', '-3':'-3', '-2':'-2', '-1':'-1', '0':'Neutral', '1':'1', '2':'2', '3':'3', '4':'4', '5':'Spoken only'}
+            fig.update_layout(
+                xaxis2=dict(  # Secondary x-axis at top
+                    tickvals=[-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
+                    ticktext=[Rating_map[str(i)] for i in range(-5, 6)],
+                    overlaying='x1',
+                    side='top',
+                    showgrid=False,
+                    zeroline=False,
+                    range=[-5.5, 5.5]
+                )
+            )
+            
+            # Add vertical grid lines at tick positions
+            if len(unique_items) > 5:
+                for rating_val in [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]:
+                    fig.add_vline(
+                        x=rating_val,
+                        line_width=1,
+                        line_dash="dot",
+                        line_color="lightgray",
+                        opacity=0.5,
+                        layer="below"
+                    )
         # Update primary x-axis with all rating labels (swapped) - always show all labels for split by variety
         if not pairs:
             Rating_map={'0':'No-one','1':'Few','2':'Some','3':'Many','4':'Most','5':'Everyone'}
@@ -1896,7 +1979,8 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                 title_text="Average difference in ratings",
                 fixedrange=True,
                 tickvals=[-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
-                ticktext=[Rating_map[str(i)] for i in range(-5, 6)]
+                ticktext=[Rating_map[str(i)] for i in range(-5, 6)],
+                range=[-5.5, 5.5]  # Fixed range for item differences
             )
         
         return fig
@@ -2276,7 +2360,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
             fixedrange=True,
             tickvals=[-5,-4,-3,-2,-1, 0, 1, 2, 3, 4, 5],
             ticktext=['Written only','-4','-3','-2','-1','Neutral','1','2','3','4','Spoken only'],
-            range=[-5.2, 5.2]
+            range=[-5.5, 5.5]
         )
     fig.update_yaxes(title_text="RF importance", secondary_y=True,fixedrange=True)
 
@@ -2288,7 +2372,7 @@ def drawParticipantsTree(informants):
     data = informants.copy(deep=True)
     data = data.loc[:,['InformantID', 'MainVariety','Year']]
     # for each country draw a tree with the years and informants
-    countries = data['MainVariety'].unique()
+    countries = sorted(data['MainVariety'].unique())  # Sort alphabetically
     treeData = []
     for country in countries:
         countryData = data[data['MainVariety'] == country]
@@ -2306,36 +2390,96 @@ def drawGrammarItemsTree(grammarMeta,pairs=False):
     #data = retrieve_data.getGrammarData(imputed=True)
     #data = grammarData.copy(deep=True)
     meta = grammarMeta.copy(deep=True)
-    meta.loc[:,'letter'] = meta['question_code'].str[0]
-    meta.loc[:,'numbering'] = meta['question_code'].str.extract(r'(\d+)')
-    meta.loc[:,'numbering']= meta.loc[:,'numbering'].astype(int)
-    meta.sort_values(by=['letter','numbering'],ascending=True,inplace=True)
+    
     if not pairs:
+        # Determine spoken vs written based on question_code letter
+        meta.loc[:,'letter'] = meta['question_code'].str[0]
         spokenLetters = ['A','B','C','D','E','F']
         writtenLetters = ['G','H','I','J','K','L','M','N']
-        spokenChildren = [{'label': letter, 'value': letter, 'children':[{'label': x + ': ' + y, 'value': x} for x,y in zip(meta.loc[meta['letter']==letter]['question_code'],meta.loc[meta['letter']==letter]['feature'])]} for letter in spokenLetters ]
-        writtenChildren = [{'label': letter, 'value': letter, 'children':[{'label': x + ': ' + y, 'value': x} for x,y in zip(meta.loc[meta['letter']==letter]['question_code'],meta.loc[meta['letter']==letter]['feature'])]} for letter in writtenLetters ]
+        
+        # Filter spoken and written items
+        spoken_meta = meta[meta['letter'].isin(spokenLetters)].copy()
+        written_meta = meta[meta['letter'].isin(writtenLetters)].copy()
+        
+        # Group by group_finegrained for spoken items
+        spokenChildren = []
+        if 'group_finegrained' in spoken_meta.columns:
+            # Sort by group_finegrained, then by question_code within each group
+            spoken_meta = spoken_meta.sort_values(by=['group_finegrained', 'question_code'])
+            spoken_groups = spoken_meta.groupby('group_finegrained', observed=True)
+            
+            for group_name, group_df in spoken_groups:
+                if group_name and pd.notna(group_name) and str(group_name).strip():
+                    group_items = [
+                        {'label': f"{code}: {feature}", 'value': code} 
+                        for code, feature in zip(group_df['question_code'], group_df['feature'])
+                    ]
+                    spokenChildren.append({
+                        'label': str(group_name),
+                        'value': f'spoken-group-{group_name}',
+                        'children': group_items
+                    })
+        
+        # Group by group_finegrained for written items
+        writtenChildren = []
+        if 'group_finegrained' in written_meta.columns:
+            # Sort by group_finegrained, then by question_code within each group
+            written_meta = written_meta.sort_values(by=['group_finegrained', 'question_code'])
+            written_groups = written_meta.groupby('group_finegrained', observed=True)
+            
+            for group_name, group_df in written_groups:
+                if group_name and pd.notna(group_name) and str(group_name).strip():
+                    group_items = [
+                        {'label': f"{code}: {feature}", 'value': code} 
+                        for code, feature in zip(group_df['question_code'], group_df['feature'])
+                    ]
+                    writtenChildren.append({
+                        'label': str(group_name),
+                        'value': f'written-group-{group_name}',
+                        'children': group_items
+                    })
+        
         SpokenCols = {
-        'label': 'Spoken section',
-        'value': 'spoken',
-        'children': spokenChildren
+            'label': 'Spoken section',
+            'value': 'spoken',
+            'children': spokenChildren
         }
 
         WrittenCols = {
-        'label': 'Written section',
-        'value': 'written',
-        'children':writtenChildren
+            'label': 'Written section',
+            'value': 'written',
+            'children': writtenChildren
         }
-        
         
         treeData = [SpokenCols, WrittenCols]
     else:
+        # For pairs mode, only show spoken items grouped by group_finegrained
+        meta.loc[:,'letter'] = meta['question_code'].str[0]
         spokenLetters = ['A','B','C','D','E','F']
-        spokenChildren = [{'label': letter, 'value': letter, 'children':[{'label': x + ': ' + y, 'value': x} for x,y in zip(meta.loc[meta['letter']==letter]['item_pair'],meta.loc[meta['letter']==letter]['feature'])]} for letter in spokenLetters ]
+        spoken_meta = meta[meta['letter'].isin(spokenLetters)].copy()
+        
+        spokenChildren = []
+        if 'group_finegrained' in spoken_meta.columns:
+            # Sort by group_finegrained, then by question_code within each group
+            spoken_meta = spoken_meta.sort_values(by=['group_finegrained', 'question_code'])
+            spoken_groups = spoken_meta.groupby('group_finegrained', observed=True)
+            
+            for group_name, group_df in spoken_groups:
+                if group_name and pd.notna(group_name) and str(group_name).strip():
+                    group_items = [
+                        {'label': f"{code}: {feature}", 'value': code} 
+                        for code, feature in zip(group_df['item_pair'], group_df['feature'])
+                    ]
+                    spokenChildren.append({
+                        'label': str(group_name),
+                        'value': f'pairs-group-{group_name}',
+                        'children': group_items
+                    })
+        
         SpokenCols = {
-        'label': 'Item pairs',
-        'value': 'spoken',
-        'children': spokenChildren
+            'label': 'Item pairs',
+            'value': 'spoken',
+            'children': spokenChildren
         }
 
         treeData = [SpokenCols]
@@ -3642,7 +3786,7 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
         
         # Update layout for rotated plot
         fig.update_layout(
-            title='Mean difference (95% CI)',
+            title='Mean with 95% CI',
             xaxis_title='Mean ratings',
             yaxis_title='Grammatical items',
             template='simple_white',

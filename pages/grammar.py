@@ -764,7 +764,7 @@ InformantsPlotContainer = InformantsGrid
 Overview = get_grammar_overview()
 
 GrammarPlots = dmc.Container([
-    dmc.Title("Grammatical Items", order = 2),
+    dmc.Title("Grammar Items", order = 2),
     dmc.Text("Plots of sentences, etc."),
 ], fluid=True)
 
@@ -1065,6 +1065,12 @@ itemSelectionAccordion = dmc.AccordionItem(
                                 size="xs"
                             )
                                                     ], mb="xs"),
+                        dmc.Text(
+                            "💡 Tip: Use the 'Grammatical Items' tab to browse and select items more easily using the interactive table.",
+                            size="sm",
+                            c="dimmed",
+                            style={"fontStyle": "italic", "marginBottom": "8px"}
+                        ),
                         html.Div([
                             dcc.Store(id="grammar-tree-css", data={}),  # Dummy store for CSS
                             dmc.Tree(
@@ -1573,33 +1579,7 @@ SettingsGrammarAnalysis = dmc.Container([
     ]),
     
 
-    # Common accordions (always visible)
-    #dmc.Accordion(children=[
-    #    informantSelectionAccordion,
-    #    itemSelectionAccordion,
-    #], 
-    #variant="contained",
-    #radius="md",
-    #mb="md",
-    #value=["LoadData", "LoadItems"]),  # Keep both accordions open by default
     
-    # # Plot-specific settings (conditionally visible)
-    # html.Div(id="item-plot-settings-container", children=[
-    #     dmc.Accordion(children=[
-    #         itemPlotSettingsAccordion,
-    #     ], 
-    #     variant="contained",
-    #     radius="md"),
-    # ]),  # Visible by default (no style attribute needed)
-    
-    # html.Div(id="umap-settings-container", children=[
-    #     dmc.Accordion(children=[
-    #         umapSettingsAccordion,
-    #         umapGroupCompAccordion
-    #     ], 
-    #     variant="contained",
-    #     radius="md"),
-    # ], style={"display": "none"}),  # Hidden by default
 ], fluid=True)
 
 # Deleted: SettingsInformants (deprecated - merged into Grammar Analysis)
@@ -1628,7 +1608,7 @@ grammarAnalysisC = dmc.Grid([
                         [
                             dmc.TabsTab("Plot View", value="plot-view", id="grammar-analysis-plot-tab"),
                             dmc.TabsTab("Sociodemographic Details", value="sociodemographic-details"),
-                            dmc.TabsTab("Grammatical Items Table", value="grammar-items-table"),
+                            dmc.TabsTab("Grammar Items", value="grammar-items-table"),
                         ]
                     ),
                     dmc.TabsPanel(
@@ -1646,7 +1626,7 @@ grammarAnalysisC = dmc.Grid([
                         value="sociodemographic-details"
                     ),
                     dmc.TabsPanel(
-                        getMetaTable(grammarMeta),
+                        getMetaTable(grammarMeta, preset_data=labels_dict),
                         value="grammar-items-table"
                     ),
                 ],
@@ -1674,7 +1654,7 @@ leidenC = dmc.Grid([
 GrammaticalItems = dmc.Container([dmc.Grid(children=[
             dmc.GridCol(children=[
                 dmc.Card(children=[
-                        getMetaTable(grammarMeta) 
+                        getMetaTable(grammarMeta, preset_data=labels_dict) 
                 ], withBorder=True,
                 shadow="sm",
                 radius="md")
@@ -1932,7 +1912,7 @@ def toggle_plot_type_ui(plot_type):
             True,                  # disable add group
             True,                  # disable clear groups
             True,                  # disable compare groups
-            "Compare how different groups rate grammatical items"  # description
+            "Compare how different groups rate grammar items"  # description
         )
     else:  # plot_type == 'umap'
         # Show UMAP settings and display, hide item plot
@@ -2174,86 +2154,193 @@ def export_data(n_clicks, participants, items, pairs, use_imputed):
     
     return dict(content=data.to_csv(index=False), filename=filename)
 
-# Callback to filter grammar items table based on selected items
+# Callback to filter grammar items table based on preset selection
 @callback(
-    Output('grammar-items-table', 'rowData'),
+    [Output("grammar-items-preset-filter", "value", allow_duplicate=True),
+     Output("grammar-items-table", "rowData", allow_duplicate=True)],
+    [Input("grammar-items-preset-filter", "value"),
+     Input('grammar-type-switch', 'checked')],
+    prevent_initial_call='initial_duplicate'
+)
+def update_grammar_items_preset_filter(selected_presets, pairs):
+    """Filter table based on selected presets"""
+    from dash import ctx
+    
+    # Get metadata based on pairs mode
+    if pairs:
+        meta = retrieve_data.getGrammarMeta(type="item_pairs")
+        meta = meta[meta['question_code_written'].notna() & (meta['question_code_written'] != '')].copy()
+        meta['combined_item_code'] = meta['question_code'] + ' - ' + meta['question_code_written']
+        
+        column_mapping = {
+            'group_finegrained': 'Group',
+            'feature_ewave': 'eWAVE',
+            'group_ewave': 'eWAVE Area',
+            'item': 'Item',
+            'combined_item_code': 'Item Code',
+            'feature': 'Feature',
+            'section': 'Section'
+        }
+        selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'combined_item_code', 'feature', 'section']
+        meta = meta[selected_columns].copy()
+        meta = meta.rename(columns=column_mapping)
+    else:
+        meta = retrieve_data.getGrammarMeta()
+        
+        column_mapping = {
+            'group_finegrained': 'Group',
+            'feature_ewave': 'eWAVE',
+            'group_ewave': 'eWAVE Area',
+            'item': 'Item',
+            'question_code': 'Item Code',
+            'feature': 'Feature',
+            'section': 'Section'
+        }
+        selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'question_code', 'feature', 'section']
+        available_columns = [col for col in selected_columns if col in meta.columns]
+        meta = meta[available_columns].copy()
+        meta = meta.rename(columns=column_mapping)
+    
+    # Check what triggered the callback
+    triggered_id = ctx.triggered_id if ctx.triggered else None
+    
+    # If pairs mode changed, clear the filter
+    if triggered_id == 'grammar-type-switch':
+        return [], meta.to_dict("records")
+    
+    # Filter data if presets are selected
+    if selected_presets and len(selected_presets) > 0:
+        # Expand presets to get item codes
+        item_codes = expand_presets_to_items(selected_presets, item_presets)
+        
+        if pairs:
+            # For pairs mode, we need to filter based on the original question_code
+            original_meta = retrieve_data.getGrammarMeta(type="item_pairs")
+            original_meta = original_meta[original_meta['question_code_written'].notna() & (original_meta['question_code_written'] != '')].copy()
+            
+            # Filter to only include items that match the preset item codes
+            filtered_original = original_meta[original_meta['question_code'].isin(item_codes)]
+            
+            # Create combined item codes for matching
+            filtered_original['combined_item_code'] = filtered_original['question_code'] + ' - ' + filtered_original['question_code_written']
+            
+            # Filter meta by these combined codes
+            filtered_meta = meta[meta['Item Code'].isin(filtered_original['combined_item_code'].tolist())]
+        else:
+            # For individual items, filter directly by item codes
+            filtered_meta = meta[meta['Item Code'].isin(item_codes)]
+        
+        return selected_presets, filtered_meta.to_dict("records")
+    else:
+        return selected_presets, meta.to_dict("records")
+
+# Callback to filter grammar items table to show only checked items from tree
+@callback(
+    Output("grammar-items-table", "rowData", allow_duplicate=True),
     Input('filter-grammar-items-table', 'n_clicks'),
     [State('grammarItemsTree', 'checked'),
      State('grammar-type-switch', 'checked')],
     prevent_initial_call=True
 )
 def filter_grammar_items_table(n_clicks, items, pairs):
-    """Filter grammar items table to show only selected items"""
+    """Filter grammar items table to show only selected items from tree"""
     if not n_clicks or not items:
         return no_update
     
-    # Get the full grammar meta data
+    # Get metadata based on pairs mode
     if pairs:
         meta = retrieve_data.getGrammarMeta(type="item_pairs")
-        # For pairs, the 'item_pair' column contains the pair codes like 'A1-G21'
-        # Filter to only show rows where item_pair is in the selected items
-        filtered = meta[meta['item_pair'].isin(items)]
+        meta = meta[meta['question_code_written'].notna() & (meta['question_code_written'] != '')].copy()
+        meta['combined_item_code'] = meta['question_code'] + ' - ' + meta['question_code_written']
+        
+        column_mapping = {
+            'group_finegrained': 'Group',
+            'feature_ewave': 'eWAVE',
+            'group_ewave': 'eWAVE Area',
+            'item': 'Item',
+            'combined_item_code': 'Item Code',
+            'feature': 'Feature',
+            'section': 'Section'
+        }
+        selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'combined_item_code', 'feature', 'section']
+        meta = meta[selected_columns].copy()
+        meta = meta.rename(columns=column_mapping)
+        
+        # Convert tree items from "A1-G21" to "A1 - G21" format for matching
+        display_items = [item.replace('-', ' - ') for item in items]
+        filtered_meta = meta[meta['Item Code'].isin(display_items)]
     else:
-        meta = retrieve_data.getGrammarMeta(type="all_items")
-        # For individual items, filter by 'question_code' column
-        filtered = meta[meta['question_code'].isin(items)]
+        meta = retrieve_data.getGrammarMeta()
+        
+        column_mapping = {
+            'group_finegrained': 'Group',
+            'feature_ewave': 'eWAVE',
+            'group_ewave': 'eWAVE Area',
+            'item': 'Item',
+            'question_code': 'Item Code',
+            'feature': 'Feature',
+            'section': 'Section'
+        }
+        selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'question_code', 'feature', 'section']
+        available_columns = [col for col in selected_columns if col in meta.columns]
+        meta = meta[available_columns].copy()
+        meta = meta.rename(columns=column_mapping)
+        
+        # Filter by tree items directly
+        filtered_meta = meta[meta['Item Code'].isin(items)]
     
-    # Apply the same column selection and renaming as in getMetaTable
-    column_mapping = {
-        'group_finegrained': 'Group',
-        'feature_ewave': 'eWAVE',
-        'group_ewave': 'eWAVE Area',
-        'item': 'Item',
-        'question_code': 'Item Code',
-        'feature': 'Feature',
-        'section': 'Section'
-    }
-    
-    # Select and reorder columns (same as getMetaTable)
-    selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'question_code', 'feature', 'section']
-    # Only select columns that exist in filtered data
-    available_columns = [col for col in selected_columns if col in filtered.columns]
-    filtered = filtered[available_columns].copy()
-    
-    # Rename columns
-    filtered = filtered.rename(columns=column_mapping)
-    
-    return filtered.to_dict("records")
+    return filtered_meta.to_dict("records")
 
 @callback(
-    Output('grammar-items-table', 'rowData', allow_duplicate=True),
+    [Output('grammar-items-table', 'rowData', allow_duplicate=True),
+     Output('grammar-items-preset-filter', 'value'),
+     Output('grammar-items-quick-filter', 'value')],
     Input('show-all-grammar-items-table', 'n_clicks'),
+    State('grammar-type-switch', 'checked'),
     prevent_initial_call=True
 )
-def show_all_grammar_items_table(n_clicks):
-    """Reset table to show all items"""
+def clear_all_grammar_items_filters(n_clicks, pairs):
+    """Clear all filters from the grammar items table"""
     if not n_clicks:
-        return no_update
+        return no_update, no_update, no_update
     
-    # Get all grammar meta data and apply the same transformations as getMetaTable
-    meta = retrieve_data.getGrammarMeta()
+    # Get full metadata to reset table
+    if pairs:
+        meta = retrieve_data.getGrammarMeta(type="item_pairs")
+        meta = meta[meta['question_code_written'].notna() & (meta['question_code_written'] != '')].copy()
+        meta['combined_item_code'] = meta['question_code'] + ' - ' + meta['question_code_written']
+        
+        column_mapping = {
+            'group_finegrained': 'Group',
+            'feature_ewave': 'eWAVE',
+            'group_ewave': 'eWAVE Area',
+            'item': 'Item',
+            'combined_item_code': 'Item Code',
+            'feature': 'Feature',
+            'section': 'Section'
+        }
+        selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'combined_item_code', 'feature', 'section']
+        meta = meta[selected_columns].copy()
+        meta = meta.rename(columns=column_mapping)
+    else:
+        meta = retrieve_data.getGrammarMeta()
+        
+        column_mapping = {
+            'group_finegrained': 'Group',
+            'feature_ewave': 'eWAVE',
+            'group_ewave': 'eWAVE Area',
+            'item': 'Item',
+            'question_code': 'Item Code',
+            'feature': 'Feature',
+            'section': 'Section'
+        }
+        selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'question_code', 'feature', 'section']
+        available_columns = [col for col in selected_columns if col in meta.columns]
+        meta = meta[available_columns].copy()
+        meta = meta.rename(columns=column_mapping)
     
-    # Apply the same column selection and renaming as in getMetaTable
-    column_mapping = {
-        'group_finegrained': 'Group',
-        'feature_ewave': 'eWAVE',
-        'group_ewave': 'eWAVE Area',
-        'item': 'Item',
-        'question_code': 'Item Code',
-        'feature': 'Feature',
-        'section': 'Section'
-    }
-    
-    # Select and reorder columns (same as getMetaTable)
-    selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'question_code', 'feature', 'section']
-    # Only select columns that exist in meta data
-    available_columns = [col for col in selected_columns if col in meta.columns]
-    meta = meta[available_columns].copy()
-    
-    # Rename columns
-    meta = meta.rename(columns=column_mapping)
-    
-    return meta.to_dict("records")
+    # Return full data, clear preset filter, and clear quick search
+    return meta.to_dict("records"), [], ""
 
 @callback(
     Output("grammar-items-table", "dashGridOptions"),
@@ -2265,6 +2352,73 @@ def update_grammar_items_quick_filter(filter_value):
     newFilter = Patch()
     newFilter['quickFilterText'] = filter_value
     return newFilter
+
+# Callback to select rows from table in the grammar items tree
+@callback(
+    Output('grammarItemsTree', 'checked', allow_duplicate=True),
+    Input('select-rows-in-tree-button', 'n_clicks'),
+    [State('grammar-items-table', 'selectedRows'),
+     State('grammarItemsTree', 'checked'),
+     State('grammar-type-switch', 'checked')],
+    prevent_initial_call=True
+)
+def select_table_rows_in_tree(n_clicks, selected_rows, current_checked, pairs):
+    """Add selected table rows to the grammar items tree selection"""
+    if not n_clicks or not selected_rows:
+        return no_update
+    
+    # Get item codes from selected rows based on pairs mode
+    if pairs:
+        # In pairs mode, extract the item_pair codes from the combined "Item Code" column
+        # The format is "A1 - G21", we need to convert it back to "A1-G21" for the tree
+        item_codes = []
+        for row in selected_rows:
+            item_code = row.get('Item Code', '')
+            if item_code:
+                # Convert "A1 - G21" to "A1-G21"
+                item_codes.append(item_code.replace(' - ', '-'))
+    else:
+        # In individual mode, extract question_code from "Item Code" column
+        item_codes = [row.get('Item Code', '') for row in selected_rows if row.get('Item Code')]
+    
+    # Combine with currently checked items (avoid duplicates)
+    current_checked = current_checked or []
+    updated_checked = list(set(current_checked + item_codes))
+    
+    return updated_checked
+
+# Callback to deselect rows from table in the grammar items tree
+@callback(
+    Output('grammarItemsTree', 'checked', allow_duplicate=True),
+    Input('deselect-rows-in-tree-button', 'n_clicks'),
+    [State('grammar-items-table', 'selectedRows'),
+     State('grammarItemsTree', 'checked'),
+     State('grammar-type-switch', 'checked')],
+    prevent_initial_call=True
+)
+def deselect_table_rows_in_tree(n_clicks, selected_rows, current_checked, pairs):
+    """Remove selected table rows from the grammar items tree selection"""
+    if not n_clicks or not selected_rows:
+        return no_update
+    
+    # Get item codes from selected rows based on pairs mode
+    if pairs:
+        # In pairs mode, extract the item_pair codes from the combined "Item Code" column
+        item_codes = []
+        for row in selected_rows:
+            item_code = row.get('Item Code', '')
+            if item_code:
+                # Convert "A1 - G21" to "A1-G21"
+                item_codes.append(item_code.replace(' - ', '-'))
+    else:
+        # In individual mode, extract question_code from "Item Code" column
+        item_codes = [row.get('Item Code', '') for row in selected_rows if row.get('Item Code')]
+    
+    # Remove selected items from currently checked items
+    current_checked = current_checked or []
+    updated_checked = [item for item in current_checked if item not in item_codes]
+    
+    return updated_checked
 
 # Clientside callback to copy settings to clipboard (100% client-side for security)
 clientside_callback(
@@ -2900,15 +3054,15 @@ def initiate_umap_rendering(BTNrenderPlot, modal_ok, modal_cancel, figure, runni
         if running_state:
             return no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update
         
-        # Validation passed - show rendering notification
+        # Validation passed - show rendering notification with imputed data info for UMAP
         notification = dmc.Notification(
             id="my-notification",
             title="Info",
-            message="Rendering UMAP plot, please wait.",
+            message="Rendering UMAP plot with imputed data (UMAP cannot handle missing data), please wait.",
             color="blue",
             loading=True,
             action="show",
-            autoClose=2000,
+            autoClose=4000,
             position="top-right"
         )
         
@@ -3170,8 +3324,29 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
         else:
             groupcol['group'] = groupcol['symbol'] # group by color
 
-        # to do: group here, then pass DF on to trainRF - need the grouping in getRFplot again
-        notification = create_info_notification("Rendering new plot, please wait.")
+        # Show notification with imputed data info
+        if use_imputed:
+            notification = dmc.Notification(
+                id="my-notification",
+                title="Info",
+                message="Rendering comparison plot with imputed data. Note: Imputed data might skew the distribution for some items.",
+                color="blue",
+                loading=True,
+                action="show",
+                autoClose=4000,
+                position="top-right"
+            )
+        else:
+            notification = dmc.Notification(
+                id="my-notification",
+                title="Info",
+                message="Rendering comparison plot, please wait.",
+                color="blue",
+                loading=True,
+                action="show",
+                autoClose=2000,
+                position="top-right"
+            )
         
         # Use lazy data loading for better performance
         data = retrieve_data.getGrammarData(imputed=use_imputed,participants=df['ids'],columns=items, pairs=pairs)
@@ -3358,17 +3533,29 @@ def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imput
             )
             return no_update, False, False, notification
         
-        # Validation passed - show rendering notification
-        notification = dmc.Notification(
-            id="my-notification",
-            title="Info",
-            message="Rendering Item plot, please wait.",
-            color="blue",
-            loading=True,
-            action="show",
-            autoClose=2000,
-            position="top-right"
-        )
+        # Validation passed - show rendering notification with imputed data info if applicable
+        if use_imputed:
+            notification = dmc.Notification(
+                id="my-notification",
+                title="Info",
+                message="Rendering Item plot with imputed data. Note: Imputed data might skew the distribution for some items.",
+                color="blue",
+                loading=True,
+                action="show",
+                autoClose=4000,
+                position="top-right"
+            )
+        else:
+            notification = dmc.Notification(
+                id="my-notification",
+                title="Info",
+                message="Rendering Item plot, please wait.",
+                color="blue",
+                loading=True,
+                action="show",
+                autoClose=2000,
+                position="top-right"
+            )
 
         # Use lazy data loading - only get data when needed
         if use_imputed:
