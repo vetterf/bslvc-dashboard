@@ -169,9 +169,10 @@ navbar = dmc.AppShellNavbar(
             ),
             dmc.NavLink(
                 label="Getting Started",
+                href="/getting-started",
                 leftSection=get_icon(icon="tabler:rocket"),
-                disabled=True,
-                style={"color": "gray", "cursor": "not-allowed"},
+                disabled=False,
+                active="partial", 
             ),
             dmc.Divider(label="Data & Analysis", labelPosition="left", mt="md", mb="xs"),
             dmc.NavLink(

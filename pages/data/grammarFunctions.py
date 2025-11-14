@@ -1385,7 +1385,7 @@ def getMetaTable(data, pairs=False, preset_data=None):
                 size="xs"
             ),
             dmc.Button(
-                "Show only selected items",
+                "Show selected",
                 id="filter-grammar-items-table",
                 size="xs",
                 variant="light",
@@ -1401,7 +1401,7 @@ def getMetaTable(data, pairs=False, preset_data=None):
                 leftSection=DashIconify(icon="tabler:filter-off", width=14),
             ),
             dmc.Button(
-                "Select rows in tree",
+                "Select rows",
                 id="select-rows-in-tree-button",
                 size="xs",
                 variant="filled",
@@ -1409,7 +1409,7 @@ def getMetaTable(data, pairs=False, preset_data=None):
                 leftSection=DashIconify(icon="tabler:check", width=14),
             ),
             dmc.Button(
-                "Deselect rows in tree",
+                "Deselect rows",
                 id="deselect-rows-in-tree-button",
                 size="xs",
                 variant="filled",
@@ -1429,7 +1429,7 @@ def getMetaTable(data, pairs=False, preset_data=None):
             style={"width": "100%"}
         ),
         dmc.Text(
-            "💡 Click rows to select • Click headers to sort • Use filter boxes below headers to search.", 
+            "💡 Click rows to select • Click headers to sort • Use the quick search and preset filter above to search.", 
             size="sm", c="dimmed", 
             style={"fontStyle": "italic"}
         ),

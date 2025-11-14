@@ -4,3 +4,4 @@
 **/venv_fedora
 **/cache
 **/.venv
+BSLVC_sqlite.db

@@ -1059,14 +1059,17 @@ itemSelectionAccordion = dmc.AccordionItem(
                         dmc.Group(children=[
                             dmc.Button("Select All", id='select-all-grammar-items', size="xs", variant="outline"),
                             dmc.Button("Deselect All", id='deselect-all-grammar-items', size="xs", variant="outline"),
-                            dmc.Button("Deselect Problematic",
+                            dmc.Button([
+                                DashIconify(icon="tabler:filter-x", width=14),
+                                " Problematic"
+                            ],
                                 id="grammar_deselect_problematic",
                                 variant="outline",
                                 size="xs"
                             )
                                                     ], mb="xs"),
                         dmc.Text(
-                            "💡 Tip: Use the 'Grammatical Items' tab to browse and select items more easily using the interactive table.",
+                            "💡 Tip: Use the 'Grammar Items' tab to browse and select items more easily using the interactive table.",
                             size="sm",
                             c="dimmed",
                             style={"fontStyle": "italic", "marginBottom": "8px"}
@@ -1131,7 +1134,10 @@ itemSelectionAccordion = dmc.AccordionItem(
                                                         size="xs",
                                                         variant="light"
                                                     ),
-                                                    dmc.Button("Toggle Currency/Unit",
+                                                    dmc.Button([
+                                                        DashIconify(icon="tabler:coin-off", width=14),
+                                                        " Currency/Unit"
+                                                    ],
                                                         id="grammar_toggle_currency",
                                                         size="xs",
                                                         variant="light"

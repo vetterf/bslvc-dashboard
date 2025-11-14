@@ -128,3 +128,22 @@
     border-radius: 6px !important;
 }
 
+/* AG Grid selected row styling - using DMC default blue (matching render plot button) */
+.ag-row-selected {
+    background-color: #1f77b4 !important; /* DMC default blue */
+    color: white !important;
+}
+
+.ag-row-selected:hover {
+    background-color: #1c7ed6 !important; /* Darker blue on hover */
+}
+
+/* Ensure text is readable on blue background */
+.ag-row-selected .ag-cell {
+    color: white !important;
+}
+
+/* Make checkboxes visible on selected rows if present */
+.ag-row-selected input[type="checkbox"] {
+    filter: brightness(0) invert(1);
+}
