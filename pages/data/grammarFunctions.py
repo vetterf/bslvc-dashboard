@@ -1289,7 +1289,7 @@ def getAuxiliaryTable(Informants,participants):
     if len(participants) == 0:
         return dash_table.DataTable()
 
-    columns = ['InformantID','MainVariety','AdditionalVarieties','Age','Gender','Nationality','EthnicSelfID','CountryID','LanguageHome','YearsLivedInMainVariety','RatioMainVariety','CountryCollection','Year','LanguageMother','LanguageFather','Qualifications','Occupation','OccupMother','OccupFather','OccupPartner','QualiMother','QualiFather','QualiPartner','YearsLivedOutside','YearsLivedInside','YearsLivedOtherEnglish','CommentsTimeline']
+    columns = ['InformantID','MainVariety','AdditionalVarieties','Age','Gender','Nationality','EthnicSelfID','CountryID','LanguageHome','YearsLivedInMainVariety','RatioMainVariety','CountryCollection','Year','LanguageMother','LanguageFather','Qualifications','Occupation','OccupMother','OccupFather','OccupPartner','QualiMother','QualiFather','QualiPartner','YearsLivedOutside','YearsLivedInside','YearsLivedOtherEnglish']
     data = data.loc[data['InformantID'].isin(participants),columns].reset_index()
 
 
@@ -1339,17 +1339,17 @@ def getMetaTable(data, pairs=False, preset_data=None):
         
         # Column mapping for pairs
         column_mapping = {
+            'combined_item_code': 'Item Code',
             'group_finegrained': 'Group',
             'feature_ewave': 'eWAVE',
-            'group_ewave': 'eWAVE Area',
             'item': 'Item',
-            'combined_item_code': 'Item Code',
+            'group_ewave': 'eWAVE Area',
             'feature': 'Feature',
             'section': 'Section'
         }
         
-        # Select and reorder columns
-        selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'combined_item_code', 'feature', 'section']
+        # Select and reorder columns - Item Code, Group, eWAVE, Item first
+        selected_columns = ['combined_item_code', 'group_finegrained', 'feature_ewave', 'item', 'group_ewave', 'feature', 'section']
         data = data[selected_columns].copy()
         
         # Rename columns
@@ -1358,17 +1358,17 @@ def getMetaTable(data, pairs=False, preset_data=None):
         # Original behavior for non-pairs mode
         # Select only specific columns in the desired order and rename them
         column_mapping = {
+            'question_code': 'Item Code',
             'group_finegrained': 'Group',
             'feature_ewave': 'eWAVE',
-            'group_ewave': 'eWAVE Area',
             'item': 'Item',
-            'question_code': 'Item Code',
+            'group_ewave': 'eWAVE Area',
             'feature': 'Feature',
             'section': 'Section'
         }
         
-        # Select and reorder columns
-        selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'question_code', 'feature','section']
+        # Select and reorder columns - Item Code, Group, eWAVE, Item first
+        selected_columns = ['question_code', 'group_finegrained', 'feature_ewave', 'item', 'group_ewave', 'feature', 'section']
         data = data[selected_columns].copy()
         
         # Rename columns
@@ -1545,7 +1545,7 @@ def get_balanced_informants(informants, groupby):
     
     return balanced_informants
 
-def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="variety",pairs=False,use_imputed=False,plot_mode="normal",split_by_variety=False):
+def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="variety",pairs=False,use_imputed=False,plot_mode="normal",split_by_variety=False,regional_mapping=False):
     # groupby: group by column in the data, possible Values: "variety","vtype","vtype_balanced","gender"
     # sortby: column to sort by, . "mean", "sd","alpha"
     #if True:
@@ -1556,7 +1556,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
     balanced_informants = get_balanced_informants(informants, groupby)
     
     Rating_map={'0':'No-one','1':'Few','2':'Some','3':'Many','4':'Most','5':'Everyone'}
-    df = retrieve_data.getGrammarData(imputed=use_imputed, items=items, participants=balanced_informants,pairs=pairs)
+    df = retrieve_data.getGrammarData(imputed=use_imputed, items=items, participants=balanced_informants,pairs=pairs,regional_mapping=regional_mapping)
     #df = df.groupby('item').filter(lambda x: x['mean'].between(value_range[0], value_range[1]).all()).reset_index()
     
     if df.empty:
@@ -1987,7 +1987,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
     
     # Handle diverging stacked bar chart mode
     if plot_mode == "diverging":
-        return create_diverging_stacked_bar_plot(df, items, modes, groupby, variety_color_map, pairs, meta, balanced_informants, sortby, use_imputed)
+           return create_diverging_stacked_bar_plot(df, items, modes, groupby, variety_color_map, pairs, meta, balanced_informants, sortby, use_imputed, regional_mapping)
 
     # Handle correlation matrix mode
     if plot_mode == "correlation_matrix":
@@ -1995,7 +1995,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
     
     # Handle missing values heatmap mode
     if plot_mode == "missing_values_heatmap":
-        return create_missing_values_heatmap(items, balanced_informants, pairs, sortby, use_imputed)
+           return create_missing_values_heatmap(items, balanced_informants, pairs, sortby, use_imputed, regional_mapping)
     
     # Handle split by variety mode
     if plot_mode == "split_by_variety":
@@ -2008,7 +2008,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
     
     # Handle informant mean boxplot mode
     if plot_mode == "informant_boxplot":
-        return create_informant_mean_boxplot(df, items, modes, groupby, variety_color_map, pairs, meandf, sortby, use_imputed, balanced_informants)
+           return create_informant_mean_boxplot(df, items, modes, groupby, variety_color_map, pairs, meandf, sortby, use_imputed, balanced_informants, regional_mapping)
     
     # Legacy code for backward compatibility (will be removed)
     if len(modes) == 1 and not pairs:
@@ -2917,11 +2917,11 @@ def _participants_hash(participants):
     # Convert to tuple for consistent hashing
     return hashlib.md5(str(tuple(sorted(participants))).encode()).hexdigest()
 
-def create_diverging_stacked_bar_plot(df_orig, items, modes, groupby, variety_color_map, pairs, meta, informants, sortby="mean", use_imputed=True):
+def create_diverging_stacked_bar_plot(df_orig, items, modes, groupby, variety_color_map, pairs, meta, informants, sortby="mean", use_imputed=True, regional_mapping=False):
     """Create a diverging stacked bar chart for rating distributions"""
     
     # Get raw data with individual ratings (not aggregated)
-    raw_df = retrieve_data.getGrammarData(imputed=use_imputed, items=items, pairs=pairs, participants=informants)
+    raw_df = retrieve_data.getGrammarData(imputed=use_imputed, items=items, pairs=pairs, participants=informants, regional_mapping=regional_mapping)
 
     # Apply same grouping logic as main function
     if groupby == "variety":
@@ -4092,11 +4092,11 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
     return fig
 
 
-def create_informant_mean_boxplot(df_orig, items, modes, groupby, variety_color_map, pairs, meandf, sortby="mean", use_imputed=True, informants=None):
+def create_informant_mean_boxplot(df_orig, items, modes, groupby, variety_color_map, pairs, meandf, sortby="mean", use_imputed=True, informants=None, regional_mapping=False):
     """Create boxplots showing distribution of individual participant means across all items for each mode"""
     
     # Get raw data with individual ratings (not aggregated)
-    raw_df = retrieve_data.getGrammarData(imputed=use_imputed, items=items, pairs=pairs, participants=informants)
+    raw_df = retrieve_data.getGrammarData(imputed=use_imputed, items=items, pairs=pairs, participants=informants, regional_mapping=regional_mapping)
     
     # Get metadata and merge it to get section information
     if not pairs:
@@ -4419,7 +4419,7 @@ def create_correlation_matrix_plot(df, items, informants, pairs=False, use_imput
     return fig
 
 
-def create_missing_values_heatmap(items, informants, pairs=False, sortby="mean", use_imputed=False):
+def create_missing_values_heatmap(items, informants, pairs=False, sortby="mean", use_imputed=False, regional_mapping=False):
     """Create a heatmap showing percentage of missing values per variety and item
     
     Args:
@@ -4428,12 +4428,13 @@ def create_missing_values_heatmap(items, informants, pairs=False, sortby="mean",
         pairs: Whether to use item pairs
         sortby: Sorting method ('mean', 'sd', 'alpha')
         use_imputed: Whether to use imputed data (typically False to show actual missing values)
+        regional_mapping: Whether to apply regional mapping to England participants
     """
     import plotly.graph_objects as go
     import numpy as np
     
     # Get data based on use_imputed parameter
-    df_wide = retrieve_data.getGrammarData(imputed=use_imputed, items=items, participants=informants, pairs=pairs)
+    df_wide = retrieve_data.getGrammarData(imputed=use_imputed, items=items, participants=informants, pairs=pairs, regional_mapping=regional_mapping)
     
     if df_wide.empty:
         return getEmptyPlot("No data available for missing values heatmap")

@@ -43,7 +43,7 @@ from flask import request
 
 ############################################################################################################
 
-_dash_renderer._set_react_version("18.2.0")
+#_dash_renderer._set_react_version("18.2.0")
 launch_uid = uuid4()
 
 def get_icon(icon):
@@ -174,6 +174,13 @@ navbar = dmc.AppShellNavbar(
                 disabled=False,
                 active="partial", 
             ),
+            dmc.NavLink(
+                label="About",
+                href="/about",
+                leftSection=get_icon(icon="tabler:info-square"),
+                disabled=False,
+                active="partial", 
+            ),
             dmc.Divider(label="Data & Analysis", labelPosition="left", mt="md", mb="xs"),
             dmc.NavLink(
                 label="Data Overview",
@@ -193,25 +200,6 @@ navbar = dmc.AppShellNavbar(
                 disabled=True,
                 style={"color": "gray", "cursor": "not-allowed"},
             ),
-            dmc.Divider(label="About", labelPosition="left", mt="md", mb="xs"),
-            dmc.NavLink(
-                label="About the Dashboard",
-                leftSection=get_icon(icon="tabler:info-square"),
-                disabled=True,
-                style={"color": "gray", "cursor": "not-allowed"},
-            ),
-            dmc.NavLink(
-                label="How to Cite",
-                leftSection=get_icon(icon="tabler:quote"),
-                disabled=True,
-                style={"color": "gray", "cursor": "not-allowed"},
-            ),
-            dmc.NavLink(
-                label="Terms of Use",
-                leftSection=get_icon(icon="tabler:license"),
-                disabled=True,
-                style={"color": "gray", "cursor": "not-allowed"},
-            ),
             dmc.Divider(label="External resources", labelPosition="left", mt="md", mb="xs"),
             dmc.Anchor(
                 dmc.NavLink(
@@ -220,25 +208,21 @@ navbar = dmc.AppShellNavbar(
                 ),
                 href="https://www.uni-bamberg.de/en/eng-ling/forschung/the-bslvc-project-dfg-funded/",
                 target="_blank",
-                underline=False,
+                underline=False
             ),
-            dmc.NavLink(
-                label="OSF Repository",
-                leftSection=get_icon(icon="tabler:database-export"),
-                disabled=True,
-                style={"color": "gray", "cursor": "not-allowed"},
+            dmc.Anchor(
+                dmc.NavLink(
+                    label="OSF Repository",
+                    leftSection=get_icon(icon="tabler:database-export"),
+                ),
+                href="https://osf.io/4buef/",
+                target="_blank",
+                underline=False
             ),
             ],
             p="md"
         )
-# dmc.Stack([
-#     create_main_link(icon="tabler:home", label="Home", href="/"),
-#     create_main_link(icon="tabler:book-2", label="Lexical Sets", href="/lexical"),
-#     create_main_link(icon="tabler:library", label="Grammar Sets", href="/grammar"),
-#     create_main_link(icon="tabler:help", label="Documentation", href="/documentation")
-# ], gap="xs", p="md")
 
-#logo = "https://github.com/user-attachments/assets/c1ff143b-4365-4fd1-880f-3e97aab5c302"
 
 header = dmc.Group(children=[
                       dmc.Group(

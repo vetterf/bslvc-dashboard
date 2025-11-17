@@ -78,7 +78,7 @@ except (OSError, PermissionError) as e:
 
 plot_cache = dc.Cache(cache_dir)
 
-def create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs):
+def create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, regional_mapping=False):
     """Create a unique cache key for plot parameters"""
     key_data = {
         'participants': sorted(participants) if participants else 'all',
@@ -88,32 +88,43 @@ def create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_
         'distance_metric': distance_metric,
         'standardize': standardize,
         'densemap': densemap,
-        'pairs': pairs
+        'pairs': pairs,
+        'regional_mapping': regional_mapping
     }
     key_string = str(key_data)
     return hashlib.md5(key_string.encode()).hexdigest()
 
-def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs):
+def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, informants=None, regional_mapping=False):
     """Get UMAP plot from cache or compute if not exists"""
-    cache_key = f"umap_{create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs)}"
+    cache_key = f"umap_{create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, regional_mapping)}"
     
     cached_plot = plot_cache.get(cache_key)
     if cached_plot is not None:
         return cached_plot
     
+    # Use provided informants or fall back to module-level Informants
+    if informants is None:
+        informants_df = Informants
+    else:
+        # Convert from dict if needed
+        if isinstance(informants, list):
+            informants_df = pd.DataFrame(informants)
+        else:
+            informants_df = informants
+    
     # Not in cache, compute it
     # Get data filtered by participants to ensure cache consistency
     if not pairs:
-        grammarData = retrieve_data.getGrammarData(imputed=True, participants=participants, columns=items)
+        grammarData = retrieve_data.getGrammarData(imputed=True, participants=participants, columns=items, regional_mapping=regional_mapping)
         grammarCols = GrammarItemsCols
     else:
-        grammarData = retrieve_data.getGrammarData(imputed=True, participants=participants, columns=items, pairs=True)
+        grammarData = retrieve_data.getGrammarData(imputed=True, participants=participants, columns=items, pairs=True, regional_mapping=regional_mapping)
         grammarCols = GrammarItemsColsPairs
         
     plot = getUMAPplot(
         grammarData=grammarData,
         GrammarItemsCols=grammarCols,
-        informants=Informants,
+        informants=informants_df,
         selected_informants=participants,
         items=items,
         n_neighbours=n_neighbours,
@@ -129,25 +140,25 @@ def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_m
     plot_cache.set(cache_key, plot)
     return plot
 
-@lru_cache(maxsize=1)
-def get_grammar_data_cached():
-    return retrieve_data.getGrammarData(imputed=True)
+@lru_cache(maxsize=2)  # Increased to cache both mapped and unmapped versions
+def get_grammar_data_cached(regional_mapping=False):
+    return retrieve_data.getGrammarData(imputed=True, regional_mapping=regional_mapping)
 
-@lru_cache(maxsize=1)
-def get_grammar_data_pairs_cached():
-    return retrieve_data.getGrammarData(imputed=True, items=retrieve_data.getGrammarItemsCols("item_pairs"), pairs=True)
+@lru_cache(maxsize=2)
+def get_grammar_data_pairs_cached(regional_mapping=False):
+    return retrieve_data.getGrammarData(imputed=True, items=retrieve_data.getGrammarItemsCols("item_pairs"), pairs=True, regional_mapping=regional_mapping)
 
-@lru_cache(maxsize=1)
-def get_informants_cached():
-    return retrieve_data.getInformantDataGrammar(imputed=True)
+@lru_cache(maxsize=2)
+def get_informants_cached(regional_mapping=False):
+    return retrieve_data.getInformantDataGrammar(imputed=True, regional_mapping=regional_mapping)
 
-@lru_cache(maxsize=1)
-def get_grammar_data_raw_cached():
-    return retrieve_data.getGrammarData(imputed=False)
+@lru_cache(maxsize=2)
+def get_grammar_data_raw_cached(regional_mapping=False):
+    return retrieve_data.getGrammarData(imputed=False, regional_mapping=regional_mapping)
 
-@lru_cache(maxsize=1)
-def get_grammar_data_pairs_raw_cached():
-    return retrieve_data.getGrammarData(imputed=False, items=retrieve_data.getGrammarItemsCols("item_pairs"), pairs=True)
+@lru_cache(maxsize=2)
+def get_grammar_data_pairs_raw_cached(regional_mapping=False):
+    return retrieve_data.getGrammarData(imputed=False, items=retrieve_data.getGrammarItemsCols("item_pairs"), pairs=True, regional_mapping=regional_mapping)
 
 @lru_cache(maxsize=1)
 def get_grammar_meta_cached():
@@ -1095,9 +1106,9 @@ itemSelectionAccordion = dmc.AccordionItem(
                             searchable=True,
                             clearable=True,
                             nothingFoundMessage="Nothing found...",
-                            #clearSearchOnChange=False, only supported in newer version of DMC.
                             size="xs",
                             style={"flex": 1},
+                            comboboxProps={"position": "bottom"},
                             persistence=persist_UI,persistence_type=persistence_type),
                         # Use a wrapper div with custom CSS class
                         # Advanced item options sub-accordion
@@ -1673,6 +1684,7 @@ GrammaticalItems = dmc.Container([dmc.Grid(children=[
 layout = html.Div([
 
     customSetWarningModal, 
+    dcc.Store(id="england-mapping-param", storage_type="memory", data=False),  # Store for EnglandMapping URL parameter
     dcc.Store(id="UMAPgroup", storage_type="memory",data=0),
     dcc.Store(id="UMAPparticipants",storage_type="memory",data=[]), # Start empty - no auto-selection
     dcc.Store(id="UMAPitems",storage_type="memory",data=[]), # Start empty - no auto-selection
@@ -2153,6 +2165,10 @@ def export_data(n_clicks, participants, items, pairs, use_imputed):
     # Remove NameSchool column if it exists (privacy protection)
     if 'NameSchool' in data.columns:
         data = data.drop(columns=['NameSchool'])
+    if 'signature' in data.columns:
+        data = data.drop(columns=['signature'])
+    if 'CommentsTimeline' in data.columns:
+        data = data.drop(columns=['CommentsTimeline'])
     
     # Generate filename
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -2179,30 +2195,30 @@ def update_grammar_items_preset_filter(selected_presets, pairs):
         meta['combined_item_code'] = meta['question_code'] + ' - ' + meta['question_code_written']
         
         column_mapping = {
+            'combined_item_code': 'Item Code',
             'group_finegrained': 'Group',
             'feature_ewave': 'eWAVE',
-            'group_ewave': 'eWAVE Area',
             'item': 'Item',
-            'combined_item_code': 'Item Code',
+            'group_ewave': 'eWAVE Area',
             'feature': 'Feature',
             'section': 'Section'
         }
-        selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'combined_item_code', 'feature', 'section']
+        selected_columns = ['combined_item_code', 'group_finegrained', 'feature_ewave', 'item', 'group_ewave', 'feature', 'section']
         meta = meta[selected_columns].copy()
         meta = meta.rename(columns=column_mapping)
     else:
         meta = retrieve_data.getGrammarMeta()
         
         column_mapping = {
+            'question_code': 'Item Code',
             'group_finegrained': 'Group',
             'feature_ewave': 'eWAVE',
-            'group_ewave': 'eWAVE Area',
             'item': 'Item',
-            'question_code': 'Item Code',
+            'group_ewave': 'eWAVE Area',
             'feature': 'Feature',
             'section': 'Section'
         }
-        selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'question_code', 'feature', 'section']
+        selected_columns = ['question_code', 'group_finegrained', 'feature_ewave', 'item', 'group_ewave', 'feature', 'section']
         available_columns = [col for col in selected_columns if col in meta.columns]
         meta = meta[available_columns].copy()
         meta = meta.rename(columns=column_mapping)
@@ -2260,15 +2276,15 @@ def filter_grammar_items_table(n_clicks, items, pairs):
         meta['combined_item_code'] = meta['question_code'] + ' - ' + meta['question_code_written']
         
         column_mapping = {
+            'combined_item_code': 'Item Code',
             'group_finegrained': 'Group',
             'feature_ewave': 'eWAVE',
-            'group_ewave': 'eWAVE Area',
             'item': 'Item',
-            'combined_item_code': 'Item Code',
+            'group_ewave': 'eWAVE Area',
             'feature': 'Feature',
             'section': 'Section'
         }
-        selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'combined_item_code', 'feature', 'section']
+        selected_columns = ['combined_item_code', 'group_finegrained', 'feature_ewave', 'item', 'group_ewave', 'feature', 'section']
         meta = meta[selected_columns].copy()
         meta = meta.rename(columns=column_mapping)
         
@@ -2279,15 +2295,15 @@ def filter_grammar_items_table(n_clicks, items, pairs):
         meta = retrieve_data.getGrammarMeta()
         
         column_mapping = {
+            'question_code': 'Item Code',
             'group_finegrained': 'Group',
             'feature_ewave': 'eWAVE',
-            'group_ewave': 'eWAVE Area',
             'item': 'Item',
-            'question_code': 'Item Code',
+            'group_ewave': 'eWAVE Area',
             'feature': 'Feature',
             'section': 'Section'
         }
-        selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'question_code', 'feature', 'section']
+        selected_columns = ['question_code', 'group_finegrained', 'feature_ewave', 'item', 'group_ewave', 'feature', 'section']
         available_columns = [col for col in selected_columns if col in meta.columns]
         meta = meta[available_columns].copy()
         meta = meta.rename(columns=column_mapping)
@@ -2317,30 +2333,30 @@ def clear_all_grammar_items_filters(n_clicks, pairs):
         meta['combined_item_code'] = meta['question_code'] + ' - ' + meta['question_code_written']
         
         column_mapping = {
+            'combined_item_code': 'Item Code',
             'group_finegrained': 'Group',
             'feature_ewave': 'eWAVE',
-            'group_ewave': 'eWAVE Area',
             'item': 'Item',
-            'combined_item_code': 'Item Code',
+            'group_ewave': 'eWAVE Area',
             'feature': 'Feature',
             'section': 'Section'
         }
-        selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'combined_item_code', 'feature', 'section']
+        selected_columns = ['combined_item_code', 'group_finegrained', 'feature_ewave', 'item', 'group_ewave', 'feature', 'section']
         meta = meta[selected_columns].copy()
         meta = meta.rename(columns=column_mapping)
     else:
         meta = retrieve_data.getGrammarMeta()
         
         column_mapping = {
+            'question_code': 'Item Code',
             'group_finegrained': 'Group',
             'feature_ewave': 'eWAVE',
-            'group_ewave': 'eWAVE Area',
             'item': 'Item',
-            'question_code': 'Item Code',
+            'group_ewave': 'eWAVE Area',
             'feature': 'Feature',
             'section': 'Section'
         }
-        selected_columns = ['group_finegrained', 'feature_ewave', 'group_ewave', 'item', 'question_code', 'feature', 'section']
+        selected_columns = ['question_code', 'group_finegrained', 'feature_ewave', 'item', 'group_ewave', 'feature', 'section']
         available_columns = [col for col in selected_columns if col in meta.columns]
         meta = meta[available_columns].copy()
         meta = meta.rename(columns=column_mapping)
@@ -3099,14 +3115,16 @@ def initiate_umap_rendering(BTNrenderPlot, modal_ok, modal_cancel, figure, runni
     State('umap-standardize-checkbox', 'checked'),
     State('umap-densemap-checkbox', 'checked'),
     State('grammar-type-switch', 'checked'), 
-    State('use-imputed-data-switch', 'checked')], 
+    State('use-imputed-data-switch', 'checked'),
+    State('informants-store', 'data'),  # Add informants store
+    State('england-mapping-param', 'data')],  # Add england mapping parameter
     prevent_initial_call=True,
     background=True,
     running=[(Output("grammar_running","data"),True,False)]
 )
 def compute_umap_background(trigger_data, selected_informants, items, n_neighbours, 
                            min_dist, selected_presets, distance_metric, 
-                           standardize_participant_ratings, densemap, pairs, use_imputed):
+                           standardize_participant_ratings, densemap, pairs, use_imputed, informants_data, regional_mapping):
     """Compute UMAP in background - this is the slow operation"""
     if trigger_data is None:
         raise PreventUpdate
@@ -3139,7 +3157,9 @@ def compute_umap_background(trigger_data, selected_informants, items, n_neighbou
         distance_metric=distance_metric,
         standardize=standardize_participant_ratings,
         densemap=densemap,
-        pairs=pairs
+        pairs=pairs,
+        informants=informants_data,
+        regional_mapping=regional_mapping
     )
     groupsCache = getColorGroupingsFromFigure(figure)
     
@@ -3506,10 +3526,10 @@ def updateGrammarItemsTree(wo_button,curr_button,prob_button,itemTree):
      Output('render-grammar-plot', 'disabled', allow_duplicate=True),
      Output("notify-container", "children",allow_duplicate=True)],
     Input('render-item-plot','n_clicks'),
-    [State('participantsTree','checked'),State('grammarItemsTree','checked'),State('items-group-by','value'),State('items-sort-by','value'),State('items-plot-mode','value'),State('grammar-type-switch','checked'),State('use-imputed-data-switch', 'checked')],
+    [State('participantsTree','checked'),State('grammarItemsTree','checked'),State('items-group-by','value'),State('items-sort-by','value'),State('items-plot-mode','value'),State('grammar-type-switch','checked'),State('use-imputed-data-switch', 'checked'),State('england-mapping-param', 'data')],
     prevent_initial_call=True
 )
-def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imputed):
+def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imputed,regional_mapping):
     button_clicked = ctx.triggered_id
     if button_clicked == 'render-item-plot' and BTN is not None:
         # Validation: Check minimum selections (handle None case)
@@ -3566,19 +3586,19 @@ def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imput
         # Use lazy data loading - only get data when needed
         if use_imputed:
             if pairs:
-                data_source = get_grammar_data_pairs_cached()
+                data_source = get_grammar_data_pairs_cached(regional_mapping=regional_mapping)
             else:
-                data_source = get_grammar_data_cached()
+                data_source = get_grammar_data_cached(regional_mapping=regional_mapping)
         else:
             if pairs:
-                data_source = get_grammar_data_pairs_raw_cached()
+                data_source = get_grammar_data_pairs_raw_cached(regional_mapping=regional_mapping)
             else:
-                data_source = get_grammar_data_raw_cached()
+                data_source = get_grammar_data_raw_cached(regional_mapping=regional_mapping)
         
         # to do: merge meta info here for hoverinfo in plot
         # Check if split_by_variety mode is selected
         split_by_variety = (plot_mode == "split_by_variety")
-        itemPlot = getItemPlot(informants, items,groupby=groupby,sortby=sortby,pairs=pairs,use_imputed=use_imputed,plot_mode=plot_mode,split_by_variety=split_by_variety)
+        itemPlot = getItemPlot(informants, items,groupby=groupby,sortby=sortby,pairs=pairs,use_imputed=use_imputed,plot_mode=plot_mode,split_by_variety=split_by_variety,regional_mapping=regional_mapping)
         return itemPlot, no_update, no_update, notification
     return no_update, no_update, no_update, no_update
 
@@ -3878,23 +3898,27 @@ def close_modal_on_ok(n_clicks):
      State('similarity-threshold', 'value'),
      State('leiden-color-dropdown', 'value'),
      State('leiden-pca-switch', 'checked'),
-     State('leiden-pca-components', 'value')],
+     State('leiden-pca-components', 'value'),
+     State('informants-store', 'data')],  # Add informants store
     prevent_initial_call=True
 )
 def run_leiden_clustering(n_clicks, selected_informants, selected_items, resolution, similarity_threshold, 
-                         color_by, apply_pca, n_components):
+                         color_by, apply_pca, n_components, informants_data):
     if n_clicks is None:
         return no_update, no_update, no_update, False, no_update
     
     try:
+        # Convert informants data from store
+        informants_df = pd.DataFrame(informants_data) if informants_data else Informants
+        
         # Filter data based on selections
         if selected_informants == ['informants']:
-            selected_informants = Informants['InformantID'].tolist()
+            selected_informants = informants_df['InformantID'].tolist()
         if selected_items == ['grammaritems']:
             selected_items = GrammarItemsCols        
         # Get filtered data
         data = retrieve_data.getGrammarData(imputed=True, participants=selected_informants, columns=selected_items)
-        informant_data = Informants[Informants['InformantID'].isin(selected_informants)].copy()
+        informant_data = informants_df[informants_df['InformantID'].isin(selected_informants)].copy()
         
         # Prepare feature matrix
         feature_cols = [col for col in data.columns if col in selected_items]
@@ -4148,11 +4172,40 @@ def toggle_item_selection_ui(type_switch_checked):
     Enable/disable UI elements based on Type switch state.
     If Type = "Mode difference" (checked=True), disable preset and toggle buttons.
     If Type = "Individual items" (checked=False), enable them.
+    Note: The preset filter in the grammar table remains enabled.
     """
     # When checked=True, it's "Mode difference" - disable elements
     # When checked=False, it's "Individual items" - enable elements
     disabled = type_switch_checked
     return disabled, disabled, disabled
+
+# Add callback to update preset options based on item difference mode
+@callback(
+    [Output('grammar-items-preset', 'data'),
+     Output('grammar-items-preset-filter', 'data')],
+    Input('grammar-type-switch', 'checked'),
+    prevent_initial_call=False
+)
+def update_preset_options(type_switch_checked):
+    """
+    Update preset options based on Type switch state.
+    If Type = "Mode difference" (checked=True), exclude "Top 15", "Mode: Spoken", "Mode: written".
+    If Type = "Individual items" (checked=False), show all presets.
+    """
+    if type_switch_checked:
+        # Filter out mode-related presets when in item difference mode
+        filtered_presets = [
+            p for p in item_presets 
+            if p['label'] not in ['Top 15 spoken', 'Mode: Spoken', 'Mode: written']
+        ]
+        filtered_data = build_preset_multiselect_data(filtered_presets)
+        # For the filter dropdown, we need a flat list of labels
+        filter_data = [{'label': p['label'], 'value': p['label']} for p in filtered_presets]
+        return filtered_data, filter_data
+    else:
+        # Return all presets in individual items mode
+        filter_data = [{'label': p['label'], 'value': p['label']} for p in item_presets]
+        return labels_dict, filter_data
 
 @callback(
     [Output('grammarItemsTree', 'data'),
@@ -4179,3 +4232,36 @@ def update_grammar_items_tree(type_switch_checked):
     pairs = type_switch_checked
     tree_data = drawGrammarItemsTree(meta, pairs=pairs)
     return tree_data, checked_items
+
+# Callback to parse URL parameters and set England mapping flag
+@callback(
+    [Output('england-mapping-param', 'data'),
+     Output('informants-store', 'data'),
+     Output('participantsTree', 'data')],
+    Input('url', 'search'),
+    prevent_initial_call=False
+)
+def parse_url_parameters(search):
+    """
+    Parse URL search parameters and extract RegionalMapping flag.
+    Also reload informants data based on the flag.
+    """
+    regional_mapping = False
+    
+    if search:
+        # Parse the URL parameters
+        from urllib.parse import parse_qs
+        params = parse_qs(search.lstrip('?'))
+        
+        # Check for RegionalMapping parameter (renamed from EnglandMapping)
+        if 'RegionalMapping' in params:
+            value = params['RegionalMapping'][0].lower()
+            regional_mapping = value in ['true', '1', 'yes']
+    
+    # Reload informants data with the regional mapping flag
+    informants = retrieve_data.getInformantDataGrammar(imputed=True, regional_mapping=regional_mapping)
+    
+    # Rebuild the participants tree with the updated informants data
+    tree_data = drawParticipantsTree(informants)
+    
+    return regional_mapping, informants.to_dict("records"), tree_data

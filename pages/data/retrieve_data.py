@@ -57,14 +57,13 @@ EXCLUDED_PARTICIPANTS = ["GIB10-041m17","GIB10-042m17", "IND24-0105", "PR15-039m
 
 # function to map variety names to colors
 def get_color_for_variety(type="lexical"):
-    if type == "lexical":
-        variety_names = getInformantData()['MainVariety'].unique()
-    elif type == "grammar":
-        variety_names = getInformantDataGrammar()['MainVariety'].unique()
-    
     # Fixed color mapping for varieties
+    # Return the complete fixed map to ensure all varieties (including England subdivisions) have colors
     fixed_color_map = {
         "England": "#1f77b4",
+        "England_North": "#4a90c4",  # Lighter blue for North England
+        "England_South": "#0d5a8f",  # Darker blue for South England
+        "England_UNCLEAR": "#7bb3d9",  # Even lighter blue for UNCLEAR England
         "Scotland": "#ff7f0e", 
         "US": "#2ca02c",
         "Gibraltar": "#d62728",
@@ -77,17 +76,7 @@ def get_color_for_variety(type="lexical"):
         "Other": "#c49c94"
     }
     
-    # Create a dictionary mapping variety names to colors
-    # For any variety not in the fixed map, use a default color
-    variety_to_color = {}
-    for variety in variety_names:
-        if variety in fixed_color_map:
-            variety_to_color[variety] = fixed_color_map[variety]
-        else:
-            # If a variety is not in our fixed map, assign it the "Other" color
-            variety_to_color[variety] = fixed_color_map["Other"]
-    
-    return variety_to_color
+    return fixed_color_map
 
 
 
@@ -246,9 +235,13 @@ def getInformantData(columns = None, informants = None, varieties = None):
     # Exclude specified participants
     data = data[~data['InformantID'].isin(EXCLUDED_PARTICIPANTS)]
     
-    # Remove NameSchool column if it exists (privacy protection)
+    # Remove NameSchool, signature, and CommentsTimeline columns if they exist (privacy protection)
     if 'NameSchool' in data.columns:
         data = data.drop(columns=['NameSchool'])
+    if 'signature' in data.columns:
+        data = data.drop(columns=['signature'])
+    if 'CommentsTimeline' in data.columns:
+        data = data.drop(columns=['CommentsTimeline'])
     
     float_columns = ['Age', 'YearsLivedOutside', 'YearsLivedInside', 'YearsLivedOtherEnglish', 'Ratio', 'YearsLivedInMainVariety', 'RatioMainVariety']
     data.loc[:,float_columns] = data.loc[:,float_columns].apply(pd.to_numeric, errors='coerce')
@@ -273,7 +266,7 @@ def getInformantData(columns = None, informants = None, varieties = None):
 
     return data
 
-def getInformantDataGrammar(columns = None, participants = None, varieties = None, imputed = False):
+def getInformantDataGrammar(columns = None, participants = None, varieties = None, imputed = False, regional_mapping = False):
     # Load all columns from Informants table, filtered by InformantIDs that exist in grammar tables
     
     if imputed:
@@ -304,9 +297,13 @@ def getInformantDataGrammar(columns = None, participants = None, varieties = Non
     # Exclude specified participants
     data = data[~data['InformantID'].isin(EXCLUDED_PARTICIPANTS)]
     
-    # Remove NameSchool column if it exists (privacy protection)
+    # Remove NameSchool, signature, and CommentsTimeline columns if they exist (privacy protection)
     if 'NameSchool' in data.columns:
         data = data.drop(columns=['NameSchool'])
+    if 'signature' in data.columns:
+        data = data.drop(columns=['signature'])
+    if 'CommentsTimeline' in data.columns:
+        data = data.drop(columns=['CommentsTimeline'])
     
     float_columns = ['Age', 'YearsLivedOutside', 'YearsLivedInside', 'YearsLivedOtherEnglish', 'Ratio', 'YearsLivedInMainVariety', 'RatioMainVariety']
     data.loc[:,float_columns] = data.loc[:,float_columns].apply(pd.to_numeric, errors='coerce')
@@ -348,6 +345,33 @@ def getInformantDataGrammar(columns = None, participants = None, varieties = Non
     data['MainVariety'] = data['MainVariety'].apply(lambda x: x if variety_counts.get(x, 0) >= 10 else 'Other')
     # if main variety unclear, set to "Other"
     data['MainVariety'] = data['MainVariety'].apply(lambda x: x if x != 'UNCLEAR' else 'Other')
+
+    # Apply England North/South mapping if requested
+    if regional_mapping:
+        # Load the England mapping CSV
+        regional_mapping_file = os.path.join(Conf.dataDir, 'england_N_S_mapping.csv')
+        if os.path.exists(regional_mapping_file):
+            regional_map_df = pd.read_csv(regional_mapping_file)
+            # Create a dictionary for quick lookup (note: CSV has "Informant ID" with space)
+            # Rename column if necessary
+            if 'Informant ID' in regional_map_df.columns:
+                regional_map_df = regional_map_df.rename(columns={'Informant ID': 'InformantID'})
+            regional_map_dict = dict(zip(regional_map_df['InformantID'], regional_map_df['north_south']))
+            
+            # Apply mapping to England participants
+            def apply_regional_mapping(row):
+                if row['MainVariety'] == 'England':
+                    informant_id = row['InformantID']
+                    region = regional_map_dict.get(informant_id, 'UNCLEAR')
+                    if region == 'north':
+                        return 'England_North'
+                    elif region == 'south':
+                        return 'England_South'
+                    else:
+                        return 'England_UNCLEAR'
+                return row['MainVariety']
+            
+            data['MainVariety'] = data.apply(apply_regional_mapping, axis=1)
 
     if varieties is not None:
         data = data[data['MainVariety'].isin(varieties)]
@@ -406,15 +430,19 @@ def getLexicalData(imputed=False):
     # Exclude specified participants
     data = data[~data['InformantID'].isin(EXCLUDED_PARTICIPANTS)]
     
-    # Remove NameSchool column if it exists (privacy protection)
+    # Remove NameSchool, signature, and CommentsTimeline columns if they exist (privacy protection)
     if 'NameSchool' in data.columns:
         data = data.drop(columns=['NameSchool'])
+    if 'signature' in data.columns:
+        data = data.drop(columns=['signature'])
+    if 'CommentsTimeline' in data.columns:
+        data = data.drop(columns=['CommentsTimeline'])
     
     return data
 
 
 # implement filter here
-def getGrammarData(imputed=False,pairs=False, **kwargs):
+def getGrammarData(imputed=False,pairs=False, regional_mapping=False, **kwargs):
 
     InformantCols = getInformantCols()
     GrammarCols = getGrammarItemsCols(type="all")
@@ -491,6 +519,10 @@ def getGrammarData(imputed=False,pairs=False, **kwargs):
     # Remove NameSchool column if it exists (privacy protection)
     if 'NameSchool' in data.columns:
         data = data.drop(columns=['NameSchool'])
+    if 'signature' in data.columns:
+        data = data.drop(columns=['signature'])
+    if 'CommentsTimeline' in data.columns:
+        data = data.drop(columns=['CommentsTimeline'])
     
     # delete all records where InformantID starts with "Unnamed"
 
@@ -534,6 +566,33 @@ def getGrammarData(imputed=False,pairs=False, **kwargs):
     
     data.loc[:,'MainVariety'] = data.loc[:,'MainVariety'].apply(lambda x: x if variety_counts.get(x, 0) >= 10 else 'Other')
     data.loc[:,'MainVariety'] = data.loc[:,'MainVariety'].apply(lambda x: x if x != 'UNCLEAR' else 'Other')
+
+    # Apply England North/South mapping if requested
+    if regional_mapping:
+        # Load the England mapping CSV
+        regional_mapping_file = os.path.join(Conf.dataDir, 'england_N_S_mapping.csv')
+        if os.path.exists(regional_mapping_file):
+            regional_map_df = pd.read_csv(regional_mapping_file)
+            # Create a dictionary for quick lookup (note: CSV has "Informant ID" with space)
+            # Rename column if necessary
+            if 'Informant ID' in regional_map_df.columns:
+                regional_map_df = regional_map_df.rename(columns={'Informant ID': 'InformantID'})
+            regional_map_dict = dict(zip(regional_map_df['InformantID'], regional_map_df['north_south']))
+            
+            # Apply mapping to England participants
+            def apply_regional_mapping(row):
+                if row['MainVariety'] == 'England':
+                    informant_id = row['InformantID']
+                    region = regional_map_dict.get(informant_id, 'UNCLEAR')
+                    if region == 'north':
+                        return 'England_North'
+                    elif region == 'south':
+                        return 'England_South'
+                    else:
+                        return 'England_UNCLEAR'
+                return row['MainVariety']
+            
+            data.loc[:, 'MainVariety'] = data.apply(apply_regional_mapping, axis=1)
 
     if pairs:
         # substract item pairs from each other, spoken item - written item
@@ -589,6 +648,10 @@ def getAllData(imputed=False):
     # Remove NameSchool column if it exists (privacy protection)
     if 'NameSchool' in data.columns:
         data = data.drop(columns=['NameSchool'])
+    if 'signature' in data.columns:
+        data = data.drop(columns=['signature'])
+    if 'CommentsTimeline' in data.columns:
+        data = data.drop(columns=['CommentsTimeline'])
     
     return data
 
