@@ -3,7 +3,6 @@ from dash import register_page
 import pages.data.retrieve_data as retrieve_data
 from pages.data.grammarFunctions import *
 from pages.data.grammarFunctions import _participants_hash
-from pages.components.grammar_overview import get_grammar_overview
 from time import sleep
 
 import plotly.express as px
@@ -771,8 +770,7 @@ ItemPlotContainer = dmc.Container([dmc.Grid(children=[
 
 InformantsPlotContainer = InformantsGrid
 
-# Import overview content from separate component
-Overview = get_grammar_overview()
+
 
 GrammarPlots = dmc.Container([
     dmc.Title("Grammar Items", order = 2),
@@ -937,6 +935,10 @@ informantSelectionAccordion = dmc.AccordionItem(
                                         dmc.Group(children=[
                                             dmc.Button("Female", id='batch-select-female', size="xs", variant="light"),
                                             dmc.Button("Male", id='batch-select-male', size="xs", variant="light"),
+                                        ], gap="xs", mb="xs"),
+                                        dmc.Text("Completeness:", size="xs", fw=600, c="dimmed"),
+                                        dmc.Group(children=[
+                                            dmc.Button("Complete Grammar", id='batch-select-complete-grammar', size="xs", variant="light"),
                                         ], gap="xs", mb="xs"),
                                         dmc.Group(children=[
                                             dmc.Button("Balanced", id='batch-select-balanced', size="xs", variant="light"),
@@ -2062,6 +2064,7 @@ def update_quick_stats(selected_participants, selected_items, use_pairs):
      Input('batch-select-age-50plus', 'n_clicks'),
      Input('batch-select-female', 'n_clicks'),
      Input('batch-select-male', 'n_clicks'),
+     Input('batch-select-complete-grammar', 'n_clicks'),
      Input('batch-select-balanced', 'n_clicks'),
      Input('batch-select-balanced-per-variety', 'n_clicks'),
      Input('batch-select-equal-per-variety', 'n_clicks')],
@@ -2104,6 +2107,9 @@ def batch_select_participants(*args):
         selected = data[data['Gender'].isin(['f', 'female', 'Female'])]['InformantID'].tolist()
     elif button_id == 'batch-select-male':
         selected = data[data['Gender'].isin(['m', 'male', 'Male'])]['InformantID'].tolist()
+    elif button_id == 'batch-select-complete-grammar':
+        # Get participants who completed all grammar items
+        selected = retrieve_data.getCompleteGrammarParticipants()
     elif button_id == 'batch-select-balanced':
         # Select equal numbers of male and female
         females = data[data['Gender'].isin(['f', 'female', 'Female'])]
@@ -3177,20 +3183,21 @@ def compute_umap_background(trigger_data, selected_informants, items, n_neighbou
     [Output('render-UMAP-plot', 'loading', allow_duplicate=True),
      Output('Umap-add-group', 'disabled', allow_duplicate=True),
      Output('Umap-clear-groups', 'disabled', allow_duplicate=True),
-     Output('render-rf-plot', 'disabled', allow_duplicate=True)],
+     Output('render-rf-plot', 'disabled', allow_duplicate=True),
+     Output('grammar-analysis-tabs', 'value', allow_duplicate=True)],
     Input('grammar_plots_UMAP', 'data'),
     State('grammar_plots_UMAP', 'data'),
     prevent_initial_call=True
 )
 def handle_umap_completion(new_figure, figure_state):
-    """Clear loading states when UMAP computation completes"""
+    """Clear loading states when UMAP computation completes and activate Plot View tab"""
     # Only respond to actual new plots (not initial state or group modifications)
     if new_figure is None or len(new_figure.get('data', [])) == 0:
         # No real UMAP plot yet, keep buttons in appropriate state
-        return False, False, False, False
+        return False, False, False, False, no_update
     
-    # UMAP plot is ready - enable all buttons
-    return False, False, False, False
+    # UMAP plot is ready - enable all buttons and activate Plot View tab
+    return False, False, False, False, "plot-view"
 
 
 # Callback to toggle between UMAP and RF plot views
@@ -3252,7 +3259,8 @@ def clear_rf_plot_loading(figure, notification):
      Output('Umap-clear-groups', 'disabled',allow_duplicate=True),
      Output('render-rf-plot', 'disabled',allow_duplicate=True),
      Output("notify-container", "children",allow_duplicate=True), 
-     Output('umap-view-toggle', 'value', allow_duplicate=True)],  # Auto-switch to RF view
+     Output('umap-view-toggle', 'value', allow_duplicate=True),
+     Output('grammar-analysis-tabs', 'value', allow_duplicate=True)],  # Activate Plot View tab
     Input('render-rf-plot','n_clicks'),
     [State('UMAPGroupsForRF','data'),
     State('UMAPitems','data'),
@@ -3313,7 +3321,7 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
                     autoClose=5000,
                     position="top-right"
             )
-            return no_update, False, False, False, notification, no_update
+            return no_update, False, False, False, notification, no_update, no_update
         df = pd.DataFrame(groups['dataframe'])
         if("id" in df.columns):
             # rename column id to ids
@@ -3337,7 +3345,7 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
                 autoClose=5000,
                 position="top-right"
             )
-            return no_update, False, False, False, notification, no_update
+            return no_update, False, False, False, notification, no_update, no_update
 
         #data = retrieve_data
         # retrieve grammar data, add items from session cache
@@ -3403,8 +3411,8 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
 
         # to do: merge meta info here for hoverinfo in plot
         RFPlot = get_cached_rf_plot(plotDF, importanceRatings, value_range, pairs=pairs, split_by_variety=split_by_variety)
-        return RFPlot, False, False, False, notification, 'rf-plot'
-    return no_update, no_update, no_update, no_update, no_update, no_update
+        return RFPlot, False, False, False, notification, 'rf-plot', "plot-view"
+    return no_update, no_update, no_update, no_update, no_update, no_update, no_update
 
 # apply filter to participant selection tree
 @callback(
@@ -3524,7 +3532,8 @@ def updateGrammarItemsTree(wo_button,curr_button,prob_button,itemTree):
     [Output('ItemFig','figure'),
      Output('render-loading-overlay', 'visible', allow_duplicate=True),
      Output('render-grammar-plot', 'disabled', allow_duplicate=True),
-     Output("notify-container", "children",allow_duplicate=True)],
+     Output("notify-container", "children",allow_duplicate=True),
+     Output('grammar-analysis-tabs', 'value', allow_duplicate=True)],
     Input('render-item-plot','n_clicks'),
     [State('participantsTree','checked'),State('grammarItemsTree','checked'),State('items-group-by','value'),State('items-sort-by','value'),State('items-plot-mode','value'),State('grammar-type-switch','checked'),State('use-imputed-data-switch', 'checked'),State('england-mapping-param', 'data')],
     prevent_initial_call=True
@@ -3544,7 +3553,7 @@ def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imput
                 autoClose=5000,
                 position="top-right"
             )
-            return no_update, False, False, notification
+            return no_update, False, False, notification, no_update
         
         if not items or len(items) < 1:
             notification = dmc.Notification(
@@ -3557,7 +3566,7 @@ def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imput
                 autoClose=5000,
                 position="top-right"
             )
-            return no_update, False, False, notification
+            return no_update, False, False, notification, no_update
         
         # Validation passed - show rendering notification with imputed data info if applicable
         if use_imputed:
@@ -3599,8 +3608,8 @@ def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imput
         # Check if split_by_variety mode is selected
         split_by_variety = (plot_mode == "split_by_variety")
         itemPlot = getItemPlot(informants, items,groupby=groupby,sortby=sortby,pairs=pairs,use_imputed=use_imputed,plot_mode=plot_mode,split_by_variety=split_by_variety,regional_mapping=regional_mapping)
-        return itemPlot, no_update, no_update, notification
-    return no_update, no_update, no_update, no_update
+        return itemPlot, no_update, no_update, notification, "plot-view"
+    return no_update, no_update, no_update, no_update, no_update
 
 # Save rendered plots to session storage for persistence
 @callback(

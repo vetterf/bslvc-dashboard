@@ -2,6 +2,32 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
+## [0.1.2] - 2025-11-18
+
+### Added
+- **About Page**: New dedicated About page with project information, citation information, technical details, and contact information
+- **Auto-activate Plot View Tab**: Plot View tab now automatically activates when UMAP, Item, or RF plots finish rendering
+- **Grammar item selection via Grammar Items table**: Users can now select grammar items in the grammar items table.
+- **Regional mapping URL parameter**: URL parameter ?regional_mapping=true now activates the regional mapping of English participants to England_North and England_South
+### Changed
+- **License**: Changed from CC BY-SA 4.0 to MIT License for the dashboard software
+  - Added MIT LICENSE file to repository
+  - Updated footer to display MIT License with link
+- **Grammar Items Preset Filtering**: 
+  - Preset dropdown in table filter remains enabled when Item Difference mode is active
+  - Mode-specific presets (Top 15, Mode: Spoken, Mode: Written) are now filtered out when Item Difference is enabled
+- **Grammar Items Table Column Order**: Rearranged columns to: Item Code, Group, eWAVE, Item (more intuitive ordering)
+- **Preset Dropdown Position**: Changed to open upward (`comboboxProps={"position": "top"}`) to prevent dropdown from being cut off
+- **Getting Started Page**: Added a getting started section with a description of the grammar analysis module with three items (Basic Workflow, Case Study 1, Case Study 2)
+
+### Removed
+- **Superfluous Files**: Cleaned up unused project files:
+
+### Technical Details
+- Modified callbacks in `grammar.py` to include tab activation output
+- Updated `handle_umap_completion()`, `renderItemPlot()`, and `renderRFPlot()` callbacks
+- Added conditional column drops in all data retrieval functions
+- Implemented preset filtering logic based on item difference mode
 
 ## [0.1.1] - 2025-11-06
 

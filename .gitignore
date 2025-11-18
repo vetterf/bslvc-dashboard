@@ -5,3 +5,7 @@
 **/cache
 **/.venv
 BSLVC_sqlite.db
+
+# MkDocs build output
+site/
+.cache/

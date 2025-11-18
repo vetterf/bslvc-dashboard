@@ -18,9 +18,9 @@ def create_case_study_1(create_ui_location):
                 dmc.Title("Research Questions", order=4)
             ], gap="sm", mb="sm"),
             dcc.Markdown("""
-This case study explores variety-based clustering in English varieties using spoken language features:
+This case study explores how similar participants are with respect to their ratings of the spoken grammar items. The guiding questions are:
 
-1. Do participants cluster according to their English variety based on spoken feature ratings?
+1. Do participants cluster according to their variety based on spoken feature ratings?
 2. If clustering occurs, do varieties group by type (e.g., ENL, ESL, EFL)?
 3. Which grammatical features best distinguish English from Scottish participants?
             """, className="markdown-content")
@@ -106,7 +106,7 @@ In the **Grammar Items** section:
 1. Click the checkbox next to "Spoken" to include all spoken grammar features.
 2. Then click **"Problematic"** (marked with a filter icon) to exclude features that may have distorting effects.
 
-**Problematic items?** Some features contain mentions of currency (e.g., Euro, Dollar) that vary depending on the country of collection. For two features, the way the features are rendered by our speakers may have an effect on the ratings. For more details on problematic features, see the documentation.
+For more details on problematic features, see either the basic workflow or the documentation.
             """, className="markdown-content"),
             dmc.Image(h="auto", w=300, fit="contain", src="/assets/case_studies/screenshots/c1_select_grammar_items.png"),
         ], p="md", withBorder=True, radius="md")

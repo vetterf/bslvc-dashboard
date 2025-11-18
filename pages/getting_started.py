@@ -125,7 +125,7 @@ def create_ui_location(highlight_section="", highlight_element="", highlight_tab
         "border": "2px solid #dee2e6",
         "borderRadius": "0 6px 6px 6px",
         "padding": "8px",
-        "height": "140px",
+        "height": "120px",
         "display": "flex",
         "alignItems": "center",
         "justifyContent": "center"
@@ -173,12 +173,12 @@ def create_ui_location(highlight_section="", highlight_element="", highlight_tab
             dmc.Paper([
                 nav_content
             ], withBorder=True, p="xs", radius="md", style={**left_style, "border": left_border})
-        ], span=1),
+        ], span=2),
         dmc.GridCol([
             dmc.Paper([
                 main_view_content
             ], withBorder=True, p="sm", radius="md", style={**middle_style, "border": middle_border})
-        ], span=8),
+        ], span=7),
         dmc.GridCol([
             dmc.Paper([
                 dmc.Stack(options_elements, gap=0, justify="flex-start")
@@ -247,7 +247,7 @@ Alternatively, you can use the "Select All" and "Deselect All" buttons, or choos
             dmc.Badge("4", size="lg", variant="filled", color="violet", circle=True, mb="sm"),
             dmc.Title("Select Features", order=5, mb="md"),
             dcc.Markdown("""
-Next, choose grammatical features that you want to include in your analysis. You can select features either directly in the grammar items tree selector or via the "Grammatical Items" tab.
+Next, choose grammatical features that you want to include in your analysis. You can select features either directly in the grammar items tree or via the "Grammatical Items" tab.
 
 **Selecting features in the Grammar Items tree**
 
@@ -265,11 +265,11 @@ The features are first grouped by mode, then by feature group. You can expand th
 This way of selecting features is recommended for a smaller number of specific features.
 First, navigate to the "Grammatical Items" tab in the main view. 
 There, you can use the search bar and preset filters to find specific features or groups of features. The table is filtered according to your input. You can select features by clicking invididual rows. By holding the Shift key, you can select multiple features at once. By holding the Ctrl (Cmd on Mac) key, you can add or remove individual features from your selection. 
-Finally, click the green button labelled "Select rows" above the table. This selects the features of the highlighted rows in the grammar items tree selector on the right.
+Finally, click the green button labelled "Select rows" above the table. This selects the features of the highlighted rows in the grammar items tree on the right.
             """, className="markdown-content"),
             create_ui_location(highlight_section="middle", highlight_element="", highlight_tab="grammar_items", highlight_nav="", highlight_right=True),
             dcc.Markdown("""
-                    In the screenshot below, you can see that the table was filtered by selecting the preset "Existentials", and several features are selected in the filtered results.
+                    In the screenshot below, you can see that the table was filtered by selecting the preset "Existentials", and several features are selected in the filtered results. By clicking the green button "Select rows", these features are selected in the grammar items tree on the right.
             """, className="markdown-content"),
             dmc.Image(h="auto", w=500, fit="contain", src="/assets/img/gs_select_grammar_features_table.png"),
             dcc.Markdown("""
@@ -281,7 +281,7 @@ Finally, click the green button labelled "Select rows" above the table. This sel
             dcc.Markdown("""
 **Deselecting problematic features**
 
-A handful of features in the dataset could potentially skew the analysis. These features can be deselected with the button "Problematic" above the Grammar Item tree selector."""),
+A handful of features in the dataset could potentially skew the analysis. These features can be deselected with the button "Problematic" above the Grammar Item tree."""),
             dmc.Image(h="auto", w=300, fit="contain", src="/assets/img/gs_select_grammar_features_problematic.png"),
             dcc.Markdown("""
 
@@ -385,7 +385,7 @@ layout = dmc.Container([
 The BSLVC Dashboard allows you to interactively explore the data of the Bamberg Survey of Language Variation and Change.
 Currently, only the grammar data are available for exploration. The lexical data will be added in future updates.
 
-This section provides an overview of the interface, describe the basic workflow for utilizing the Dashboard to analyse the grammar data, and describe two case studies in which we illustrate how you can approach more specific research questions. 
+This section provides an overview of the interface, describes the basic workflow for utilizing the Dashboard to analyse the grammar data, and describes two case studies in which we illustrate how you can approach more specific research questions. 
 A comprehensive documentation of the Dashboard's features and functionalities will be available soon.
         """),
         
@@ -440,7 +440,10 @@ A comprehensive documentation of the Dashboard's features and functionalities wi
         ], gutter="md", mb="xl"),
         
         # Working with Grammar Data Section (combines workflow + case studies)
-        dmc.Title("Working with the Grammar Data", order=3, mt="xl", mb="md"),
+        dmc.Group([
+            DashIconify(icon="tabler:language", width=28),
+            dmc.Title("Working with the Grammar Data", order=3, mt="xl", mb="md")
+        ], gap="sm", mt="xl", mb="md"),
         dmc.Text("Follow the basic workflow to get started, or explore practical examples through case studies.", c="dimmed", mb="md"),
         
         dmc.Accordion([

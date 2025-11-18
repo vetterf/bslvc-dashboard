@@ -416,6 +416,40 @@ def getSurveyCount():
     data['WrittenOnly'] = data['GrammarWrittenCount'] - data['GrammarCompleteCount']
     return data
 
+def getCompleteGrammarParticipants():
+    """
+    Returns a list of InformantIDs who have filled in all grammar items (non-imputed data).
+    A participant is considered complete if they have non-ND values for all grammar item columns.
+    """
+    # Get all grammar item columns
+    grammar_cols = getGrammarItemsCols(type="all")
+    
+    # Build SQL query to find participants with complete data
+    # A complete participant has no ND values in any grammar column
+    excluded_clause = "'" + "', '".join(EXCLUDED_PARTICIPANTS) + "'"
+    
+    # Create conditions for each grammar column (not ND and not NULL)
+    conditions = " AND ".join([f"({col} IS NOT NULL AND {col} != 'ND')" for col in grammar_cols])
+    
+    SQLstatement = f"""
+        SELECT InformantID 
+        FROM BSLVC_Grammar
+        WHERE {conditions}
+        AND InformantID NOT IN ({excluded_clause})
+        ORDER BY InformantID
+    """
+    
+    if Conf.source == 'sqlite':
+        db_connection = sqlite3.connect(Conf.sqliteFile)
+    
+    data = pd.read_sql(SQLstatement, con=db_connection)
+    
+    if Conf.source == 'sqlite':
+        db_connection.close()
+    
+    # Return list of InformantIDs
+    return data['InformantID'].tolist()
+
 def getLexicalData(imputed=False):
     if imputed:
         SQLstatement = "SELECT * FROM BSLVC_Lexical_Imputed"

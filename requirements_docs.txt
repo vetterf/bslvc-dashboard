@@ -1,0 +1,4 @@
+# Documentation requirements for MkDocs
+mkdocs>=1.6.0
+mkdocs-material>=9.7.0
+mkdocs-glightbox>=0.5.2

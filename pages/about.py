@@ -15,13 +15,13 @@ layout = dmc.Container([
         # Introduction
         dmc.Text(
             "The BSLVC Dashboard is an interactive web application for exploring and analyzing data from the Bamberg Survey of Language Variation and Change. "
-            "It provides researchers, students, and language enthusiasts with powerful tools to visualize grammatical variation across World Englishes varieties through acceptability judgments and dimensionality reduction techniques.",
+            "It provides researchers with powerful tools to visualize lexical (coming soon) and grammatical variation across varieties of English.",
             size="md",
             mb="xl"
         ),
         
         # Project Homepage Section
-        dmc.Paper([
+        dmc.Card([
             dmc.Group([
                 dmc.ThemeIcon(
                     DashIconify(icon="tabler:world", width=20),
@@ -33,9 +33,18 @@ layout = dmc.Container([
                 dmc.Title("Project Information", order=4)
             ], gap="sm", mb="md"),
             dmc.Text(
-                "For comprehensive information about the Bamberg Survey of Language Variation and Change project, "
-                "including methodology, research objectives, and the team behind the corpus, please visit:",
-                size="sm",
+                """The BSLVC project investigates the use of lexical and grammatical structures in varieties of English
+around the world. Its overarching goal is to identify (supra-)
+regional patterns, globalization trends and sociolinguistic variation through the systematic description, profiling and
+comparison of questionnaire data. For this purpose, more than 6,000
+questionnaires have (so far) been collected in over 10 countries where English is used as a native
+language (ENL), a second language (ESL) or as a foreign language (EFL). The survey elicits
+sociodemographic data, informant ratings for lexical preferences and stylistically differentiated
+intuition ratings for a broad range of grammatical structures, including 56 features from the
+electronic World Atlas of Varieties of English (https://ewave-atlas.org/).
+
+While data collection started in 2008, the current phase of the project is funded by the DFG. For more information, please visit the project homepage.
+""",
                 mb="sm"
             ),
             dmc.Anchor(
@@ -45,14 +54,14 @@ layout = dmc.Container([
                     variant="light",
                     color="blue"
                 ),
-                href="https://www.uni-bamberg.de/aspra/bslvc/",
+                href="https://www.uni-bamberg.de/en/eng-ling/forschung/the-bslvc-project-dfg-funded/",
                 target="_blank",
                 style={"textDecoration": "none"}
             )
         ], p="md", withBorder=True, radius="md", mb="xl", style={"backgroundColor": "#f8f9fa"}),
         
         # Citation Section
-        dmc.Paper([
+        dmc.Card([
             dmc.Group([
                 dmc.ThemeIcon(
                     DashIconify(icon="tabler:quote", width=20),
@@ -64,79 +73,33 @@ layout = dmc.Container([
                 dmc.Title("How to Cite", order=4)
             ], gap="sm", mb="md"),
             dmc.Text(
-                "If you use the BSLVC Dashboard or data from the corpus in your research, please cite it appropriately:",
-                size="sm",
+                "If you use the BSLVC Dashboard or data from the BSLVC project in your research, please cite it appropriately:",
                 mb="md"
             ),
             
             # Dashboard Citation
             dmc.Stack([
                 dmc.Text("Dashboard Citation:", fw=600, size="sm"),
-                dmc.Code(
-                    "Vorberger, L., & Röthlisberger, M. (2025). BSLVC Interactive Dashboard (Version 0.1) [Software]. University of Bamberg. https://bslvc-dashboard.uni-bamberg.de",
-                    block=True,
-                    style={"whiteSpace": "pre-wrap", "padding": "12px"}
+                dmc.Text("The Dashboard will have its own DOI and OSF repo soon. For the time being, cite as follows:"),
+                dmc.Text(
+                    "Vetter, Fabian. 2025. BSLVC Dashboard (Version 0.1.2) [Software]. University of Bamberg. https://bslvc.eng-ling.uni-bamberg.de",
                 ),
                 
                 dmc.Space(h="md"),
                 
                 # Corpus Citation
-                dmc.Text("Corpus Citation:", fw=600, size="sm"),
-                dmc.Code(
-                    "Vorberger, L., & Röthlisberger, M. (2025). Bamberg Survey of Language Variation and Change (BSLVC) [Data set]. University of Bamberg. https://www.uni-bamberg.de/aspra/bslvc/",
-                    block=True,
-                    style={"whiteSpace": "pre-wrap", "padding": "12px"}
+                dmc.Text("Data Set Citation:", fw=600, size="sm"),
+                dmc.Text("The BSLVC data set is currently unpublished. We expect to release the full data set in 2027 at the latest. Until then, please cite as follows:"),
+                dmc.Text(
+                    "Krug, Manfred, Fabian Vetter & Lukas Sönning. 2025. The Bamberg Survey of Language Variation and Change (Version 251118) [Data set]. University of Bamberg.",
                 ),
                 
                 dmc.Space(h="md"),
-                
-                # BibTeX
-                dmc.Text("BibTeX:", fw=600, size="sm"),
-                dmc.Code(
-                    """@software{bslvc_dashboard2025,
-  author = {Vorberger, Lars and Röthlisberger, Melanie},
-  title = {BSLVC Interactive Dashboard},
-  version = {0.1},
-  year = {2025},
-  publisher = {University of Bamberg},
-  url = {https://bslvc-dashboard.uni-bamberg.de}
-}
-
-@dataset{bslvc2025,
-  author = {Vorberger, Lars and Röthlisberger, Melanie},
-  title = {Bamberg Survey of Language Variation and Change (BSLVC)},
-  year = {2025},
-  publisher = {University of Bamberg},
-  url = {https://www.uni-bamberg.de/aspra/bslvc/}
-}""",
-                    block=True,
-                    style={"whiteSpace": "pre-wrap", "padding": "12px"}
-                ),
             ], gap="xs")
         ], p="md", withBorder=True, radius="md", mb="xl", style={"backgroundColor": "#f8f9fa"}),
         
-        # Technical Information
-        dmc.Paper([
-            dmc.Group([
-                dmc.ThemeIcon(
-                    DashIconify(icon="tabler:code", width=20),
-                    size="lg",
-                    radius="md",
-                    variant="light",
-                    color="violet"
-                ),
-                dmc.Title("Technical Information", order=4)
-            ], gap="sm", mb="md"),
-            dmc.List([
-                dmc.ListItem(dmc.Text(["Dashboard Version: ", dmc.Code("0.1.1")], size="sm")),
-                dmc.ListItem(dmc.Text(["Built with: ", dmc.Code("Dash 3.2.0"), " and ", dmc.Code("dash-mantine-components 2.3.0")], size="sm")),
-                dmc.ListItem(dmc.Text(["Data Analysis: ", dmc.Code("Python 3.13"), ", ", dmc.Code("scikit-learn"), ", ", dmc.Code("umap-learn")], size="sm")),
-                dmc.ListItem(dmc.Text(["Visualizations: ", dmc.Code("Plotly")], size="sm")),
-            ], size="sm")
-        ], p="md", withBorder=True, radius="md", mb="xl", style={"backgroundColor": "#f8f9fa"}),
-        
         # Contact Information
-        dmc.Paper([
+        dmc.Card([
             dmc.Group([
                 dmc.ThemeIcon(
                     DashIconify(icon="tabler:mail", width=20),
@@ -154,4 +117,4 @@ layout = dmc.Container([
         ], p="md", withBorder=True, radius="md", style={"backgroundColor": "#f8f9fa"}),
         
     ], withBorder=True, shadow="sm", radius="md", p="lg", mb="lg")
-], fluid=True, style={"maxWidth": "1200px", "margin": "0 auto", "paddingLeft": "20px", "paddingRight": "20px"})
+], fluid=True, style={"maxWidth": "1600px", "margin": "0 auto", "paddingLeft": "20px", "paddingRight": "20px"})

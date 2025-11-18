@@ -219,6 +219,15 @@ navbar = dmc.AppShellNavbar(
                 target="_blank",
                 underline=False
             ),
+            dmc.Anchor(
+                dmc.NavLink(
+                    label="Documentation",
+                    leftSection=get_icon(icon="tabler:book-2"),
+                ),
+                href="https://github.com/vetterf/bslvc-dashboard/documentation",
+                target="_blank",
+                underline=False
+            ),
             ],
             p="md"
         )
@@ -273,8 +282,8 @@ app_shell = dmc.AppShell(
                         ),
                         " | Licensed under ",
                         dmc.Anchor(
-                            "CC BY-SA 4.0",
-                            href="https://creativecommons.org/licenses/by-sa/4.0/",
+                            "MIT License",
+                            href="https://opensource.org/licenses/MIT",
                             target="_blank",
                             c="blue"
                         ),
@@ -299,7 +308,7 @@ app_shell = dmc.AppShell(
                             target="_blank",
                             c="blue"
                         ),
-                        " | v0.1.1"
+                        " | v0.1.2"
                     ], size="sm", c="dimmed"),
                 ],
                 justify="center",
