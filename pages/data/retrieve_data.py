@@ -416,26 +416,32 @@ def getSurveyCount():
     data['WrittenOnly'] = data['GrammarWrittenCount'] - data['GrammarCompleteCount']
     return data
 
-def getCompleteGrammarParticipants():
+def getParticipantsByMissingData(max_missing_percent=0):
     """
-    Returns a list of InformantIDs who have filled in all grammar items (non-imputed data).
-    A participant is considered complete if they have non-ND values for all grammar item columns.
+    Returns a list of InformantIDs filtered by percentage of missing data.
+    Missing data includes both NULL values and 'ND' values.
+    Only includes participants that are also present in the imputed grammar table.
+    
+    Args:
+        max_missing_percent: Maximum percentage of missing values allowed (0-100).
+                           For example, 0 means no missing data, 10 means <10% missing.
+    
+    Returns:
+        List of InformantIDs meeting the criteria.
     """
     # Get all grammar item columns
     grammar_cols = getGrammarItemsCols(type="all")
+    total_cols = len(grammar_cols)
     
-    # Build SQL query to find participants with complete data
-    # A complete participant has no ND values in any grammar column
+    # Build SQL query to get all participants with their grammar data
+    # Only include participants that are also in the imputed table
     excluded_clause = "'" + "', '".join(EXCLUDED_PARTICIPANTS) + "'"
     
-    # Create conditions for each grammar column (not ND and not NULL)
-    conditions = " AND ".join([f"({col} IS NOT NULL AND {col} != 'ND')" for col in grammar_cols])
-    
     SQLstatement = f"""
-        SELECT InformantID 
+        SELECT InformantID, {', '.join(grammar_cols)}
         FROM BSLVC_Grammar
-        WHERE {conditions}
-        AND InformantID NOT IN ({excluded_clause})
+        WHERE InformantID NOT IN ({excluded_clause})
+        AND InformantID IN (SELECT DISTINCT InformantID FROM BSLVC_Grammar_Imputed)
         ORDER BY InformantID
     """
     
@@ -447,8 +453,36 @@ def getCompleteGrammarParticipants():
     if Conf.source == 'sqlite':
         db_connection.close()
     
+    # Count NULLs and NDs for each participant
+    # For each row, count how many grammar columns are NULL or 'ND'
+    null_count = data[grammar_cols].isnull().sum(axis=1)
+    nd_count = (data[grammar_cols] == 'ND').sum(axis=1)
+    total_missing = null_count + nd_count
+    
+    # Calculate percentage of missing data
+    missing_percent = (total_missing / total_cols) * 100
+    
+    # Filter to participants with missing data below threshold
+    if max_missing_percent == 0:
+        # Exact match: no missing data at all
+        filter_mask = missing_percent == 0
+    else:
+        # Less than threshold
+        filter_mask = missing_percent < max_missing_percent
+    
+    filtered_participants = data.loc[filter_mask, 'InformantID']
+    
     # Return list of InformantIDs
-    return data['InformantID'].tolist()
+    return filtered_participants.tolist()
+
+def getCompleteGrammarParticipants():
+    """
+    Returns a list of InformantIDs who have filled in all grammar items (non-imputed data).
+    A participant is considered complete if they have non-ND values for all grammar item columns.
+    
+    This is a convenience wrapper around getParticipantsByMissingData(0).
+    """
+    return getParticipantsByMissingData(max_missing_percent=0)
 
 def getLexicalData(imputed=False):
     if imputed:

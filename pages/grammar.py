@@ -222,19 +222,7 @@ def generate_dynamic_presets(meta_df):
     
     # Base presets
     presets.extend([
-        {'label':'Top 15 spoken','value':['A8','B14','B22','C12','D1','D4','D22','E11','E12','E18','E19','F22','F2','F12','F20']}, # ['F22','D4','B22','F20','D22','E12','E11','A8','F12','C12','F2','E19','D1','E18','B14']
-        # {'label':'Gender attribution','value':['A14','A18','B16','E10','F9','G16','G17','H2','K6','L10']},
-        # # Keep existing manually curated presets
-        # {'label':'Subjunctive','value':['A10','B20','B21','B7','I23','L24','N1','N4','N5','D2','D7','E17','I13','K5','N14','F2','G19','K24']},
-        # {'label':'Gender attribution','value':['A14','A18','B16','E10','F9','G16','G17','H2','K6','L10']},
-        # {'label':'Comparative strategies','value':['A12','A21','B12','B15','C11','C16','E14','E2','E8','F11','G20','G9','H25','I15','I24','J11','J7','K12','L21','L4','M11','M17','M25']},
-        # {'label':'Coordinated subjects','value':['J24','D23','D5','G25','H22','N13','B4']},
-        # {'label':'Agreement/concord','value':['B13','B17','E1','E5','J12','K13','M3','M6','N9','F10','G4','H23','M15','N23','C6','D12','D8','F4','I25','I7','J25','M14','A23','K15','A5','C17','E18','H15','J15','J16','K21','M1','N10']},
-        # {'label':'(Invariant) question tags','value':['H7','A8','C3','D9','E23','F22','G24','G3','I16','K2','K4a','K4b','N21']},
-        # {'label':'Levelling','value':['E21','A17','C4','D10','F21','F5','G12','G22','H13','H19','M4','N2','F3','J19']},
-        # {'label':'Negation','value':['J19','A2','A3','B19','C18','E11','E16','H6','I21','I5','J18','J6','L11','N15','N7']},
-        # {'label':'Articles','value':['B5','C15','D13','D14','D20','F14','F17','G1','G10','G14','G26','H26','H3','I12','I26','I8','J13','J26','K26','L26','N18','N19','N8']},
-        # {'label':'Prepositions','value':['G13','G15','H14','I11','I6','J10','J17','J2','J8','L15','L17','L22','L5','L8','M16','M21','M23','M7','M8','N12']},
+        {'label':'Top 15 spoken','value':['A8','B14','B22','C12','D1','D4','D22','E11','E12','E18','E19','F22','F2','F12','F20']},
     ])
     
     # Dynamic presets from section column (Mode: prefix)
@@ -886,9 +874,11 @@ informantSelectionAccordion = dmc.AccordionItem(
                                             dmc.Button("Balanced", id='batch-select-balanced', size="xs", variant="light"),
                                             dmc.Button("Balanced Per Variety", id='batch-select-balanced-per-variety', size="xs", variant="light"),
                                         ], gap="xs", mb="xs"),
-                                        dmc.Text("Completeness:", size="xs", fw=600, c="dimmed"),
+                                        dmc.Text("Missing data:", size="xs", fw=600, c="dimmed"),
                                         dmc.Group(children=[
-                                            dmc.Button("No missing values", id='batch-select-complete-grammar', size="xs", variant="light"),
+                                            dmc.Button("0%", id='batch-select-missing-0', size="xs", variant="light"),
+                                            dmc.Button("<5%", id='batch-select-missing-5', size="xs", variant="light"),
+                                            dmc.Button("<10%", id='batch-select-missing-10', size="xs", variant="light"),
                                         ], gap="xs", mb="xs"),
   
                                     ])
@@ -2008,7 +1998,9 @@ def update_quick_stats(selected_participants, selected_items, use_pairs):
      Input('batch-select-age-50plus', 'n_clicks'),
      Input('batch-select-female', 'n_clicks'),
      Input('batch-select-male', 'n_clicks'),
-     Input('batch-select-complete-grammar', 'n_clicks'),
+     Input('batch-select-missing-0', 'n_clicks'),
+     Input('batch-select-missing-5', 'n_clicks'),
+     Input('batch-select-missing-10', 'n_clicks'),
      Input('batch-select-balanced', 'n_clicks'),
      Input('batch-select-balanced-per-variety', 'n_clicks'),
      Input('batch-select-equal-per-variety', 'n_clicks')],
@@ -2051,9 +2043,15 @@ def batch_select_participants(*args):
         selected = data[data['Gender'].isin(['f', 'female', 'Female'])]['InformantID'].tolist()
     elif button_id == 'batch-select-male':
         selected = data[data['Gender'].isin(['m', 'male', 'Male'])]['InformantID'].tolist()
-    elif button_id == 'batch-select-complete-grammar':
-        # Get participants who completed all grammar items
-        selected = retrieve_data.getCompleteGrammarParticipants()
+    elif button_id == 'batch-select-missing-0':
+        # Get participants with 0% missing data
+        selected = retrieve_data.getParticipantsByMissingData(max_missing_percent=0)
+    elif button_id == 'batch-select-missing-5':
+        # Get participants with <5% missing data
+        selected = retrieve_data.getParticipantsByMissingData(max_missing_percent=5)
+    elif button_id == 'batch-select-missing-10':
+        # Get participants with <10% missing data
+        selected = retrieve_data.getParticipantsByMissingData(max_missing_percent=10)
     elif button_id == 'batch-select-balanced':
         # Select equal numbers of male and female
         females = data[data['Gender'].isin(['f', 'female', 'Female'])]

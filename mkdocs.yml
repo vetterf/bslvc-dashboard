@@ -3,11 +3,11 @@
 site_name: BSLVC Dashboard Documentation
 site_description: Interactive dashboard for exploring the Bamberg Survey of Language Variation and Change
 site_author: Fabian Vetter
-site_url: https://yourusername.github.io/bslvc-dashboard/
+site_url: https://vetterf.github.io/bslvc-dashboard/
 
 # Repository
 repo_name: bslvc-dashboard
-repo_url: https://github.com/yourusername/bslvc-dashboard
+repo_url: https://github.com/vetterf/bslvc-dashboard
 edit_uri: edit/main/docs/
 
 # Copyright
@@ -16,38 +16,12 @@ copyright: Copyright &copy; 2025 Fabian Vetter
 # Theme Configuration
 theme:
   name: material
-  palette:
-    # Light mode
-    - scheme: default
-      primary: indigo
-      accent: blue
-      toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
-    # Dark mode
-    - scheme: slate
-      primary: indigo
-      accent: blue
-      toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
-  features:
-    - navigation.tabs
-    - navigation.sections
-    - navigation.top
-    - navigation.tracking
-    - search.suggest
-    - search.highlight
-    - content.code.copy
-    - content.tabs.link
-  icon:
-    repo: fontawesome/brands/github
 
 # Navigation
 nav:
   - Home: index.md
-  - Technical Documentation: technical.md
-  - Setup Guide: setup.md
+  - Documentation: documentation.md
+
 
 # Extensions
 markdown_extensions:
@@ -72,7 +46,6 @@ markdown_extensions:
 # Plugins
 plugins:
   - search
-  - glightbox
 
 # Extra
 extra:

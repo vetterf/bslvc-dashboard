@@ -7,7 +7,7 @@ The BSLVC dashboard is an interactive visualization that allows researchers to e
 Visit the [live dashboard](https://bslvc.eng-ling.uni-bamberg.de). The getting started section contains instructions how you can work with the dashboard.
 As the dashboard is still in demo mode until the release of the BSLVC database, please contact Fabian Vetter should you want access to the demo version.
 
-For details on all available functions, see the [Technical Documentation](technical.md).
+For details on all available functions, see the documentation.
 
 ## Citation
 

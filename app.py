@@ -85,7 +85,7 @@ def invalidate_cache_if_requested():
                     'get_grammar_meta_cached',
                     'get_grammar_meta_pairs_cached',
                     'get_grammar_items_cols_cached',
-                    'get_grammar_items_cols_pairs_cached'
+                    'get_grammar_items_cols_pairs_cached' 
                 ]
                 
                 for func_name in lru_functions:
