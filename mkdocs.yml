@@ -78,12 +78,9 @@ plugins:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/yourusername/bslvc-dashboard
+      link: https://github.com/vetterf/bslvc-dashboard
     - icon: fontawesome/solid/building-columns
       link: https://www.uni-bamberg.de/en/eng-ling/
-  analytics:
-    provider: google
-    property: !ENV GOOGLE_ANALYTICS_KEY
   version:
     provider: mike
 

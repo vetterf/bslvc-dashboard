@@ -85,9 +85,7 @@ def invalidate_cache_if_requested():
                     'get_grammar_meta_cached',
                     'get_grammar_meta_pairs_cached',
                     'get_grammar_items_cols_cached',
-                    'get_grammar_items_cols_pairs_cached',
-                    'get_initial_umap_plot',
-                    'get_initial_item_plot'
+                    'get_grammar_items_cols_pairs_cached'
                 ]
                 
                 for func_name in lru_functions:
@@ -128,7 +126,7 @@ def invalidate_cache_if_requested():
     return False
 
 app = Dash(__name__,external_stylesheets=dmc.styles.ALL, use_pages=True,suppress_callback_exceptions=True,background_callback_manager=background_callback_manager)
-app.title = 'BSLVC'
+app.title = 'BSLVC Dashboard'
 server = app.server
 
 # Add cache invalidation middleware
@@ -450,9 +448,7 @@ def handle_cache_invalidation(search, cache_status):
                     'get_grammar_meta_cached',
                     'get_grammar_meta_pairs_cached',
                     'get_grammar_items_cols_cached',
-                    'get_grammar_items_cols_pairs_cached',
-                    'get_initial_umap_plot',
-                    'get_initial_item_plot'
+                    'get_grammar_items_cols_pairs_cached'
                 ]
                 
                 for func_name in lru_functions:

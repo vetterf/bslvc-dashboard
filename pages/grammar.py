@@ -269,32 +269,6 @@ def generate_dynamic_presets(meta_df):
     
     return presets
 
-# Lazy initial plot generation - only create when needed
-@lru_cache(maxsize=1)
-def get_initial_umap_plot():
-    """Generate initial UMAP plot lazily"""
-    grammarData = get_grammar_data_cached()
-    return getUMAPplot(
-        grammarData=grammarData,
-        GrammarItemsCols=GrammarItemsCols,
-        informants=Informants,
-        items=GrammarItemsCols,
-        n_neighbours=25,
-        min_dist=0.1,
-        distance_metric="cosine",
-        standardize=False,
-        pairs=False
-    )
-
-@lru_cache(maxsize=1)
-def get_initial_item_plot():
-    """Generate initial item plot lazily"""
-    return getItemPlot(
-        informants=Informants['InformantID'].tolist(),
-        items=GrammarItemsCols,
-        plot_mode="normal"
-    )
-
 # Create simple empty plots for initial display
 UMAP_Grammar_initialPlot = go.Figure()
 UMAP_Grammar_initialPlot.update_layout(
@@ -327,7 +301,6 @@ initial_hoverinfo = construct_initial_hoverinfo(UMAP_Grammar_initialPlot)
 item_presets = generate_dynamic_presets(grammarMeta)
 
 # Build MultiSelect data with proper grouping structure for dmc.MultiSelect
-# We categorize presets into: Manual, Mode, Group, and eWAVE feature groups
 def build_preset_multiselect_data(presets):
     # Organize presets into groups
     groups = {
@@ -459,33 +432,6 @@ UmapPlotContainer = dmc.Container([
                     style={"display": "none"}
                 ),
             ],span=12),
-            # Commented out: Sociodemographic data card (Table and Age/Gender histogram)
-            # dmc.GridCol(children=[
-            #     dmc.Card(children=[
-            #          dmc.Tabs(
-            #             [
-            #                 dmc.TabsList(
-            #                     [
-            #                         dmc.TabsTab("Table: Sociodemographic data", value="selTable"),
-            #                         dmc.TabsTab("Histogram: Age/Gender",value="selAgeGender"),
-            #                     ]
-            #                 ),
-            #                 dmc.TabsPanel(
-            #                         html.Div(id="AuxPlotTable",className="dbc")
-            #                     , value="selTable"),
-            #                 dmc.TabsPanel(dcc.Graph(id="AuxPlotFig", figure=emptyFig), value="selAgeGender"),
-            #
-            #             ],
-            #             id='grammar-UMAP-aux-tabs',
-            #             color="blue", # default is blue
-            #             orientation="horizontal", # or "vertical"
-            #             variant="default", # or "outline" or "pills"
-            #             value="selTable"
-            #         ),
-            #         ], withBorder=True,
-            #         shadow="sm",
-            #         radius="md")
-            # ],span=12),
         ])        
     ], fluid=True)
 
@@ -936,14 +882,15 @@ informantSelectionAccordion = dmc.AccordionItem(
                                             dmc.Button("Female", id='batch-select-female', size="xs", variant="light"),
                                             dmc.Button("Male", id='batch-select-male', size="xs", variant="light"),
                                         ], gap="xs", mb="xs"),
-                                        dmc.Text("Completeness:", size="xs", fw=600, c="dimmed"),
-                                        dmc.Group(children=[
-                                            dmc.Button("Complete Grammar", id='batch-select-complete-grammar', size="xs", variant="light"),
-                                        ], gap="xs", mb="xs"),
                                         dmc.Group(children=[
                                             dmc.Button("Balanced", id='batch-select-balanced', size="xs", variant="light"),
                                             dmc.Button("Balanced Per Variety", id='batch-select-balanced-per-variety', size="xs", variant="light"),
                                         ], gap="xs", mb="xs"),
+                                        dmc.Text("Completeness:", size="xs", fw=600, c="dimmed"),
+                                        dmc.Group(children=[
+                                            dmc.Button("No missing values", id='batch-select-complete-grammar', size="xs", variant="light"),
+                                        ], gap="xs", mb="xs"),
+  
                                     ])
                                 ),
                             ],
@@ -1088,7 +1035,6 @@ itemSelectionAccordion = dmc.AccordionItem(
                             style={"fontStyle": "italic", "marginBottom": "8px"}
                         ),
                         html.Div([
-                            dcc.Store(id="grammar-tree-css", data={}),  # Dummy store for CSS
                             dmc.Tree(
                                 id='grammarItemsTree',
                                 data=drawGrammarItemsTree(grammarMeta,pairs=False), 
@@ -1695,8 +1641,6 @@ layout = html.Div([
     dcc.Store(id="grammar_plots_item",storage_type="memory",data=itemPlot_Grammar_initialPlot),
     dcc.Store(id="informants-store", data=Informants.to_dict("records")),  
     dcc.Store(id="leiden-cluster-data", storage_type="memory"),
-    dcc.Store(id="leiden-cluster-figure", storage_type="memory"),
-    dcc.Store(id="umap-hoverinfo-store", storage_type="memory"),  # New store for hoverinfo
     dcc.Store(id="umap-render-trigger", storage_type="memory"),  # Trigger for background UMAP computation
     dcc.Store(id="umap-render-settings", storage_type="memory", data={"pairs": False, "use_imputed": True}),  # Store settings used for UMAP render (for RF plot consistency)
     
@@ -2756,7 +2700,7 @@ def save_settings(n_clicks, plot_type, participants, items, group_by, sort_by,
         "sort_by": sort_by,
         "plot_mode": plot_mode,
         "pairs": pairs,
-        "use_imputed": use_imputed
+        "use_imputed": use_imputed  # Save user's choice for item plots
     }
     
     umap_settings = {
@@ -2766,8 +2710,8 @@ def save_settings(n_clicks, plot_type, participants, items, group_by, sort_by,
         "min_dist": min_dist,
         "distance_metric": distance_metric,
         "standardize": standardize,
-        "pairs": pairs,
-        "use_imputed": use_imputed
+        "pairs": pairs
+        # Don't save use_imputed for UMAP - it's always True (forced by callback)
     }
     
     notification = dmc.Notification(
@@ -3170,9 +3114,11 @@ def compute_umap_background(trigger_data, selected_informants, items, n_neighbou
     groupsCache = getColorGroupingsFromFigure(figure)
     
     # Store the settings used for this UMAP render
+    # Note: We store the user's interface choice for use_imputed, even though UMAP itself always uses imputed data.
+    # This way, the RF plot (group comparison) can respect what the user actually selected in the interface.
     render_settings = {
         "pairs": pairs,
-        "use_imputed": use_imputed
+        "use_imputed": use_imputed  # Store user's interface choice for RF plot
     }
     
     return figure, data, selected_informants, items, groupsCache, render_settings
@@ -3713,9 +3659,27 @@ def auto_update_sociodemographic_plots(active_tab, selected_participants, last_s
     if active_tab != 'sociodemographic-details':
         raise PreventUpdate
     
-    # If no participants selected, use all participants
+    # If no participants selected, show empty plots
     if not selected_participants:
-        selected_participants = Informants['InformantID'].tolist()
+        # Create empty figure for all plots
+        empty_fig = go.Figure()
+        empty_fig.update_layout(
+            template="simple_white",
+            title="No participants selected",
+            annotations=[
+                dict(text="Select participants to view demographic data",
+                     xref="paper", yref="paper",
+                     x=0.5, y=0.5, showarrow=False,
+                     font=dict(size=14))
+            ]
+        )
+        return (
+            empty_fig, empty_fig, empty_fig, empty_fig, empty_fig,
+            empty_fig, empty_fig, empty_fig,
+            empty_fig, empty_fig, empty_fig, empty_fig, empty_fig,
+            empty_fig, [],
+            {'participants': []}  # Update the cache
+        )
     
     # Create current settings hash
     current_settings = {

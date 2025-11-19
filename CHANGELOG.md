@@ -9,6 +9,8 @@ All notable changes to the BSLVC Dashboard will be documented in this file.
 - **Auto-activate Plot View Tab**: Plot View tab now automatically activates when UMAP, Item, or RF plots finish rendering
 - **Grammar item selection via Grammar Items table**: Users can now select grammar items in the grammar items table.
 - **Regional mapping URL parameter**: URL parameter ?regional_mapping=true now activates the regional mapping of English participants to England_North and England_South
+- **Added Documentation**
+
 ### Changed
 - **License**: Changed from CC BY-SA 4.0 to MIT License for the dashboard software
   - Added MIT LICENSE file to repository
@@ -19,15 +21,11 @@ All notable changes to the BSLVC Dashboard will be documented in this file.
 - **Grammar Items Table Column Order**: Rearranged columns to: Item Code, Group, eWAVE, Item (more intuitive ordering)
 - **Preset Dropdown Position**: Changed to open upward (`comboboxProps={"position": "top"}`) to prevent dropdown from being cut off
 - **Getting Started Page**: Added a getting started section with a description of the grammar analysis module with three items (Basic Workflow, Case Study 1, Case Study 2)
+- **Jump to Plot upon Finished Rendering**: The interface now automatically jumps to the plot tab, once rendering is finished.
 
 ### Removed
 - **Superfluous Files**: Cleaned up unused project files:
 
-### Technical Details
-- Modified callbacks in `grammar.py` to include tab activation output
-- Updated `handle_umap_completion()`, `renderItemPlot()`, and `renderRFPlot()` callbacks
-- Added conditional column drops in all data retrieval functions
-- Implemented preset filtering logic based on item difference mode
 
 ## [0.1.1] - 2025-11-06
 

@@ -239,6 +239,7 @@ Alternatively, you can use the "Select All" and "Deselect All" buttons, or choos
     - Male: Select all male participants
     - Balanced: Select a gender-balanced sample across all varieties
     - Balanced per Variety: Select a gender-balanced sample within each variety
+- No Missing Values: Select participants with no missing values in their data
             """, className="markdown-content")
         ], p="md", withBorder=True, radius="md")
     
