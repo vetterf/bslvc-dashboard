@@ -88,14 +88,14 @@ def sort_groups_for_plot(groups, groupby="variety"):
         # For gender or other categories, use alphabetical
         return sorted(groups)
 
-def getEmptyPlot(msg="No data points remained after applying the filter. Please check the selected range."):
+def getEmptyPlot(msg="No data available."):
         # empty figure that says you should check the selected range
         fig = go.Figure()
         fig.add_annotation(
         text=msg,
         xref="paper", yref="paper",
         x=0.5, y=0.5, showarrow=False,
-        font=dict(size=20)
+        font=dict(size=12)
          )
         fig.update_layout(template="simple_white")
         return fig
@@ -585,10 +585,10 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
     if df.empty:
         fig = go.Figure()
         fig.add_annotation(
-            text="No data points remained after applying the filter. Please check the selected range.",
+            text="No data available.",
             xref="paper", yref="paper",
             x=0.5, y=0.5, showarrow=False,
-            font=dict(size=20)
+            font=dict(size=12)
         )
         fig.update_layout(template="simple_white")
         return fig
@@ -2377,10 +2377,19 @@ def drawParticipantsTree(informants):
     for country in countries:
         countryData = data[data['MainVariety'] == country]
         years = countryData['Year'].unique()
+        country_participant_count = len(countryData)
+        year_children = []
+        for year in years:
+            year_participants = countryData[countryData['Year'] == year]['InformantID']
+            year_children.append({
+                'label': f"{year}  ({len(year_participants)})",
+                'value': country + '_' + year,
+                'children': [{'value': informant, 'label': informant} for informant in year_participants]
+            })
         countryTree = {
             'value': country,
-            'label': country,
-            'children': [{'label': year, 'value': country + '_' + year, 'children': [{'value': informant, 'label': informant} for informant in countryData[countryData['Year'] == year]['InformantID']]} for year in years]
+            'label': f"{country}  ({country_participant_count})",
+            'children': year_children
         }
         treeData.append(countryTree)
     #treeData = [{'title': 'Informants', 'key': 'informants', 'children': treeData}]
@@ -2415,7 +2424,7 @@ def drawGrammarItemsTree(grammarMeta,pairs=False):
                         for code, feature in zip(group_df['question_code'], group_df['feature'])
                     ]
                     spokenChildren.append({
-                        'label': str(group_name),
+                        'label': f"{str(group_name)}  ({len(group_items)})",
                         'value': f'spoken-group-{group_name}',
                         'children': group_items
                     })
@@ -2434,19 +2443,23 @@ def drawGrammarItemsTree(grammarMeta,pairs=False):
                         for code, feature in zip(group_df['question_code'], group_df['feature'])
                     ]
                     writtenChildren.append({
-                        'label': str(group_name),
+                        'label': f"{str(group_name)}  ({len(group_items)})",
                         'value': f'written-group-{group_name}',
                         'children': group_items
                     })
         
+        # Count total features in spoken and written sections
+        spoken_feature_count = len(spoken_meta)
+        written_feature_count = len(written_meta)
+        
         SpokenCols = {
-            'label': 'Spoken section',
+            'label': f'Spoken section  ({spoken_feature_count})',
             'value': 'spoken',
             'children': spokenChildren
         }
 
         WrittenCols = {
-            'label': 'Written section',
+            'label': f'Written section  ({written_feature_count})',
             'value': 'written',
             'children': writtenChildren
         }
@@ -2471,13 +2484,16 @@ def drawGrammarItemsTree(grammarMeta,pairs=False):
                         for code, feature in zip(group_df['item_pair'], group_df['feature'])
                     ]
                     spokenChildren.append({
-                        'label': str(group_name),
+                        'label': f"{str(group_name)}  ({len(group_items)})",
                         'value': f'pairs-group-{group_name}',
                         'children': group_items
                     })
         
+        # Count total features in pairs mode
+        pairs_feature_count = len(spoken_meta)
+        
         SpokenCols = {
-            'label': 'Item pairs',
+            'label': f'Item pairs  ({pairs_feature_count})',
             'value': 'spoken',
             'children': spokenChildren
         }

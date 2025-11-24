@@ -13,6 +13,8 @@ The user interface of the BSLVC Dashboard is structure into two or three parts, 
 
 The heart of the dashboard are the analysis modules for the grammar and the lexical data. These can be found in the section "Data & Analysis" in the navigation bar. Currently, only the grammar analysis module is finished. In what follows, you will find a description of all available options in the Dashboard.
 
+![Data and Analysis Navigation](img/UI_data_and_analysis.png)
+
 ### Data Overview
 
 The Data Overview page provides statistical summaries and visualizations of the BSLVC dataset, including participant demographics, geographical distribution, the grammatical items, and data completeness metrics.
@@ -21,19 +23,57 @@ The Data Overview page provides statistical summaries and visualizations of the 
 
 ### Grammar Analysis Module
 
-The Grammar Analysis Module allows users to explore grammatical variation across different varieties of English through interactive visualizations and statistical analyses.
+The Grammar Analysis Module allows users to explore grammatical variation across different varieties of English through interactive visualizations and statistical analyses. You can access it by clicking "Grammar Sets" in the navigation.
 
 ![Grammar Analysis Module](img/UI_grammar_analysis_module.png)
 
-#### Grammar Functions
+#### Available Functions
 
-Below is a description of all major buttons and UI elements in the Grammar Sets module:
+Below is a description of all major buttons and UI elements in the Grammar Analysis module:
 
 #### Main Tabs
+
+The main content in the middle of the dashboard contains multiple tabs.
+
 - **Plot View**: Shows either the dimensionality reduction plot and the group comparison plot, or item ratings plot.
 Note: The group comparison plot uses the same settings that were used for the dimensionality reduction. Any changes that have been applied to the settings in the UI are not taken into account. This is to ensure that the group comparison is linked to the dimensionality reduction plot.
 - **Sociodemographic Details**: Displays participant information and summary plots. These plots update automatically upon changing settings in the UI.
 - **Grammar Items**: Shows a table of all grammar items and metadata. This table supports dynamic filtering, and can also be used for modifying the selected items in the grammar items tree.
+
+![Tabs in main content](img/UI_tabs_main_view.png)
+
+#### Interactive Plot Controls
+
+All plots in the dashboard are created using Plotly, which provides interactive controls for exploring and manipulating visualizations. These controls appear in a toolbar when you hover over any plot.
+
+![Plotly mode bar](img/UI_plotly_modebar.png)
+
+**Available Controls:**
+
+- **Download plot as SVG**: Save the current view of the plot as a vector image
+- **Zoom**: Click and drag to zoom into a specific region of the plot
+- **Pan**: Move the plot around after zooming (shift + click and drag, or use the pan tool)
+- **Box Select**: Click and drag to select multiple data points in a rectangular region
+- **Lasso Select**: Draw a freeform selection around data points (used for custom group comparison)
+- **Zoom In/Out**: Incremental zoom controls
+- **Autoscale**: Reset the plot to its original view and scale
+- **Reset axes**: Return to the default axis ranges
+- **Show/Hide Legend Items**: Click on legend entries to hide/show specific varieties or groups
+
+**Hover Information:**
+
+Hovering over data points in plots displays an overlay with additional information such as the participant ID, variety, gender, age, etc.
+
+![Hover Info](img/UI_plotly_hoverinfo.png)
+
+**Tips:**
+
+- Double-click on the plot to reset zoom and pan
+- Click legend items once to hide/show them; double-click to isolate a single item
+- Use the box or lasso select tools in combination with the UMAP group buttons for custom analyses
+- The download function captures the current state of the plot, including any zoom or pan adjustments
+
+![Plotly legend clicked](img/UI_plotly_legend_clicked.png)
 
 #### Analysis Type Selector
 This switch controls the analysis mode. Users can choose between "Participant Similarity" and "Item Ratings" plots. 
@@ -42,8 +82,12 @@ In the mode "Participant Similarity", the dashboard applies dimensionality reduc
 
 In the mode "Item Ratings", users can compare the ratings of specific features. This mode is best suited for the comparison of a relatively small number of features. Some plot modes have limits of how much items and varieties can be displayed. Should you hit such a limit, the dashboard issues a warning notification. 
 
-#### Primary Action
-- **Render Plot**: Main button to generate the selected plot.
+![Analysis type selector](img/UI_analysis_type_selector.png)
+
+#### Render Plot
+This button generates the plot based on the user input.
+
+![Plot buttons](img/UI_plot_buttons.png)
 
 #### UMAP Group Buttons (visible in "Participant Similarity" mode)
 These buttons facilitate custom group comparisons or excluding outliers from the selection. They all require a lasso selection of data points via the lasso tool in the mode bar at the top of the participant similarity plot as input. 
@@ -59,7 +103,9 @@ The "Deselect Lasso Selection" and "Select Only Lasso Selection" buttons modify 
 - **Compare Selected Groups**: Render a Random Forest plot comparing selected groups.
 
 #### Participant Selection
-Participants can be selected via the participant tree, either by clicking the checkboxes in the tree, by using presets or by using the buttons. Additionally, users can use the "Advanced Filters" section to select participants based on their sociodemographic details.  
+Participants can be selected via the participant tree, either by clicking the checkboxes in the tree, by using presets or by using the buttons. Additionally, users can use the "Advanced Filters" section to select participants based on their sociodemographic details. 
+
+![Participant tree](img/UI_participant_selection.png)
 
 - **Select All**: Select all participants in the tree.
 - **Deselect All**: Deselect all participants.
@@ -77,11 +123,19 @@ Participants can be selected via the participant tree, either by clicking the ch
         - Balanced per Variety: Select a gender-balanced sample within each variety
     - **Missing values**: Select participants with 0%, <5% or <10% of missing values
 
+![Participant quick selection](img/UI_participant_quick.png)
+
 - **Advanced Filters**: Filter participants by gender, age, variety ratio, and main variety.
 - **Apply Filters**: Apply selected participant filters. This overrides the current selection in the participant tree.
 
+![Participant advanced selection](img/UI_participant_advanced.png)
+
 #### Grammar Item Selection
 All grammar items can be selected in the grammar items tree. They are first grouped by mode, then by feature group. Items can be either selected by clicking the checkboxes, by using presets or the buttons above the tree, or via the grammar items table in the main view. The getting started section in the app describes how the grammar items table can be used for custom item selections.
+
+![Grammar items tree](img/UI_grammar_selection.png)
+
+![Grammar items table](img/UI_grammar_items_table.png)
 
 - **Select All**: Select all grammar items.
 - **Deselect All**: Deselect all grammar items.
@@ -94,7 +148,15 @@ All grammar items can be selected in the grammar items tree. They are first grou
     - **Toggle Written-Only**: Toggle items which feature only in the written section.
     - **Currency/Unit**: Toggle currency/unit items.
 
+![Grammar items advanced](img/UI_grammar_tree_advanced.png)
+
+
 #### UMAP Settings
+
+The UMAP Settings allow the user to tweak the UMAP hyperparameters, as well as the distance metric used, whether to standardize the participant ratings and the coloring.
+
+![UMAP settings](img/UI_umap_settings.png)
+
 - **Color**: Select coloring variable (Variety, Variety type, Gender). This setting does not trigger a rerender of the plot and can be changed after rendering the plot.
 - **Distance metric**: Choose metric (Cosine, Euclidean, Manhattan).
 - **Standardize participant ratings**: Checkbox to standardize ratings. Standardization is advised for use with Euclidean and Manhattan distances.
@@ -103,6 +165,9 @@ All grammar items can be selected in the grammar items tree. They are first grou
 - **Minimal distance**: Slider for UMAP hyperparameter. Check the UMAP docs for more info.
 
 #### Item Plot Settings
+
+![Item  plot settings](img/UI_item_plot_settings.png)
+
 - **Plot mode**: Select plot type for visualizing grammar items:
 
     - **Mean (95% CI)**: Plot mean values of features with confidence intervals
@@ -117,22 +182,30 @@ All grammar items can be selected in the grammar items tree. They are first grou
 
 #### Group Comparison Settings
 This is only available if mode is set to "Participant Similarity". These functions can be used to filter out items that fall outside a certain rating rage, or to apply standardization of the ratings before training the random forest.
+
+![Group comparison settings](img/UI_UMAP_group_comparison_settings.png)
+
 - **Filter by Average Rating**: Range slider to filter items by group average.
 - **Use Z-Scores**: Checkbox to standardize ratings (participant-wise) before training the random forest.
 
 #### Advanced Actions
+
+![Advanced actions](img/UI_advanced_actions.png)
+
 - **Export Data**: Download current data selection. By default, this includes all sociodemographic columns, but only the selected participants and grammar items.
 - **Copy Settings**: Copy current settings to clipboard. This function converts the current settings into a base64 code and copies it to the clipboard. This code can be used to share settings with other users or save the settings in a text file for later use.
 - **Paste Settings**: Paste settings from clipboard. This button takes the base64 code created with the "Copy Settings" function to restore settings.
 - **Save Settings**: Save current settings locally. Helpful for temporarily saving the settings.
 - **Restore Settings**: Restore previously saved settings with the "Save Settings" function.
 
-#### URL Parameters
+#### URL Parameters: Regional Mapping
 
 The dashboard currently supports one URL parameter for controlling regional mapping participants:
 - `regional_mapping=true`: When set to true, participants from England are divided into England_North, England_South and England_UNCLEAR.
 
 You can activate this function by adding `?regional_mapping=true` to the URL (e.g., open the grammar analysis module with the following URL: https://bslvc.eng-ling.uni-bamberg.de/grammar?regional_mapping=true)
+
+![Regional mapping activated](img/UI_regional_mapping.png)
 
 #### Custom Group Comparison
 
@@ -155,6 +228,7 @@ Custom group comparison allows you to compare groups of participants beyond the 
 - The Random Forest comparison uses the same settings (participants, items, imputation) as the UMAP plot
 - Use "Clear Groups" to reset and return to variety-based grouping
 - The "Deselect Lasso Selection" and "Select Only Lasso Selection" buttons can be used to refine your participant selection by excluding outliers visible in the UMAP plot
+
 
 #### Problematic Items
 

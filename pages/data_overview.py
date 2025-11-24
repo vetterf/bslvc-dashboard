@@ -116,12 +116,12 @@ def create_summary_card():
                 ], cols=5, spacing="lg", mb="md"),
                 dmc.Group([
                     dmc.Text("Data Completion:", size="sm", fw=600),
-                    dmc.Badge(f"Lexical: {lexical_participants}", color="green", variant="light"),
+                    dmc.Badge(f"Lexical: {lexical_participants}", color="orange", variant="light"),
                     dmc.Badge(f"Lexical & Grammar: {grammar_participants}", color="blue", variant="light"),
                 ], gap="xs", mb="md"),
                 dmc.Divider(my="sm"),
                 dmc.Text(
-                    "Geographic distribution of survey participants. Markers indicate where data is available: blue markers show locations with both grammar and lexical data, green markers show locations with lexical data only. Varieties with fewer than 10 respondents are excluded from the map.",
+                    "Geographic distribution of survey participants. Markers indicate where data is available: blue markers show locations with both grammar and lexical data, orange markers show locations with lexical data only. Varieties with fewer than 10 respondents are excluded from the map.",
                     size="sm",
                     c="dimmed",
                     mb="sm"
@@ -194,8 +194,8 @@ def create_participants_plot():
         },
         color_discrete_map={
             'Grammar + Lexical': '#1f77b4',
-            'Lexical only': '#2ca02c',
-            'Grammar only': '#ff7f0e'
+            'Lexical only': '#ff7f0e',
+            'Grammar only': '#2ca02c'
         },
         hover_data={'Total': True, 'Count': True, 'Category': True, 'Variety': False},
         height=max(400, len(variety_totals) * 25)
@@ -264,7 +264,7 @@ def create_participants_map():
         lexical_only_count = len([id for id in variety_informants if id in lexical_ids and id not in grammar_ids])
         total_count = len(variety_informants)
         data_type = 'Grammar + Lexical' if both_count >= 10 else 'Lexical only'
-        color = '#1f77b4' if both_count >= 10 else '#2ca02c'  # Blue for Grammar+Lexical (10+), Green for Lexical only
+        color = '#1f77b4' if both_count >= 10 else '#ff7f0e'  # Blue for Grammar+Lexical (10+), Orange for Lexical only
         
         coords = variety_coords[variety]
         markers.append({
@@ -288,7 +288,7 @@ def create_participants_map():
         for data_type in ['Grammar + Lexical', 'Lexical only']:
             df_subset = df_markers[df_markers['data_type'] == data_type]
             if not df_subset.empty:
-                color = '#1f77b4' if data_type == 'Grammar + Lexical' else '#2ca02c'  # Blue for Grammar+Lexical, Green for Lexical only
+                color = '#1f77b4' if data_type == 'Grammar + Lexical' else '#ff7f0e'  # Blue for Grammar+Lexical, Orange for Lexical only
                 fig.add_trace(go.Scattergeo(
                     lon=df_subset['lon'],
                     lat=df_subset['lat'],
@@ -299,7 +299,7 @@ def create_participants_map():
                     marker=dict(
                         size=10,  # Uniform size for all markers
                         color=color,
-                        line=dict(color='white', width=1)
+                        line=dict(color='white', width=2)
                     ),
                     name=data_type,
                     legendgroup=data_type
@@ -845,7 +845,7 @@ def create_lexical_items_heatmap():
     
     # Calculate grand mean per variety and sort varieties by it
     variety_grand_means = {v: np.mean(means) for v, means in variety_overall_means.items()}
-    variety_order = sorted(variety_grand_means.keys(), key=lambda x: variety_grand_means[x], reverse=True)
+    variety_order = sorted(variety_grand_means.keys(), key=lambda x: variety_grand_means[x], reverse=False)
     
     # Reorder columns by variety grand mean
     df_heatmap = df_heatmap[[v for v in variety_order if v in df_heatmap.columns]]
@@ -1151,7 +1151,7 @@ layout = dmc.Container([
                             config={'displayModeBar': False}
                         ),
                         dmc.Divider(my="md"),
-                        dmc.Title("Participants by Year and Variety", order=5, mb="sm"),
+                        dmc.Title("Participants by Survey Year and Variety", order=5, mb="sm"),
                         dcc.Graph(
                             id='participants-year-heatmap',
                             figure=create_participants_year_table(),
@@ -1202,6 +1202,13 @@ layout = dmc.Container([
                 ),
                 dmc.AccordionPanel([
                     dmc.Stack([
+                        dmc.Alert(
+                            "The analysis functions for lexical data are still under development. This section provides a quick overview of the lexical items data only.",
+                            title="Note",
+                            color="blue",
+                            icon=DashIconify(icon="tabler:info-circle"),
+                            mb="md"
+                        ),
                         dmc.Title("Lexical Items - Heatmap", order=5, mb="sm"),
                         dmc.Text(
                             "Heatmap showing mean scores for all lexical items across varieties. Colors range from green (American variant, -2) to blue (British variant, +2). Varieties are ordered by their grand mean score.",
@@ -1214,9 +1221,9 @@ layout = dmc.Container([
                             figure=create_lexical_items_heatmap(),
                             config={'displayModeBar': False}
                         ),
-                        dmc.Divider(my="md"),
-                        dmc.Title("Lexical Items - Detailed Table", order=5, mb="sm"),
-                        create_lexical_items_table()
+                        #dmc.Divider(my="md"),
+                        #dmc.Title("Lexical Items - Mean Values per Variety and Item", order=5, mb="sm"),
+                        #create_lexical_items_table()
                     ], gap="md")
                 ])
             ], value="lexical") if HAS_LEXICAL else None,

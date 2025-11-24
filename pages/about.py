@@ -33,17 +33,13 @@ layout = dmc.Container([
                 dmc.Title("Project Information", order=4)
             ], gap="sm", mb="md"),
             dmc.Text(
-                """The BSLVC project investigates the use of lexical and grammatical structures in varieties of English
-around the world. Its overarching goal is to identify (supra-)
+                """The BSLVC project investigates the use of lexical and grammatical structures in varieties of English. Its overarching goal is to identify (supra-)
 regional patterns, globalization trends and sociolinguistic variation through the systematic description, profiling and
-comparison of questionnaire data. For this purpose, more than 6,000
-questionnaires have (so far) been collected in over 10 countries where English is used as a native
-language (ENL), a second language (ESL) or as a foreign language (EFL). The survey elicits
-sociodemographic data, informant ratings for lexical preferences and stylistically differentiated
-intuition ratings for a broad range of grammatical structures, including 56 features from the
+comparison of questionnaire data. The survey elicits
+sociodemographic data, informant ratings for lexical preferences and intuition-based usage ratings for a broad range of grammatical structures, including 56 features from the
 electronic World Atlas of Varieties of English (https://ewave-atlas.org/).
 
-While data collection started in 2008, the current phase of the project is funded by the DFG. For more information, please visit the project homepage.
+For more information, please visit the project homepage.
 """,
                 mb="sm"
             ),
@@ -111,8 +107,7 @@ While data collection started in 2008, the current phase of the project is funde
                 dmc.Title("Contact & Support", order=4)
             ], gap="sm", mb="md"),
             dmc.Text(
-                "For questions, feedback, or support regarding the BSLVC Dashboard, please contact the project team through the project homepage.",
-                size="sm"
+                "For questions, feedback, or support regarding the BSLVC Dashboard, please contact the project team through the project homepage."
             )
         ], p="md", withBorder=True, radius="md", style={"backgroundColor": "#f8f9fa"}),
         

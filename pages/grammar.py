@@ -260,26 +260,12 @@ def generate_dynamic_presets(meta_df):
 # Create simple empty plots for initial display
 UMAP_Grammar_initialPlot = go.Figure()
 UMAP_Grammar_initialPlot.update_layout(
-    template="simple_white",
-    title="Click 'Render UMAP' to generate plot",
-    annotations=[
-        dict(text="UMAP plot will be generated when you click the render button",
-             xref="paper", yref="paper",
-             x=0.5, y=0.5, showarrow=False,
-             font=dict(size=16))
-    ]
+    template="simple_white"
 )
 
 itemPlot_Grammar_initialPlot = go.Figure()
 itemPlot_Grammar_initialPlot.update_layout(
-    template="simple_white", 
-    title="Click 'Render plot' to generate item plot",
-    annotations=[
-        dict(text="Item plot will be generated when you click the render button",
-             xref="paper", yref="paper", 
-             x=0.5, y=0.5, showarrow=False,
-             font=dict(size=16))
-    ]
+    template="simple_white"
 )
 
 initial_hoverinfo = construct_initial_hoverinfo(UMAP_Grammar_initialPlot)
@@ -427,14 +413,14 @@ UmapPlotContainer = dmc.Container([
 ## Stacks for InformantPlotContainer
 AgeGender = dmc.Stack([
     dmc.Text("Age/Gender"),
-    dcc.Graph(id="AgeGenderPlotG", figure=getAgeGenderPlot(Informants),style={'height': '200px'},config={'displayModeBar': False})
+    dcc.Graph(id="AgeGenderPlotG", figure=getAgeGenderPlot(Informants),style={'height': '200px'})
     ])
 
 MainVarieties = dmc.Stack([
 
     dmc.Text("Main varieties"),
     html.Div(id="NationalityPlotContainer", children=[
-    dcc.Graph(id="MainVarietiesPlotG", figure=getMainVarietiesPlot(Informants),config={'displayModeBar': False})
+    dcc.Graph(id="MainVarietiesPlotG", figure=getMainVarietiesPlot(Informants))
     ], style={'height': 'auto', 'max-height' : '300px', 'overflowY': 'scroll'}),
 ])
 
@@ -442,7 +428,7 @@ Nationality = dmc.Stack([
 
     dmc.Text("Nationality"),
     html.Div(id="NationalityPlotContainer", children=[
-    dcc.Graph(id="NationalityPlotG", figure=getCategoryHistogramPlot(Informants,"Nationality", True, ""),config={'displayModeBar': False})
+    dcc.Graph(id="NationalityPlotG", figure=getCategoryHistogramPlot(Informants,"Nationality", True, ""))
     ], style={'height': 'auto', 'max-height' : '300px', 'overflowY': 'scroll'}),
 ])
 
@@ -450,7 +436,7 @@ EthnicSID = dmc.Stack([
 
     dmc.Text("Ethnic Self-ID"),
     html.Div(id="EIDPlotContainer", children=[
-    dcc.Graph(id="EIDPlotG", figure=getCategoryHistogramPlot(Informants,"EthnicSelfID", True,""),config={'displayModeBar': False})
+    dcc.Graph(id="EIDPlotG", figure=getCategoryHistogramPlot(Informants,"EthnicSelfID", True,""))
     ], style={'height': 'auto', 'max-height' : '300px','overflowY': 'scroll'}),
 ])
 
@@ -458,14 +444,14 @@ CountryID = dmc.Stack([
 
     dmc.Text("Country (or region) you identify with most"),
     html.Div(id="CIDPlotContainer", children=[
-    dcc.Graph(id="CIDPlotG", figure=getCategoryHistogramPlot(Informants,"CountryID", True, ""),config={'displayModeBar': False})
+    dcc.Graph(id="CIDPlotG", figure=getCategoryHistogramPlot(Informants,"CountryID", True, ""))
     ], style={'height': 'auto', 'max-height' : '300px', 'overflowY': 'scroll'}),
 ])
 
 LanguagesHome = dmc.Stack([
 
     dmc.Text("Languages used at home"),
-    html.Div(id="LanguagesHomePlotContainer", children=[    dcc.Graph(id="LanguagesHomePlotG", figure=getCategoryHistogramPlot(Informants,"LanguageHome_normalized", True, ","),config={'displayModeBar': False})
+    html.Div(id="LanguagesHomePlotContainer", children=[    dcc.Graph(id="LanguagesHomePlotG", figure=getCategoryHistogramPlot(Informants,"LanguageHome_normalized", True, ","))
     ], style={'height': 'auto', 'max-height' : '300px', 'overflowY': 'scroll'}),
 ])
 
@@ -474,7 +460,7 @@ LanguageMother = dmc.Stack([
 
     dmc.Text("Mother's Native Language"),
     html.Div(id="LanguagesMotherPlotContainer", children=[
-    dcc.Graph(id="LanguagesMotherPlotG", figure=getCategoryHistogramPlot(Informants,"LanguageMother_normalized", True, ","),config={'displayModeBar': False})
+    dcc.Graph(id="LanguagesMotherPlotG", figure=getCategoryHistogramPlot(Informants,"LanguageMother_normalized", True, ","))
     ], style={'height': 'auto', 'max-height' : '300px', 'overflowY': 'scroll'}),
 ])
 
@@ -482,48 +468,48 @@ LanguageFather = dmc.Stack([
 
     dmc.Text("Father's Native Language"),
     html.Div(id="LanguagesFatherPlotContainer", children=[
-    dcc.Graph(id="LanguagesFatherPlotG", figure=getCategoryHistogramPlot(Informants,"LanguageFather_normalized", True, ","),config={'displayModeBar': False})
+    dcc.Graph(id="LanguagesFatherPlotG", figure=getCategoryHistogramPlot(Informants,"LanguageFather_normalized", True, ","))
     ], style={'height': 'auto', 'max-height' : '300px', 'overflowY': 'scroll'}),
 ])
 
 PrimarySchool = dmc.Stack([
     
         dmc.Text("Primary School"),
-        dcc.Graph(id="PrimarySchoolPlotG", figure=getCategoryHistogramPlot(Informants,"PrimarySchool",True),config={'displayModeBar': False})
+        dcc.Graph(id="PrimarySchoolPlotG", figure=getCategoryHistogramPlot(Informants,"PrimarySchool",True))
 
 ])
 
 SecondarySchool = dmc.Stack([
     
         dmc.Text("Secondary School"),
-        dcc.Graph(id="SecondarySchoolPlotG", figure=getCategoryHistogramPlot(Informants,"SecondarySchool",True),config={'displayModeBar': False})
+        dcc.Graph(id="SecondarySchoolPlotG", figure=getCategoryHistogramPlot(Informants,"SecondarySchool",True))
 
 ])
 Qualifications = dmc.Stack([
     
         dmc.Text("Highest Qualification"),
-        dcc.Graph(id="QualiPlotG", figure=getCategoryHistogramPlot(Informants,"Qualifications",True),config={'displayModeBar': False})
+        dcc.Graph(id="QualiPlotG", figure=getCategoryHistogramPlot(Informants,"Qualifications",True))
 
 ])
 
 YearsLivedOutside = dmc.Stack([
     
         dmc.Text("Years lived outside home country"),
-        dcc.Graph(id="YLOPlotG", figure=getFloatHistogramPlot(Informants,"YearsLivedOutside"),config={'displayModeBar': False})
+        dcc.Graph(id="YLOPlotG", figure=getFloatHistogramPlot(Informants,"YearsLivedOutside"))
 
 ])
 
 YearsLivedOtherE = dmc.Stack([
     
         dmc.Text("Years lived in other English-speaking countries"),
-        dcc.Graph(id="YLOEPlotG", figure=getFloatHistogramPlot(Informants,"YearsLivedOtherEnglish"),config={'displayModeBar': False})
+        dcc.Graph(id="YLOEPlotG", figure=getFloatHistogramPlot(Informants,"YearsLivedOtherEnglish"))
 
 ])
 
 RatioMainVariety = dmc.Stack([
     
         dmc.Text("Ratio Main Variety"),
-        dcc.Graph(id="RatioMainVarietyPlotG", figure=getFloatHistogramPlot(Informants,"RatioMainVariety"),config={'displayModeBar': False})
+        dcc.Graph(id="RatioMainVarietyPlotG", figure=getFloatHistogramPlot(Informants,"RatioMainVariety"))
 
 ])
 
@@ -3662,14 +3648,7 @@ def auto_update_sociodemographic_plots(active_tab, selected_participants, last_s
         # Create empty figure for all plots
         empty_fig = go.Figure()
         empty_fig.update_layout(
-            template="simple_white",
-            title="No participants selected",
-            annotations=[
-                dict(text="Select participants to view demographic data",
-                     xref="paper", yref="paper",
-                     x=0.5, y=0.5, showarrow=False,
-                     font=dict(size=14))
-            ]
+            template="simple_white"
         )
         return (
             empty_fig, empty_fig, empty_fig, empty_fig, empty_fig,

@@ -227,7 +227,8 @@ navbar = dmc.AppShellNavbar(
                 underline=False
             ),
             ],
-            p="md"
+            p="md",
+            style={"overflowY": "auto", "overflowX": "hidden"}
         )
 
 
