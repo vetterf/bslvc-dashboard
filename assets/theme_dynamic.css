@@ -1,0 +1,19 @@
+
+:root {
+    --icon-primary: #1f77b4;
+    --background-light: #f8f9fa;
+    --background-gradient-start: #f8f9fa;
+    --background-gradient-end: #e9ecef;
+    --badge-success: green;
+    --background-highlight: #e7f5ff;
+    --border-color: #dee2e6;
+    --border-highlight: #1f77b4;
+    --background-neutral: #e9ecef;
+    --text-muted: #495057;
+    --text-inactive: #adb5bd;
+    --ag-row-selected: #1f77b4;
+    --ag-row-selected-hover: #1f77b4dd;
+    --mantine-primary-color: #1f77b4;
+    --text-primary: #000000;
+    --text-dimmed: #868e96;
+}

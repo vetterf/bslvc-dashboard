@@ -1,0 +1,215 @@
+{
+  "default": {
+    "name": "default",
+    "plot": {
+      "primary": "#1f77b4",
+      "secondary": "#ff7f0e",
+      "tertiary": "#2ca02c",
+      "error": "red",
+      "neutral": "gray"
+    },
+    "data_types": {
+      "grammar_lexical": "#1f77b4",
+      "lexical_only": "#ff7f0e",
+      "grammar_only": "#2ca02c"
+    },
+    "modes": {
+      "spoken": "#1f77b4",
+      "written": "#ff7f0e"
+    },
+    "varieties": {
+      "England": "#1f77b4",
+      "Scotland": "#ff7f0e",
+      "US": "#2ca02c",
+      "Wales": "#d62728",
+      "Ireland": "#9467bd",
+      "Canada": "#8c564b",
+      "Australia": "#e377c2",
+      "New Zealand": "#7f7f7f",
+      "South Africa": "#bcbd22",
+      "India": "#17becf",
+      "Singapore": "#ff9896",
+      "Hong Kong": "#c5b0d5",
+      "Philippines": "#c49c94",
+      "Jamaica": "#f7b6d2",
+      "Trinidad and Tobago": "#c7c7c7",
+      "Nigeria": "#dbdb8d",
+      "Kenya": "#9edae5",
+      "Ghana": "#393b79",
+      "Tanzania": "#637939",
+      "Fiji": "#8c6d31",
+      "Pakistan": "#843c39"
+    },
+    "scales": {
+      "heatmap_blue": "Blues_r",
+      "heatmap_teal": "ylgnbu",
+      "heatmap_continuous": "Blues"
+    },
+    "ui": {
+      "icon_primary": "#1f77b4",
+      "background_light": "#f8f9fa",
+      "background_gradient_start": "#f8f9fa",
+      "background_gradient_end": "#e9ecef",
+      "badge_success": "green"
+    },
+    "rating": {
+      "Correct": "#2ca02c",
+      "Mostly correct": "#8cc269",
+      "Partly correct": "#ffd92f",
+      "Mostly wrong": "#fc8d59",
+      "Wrong": "#e34a33"
+    },
+    "gender": {
+      "Male": "#1f77b4",
+      "Female": "#ff7f0e",
+      "Non-binary": "#2ca02c"
+    },
+    "variety_type": {
+      "ENL": "#1f77b4",
+      "ESL": "#ff7f0e",
+      "EFL": "#2ca02c"
+    }
+  },
+  "catppuccin-latte": {
+    "name": "catppuccin-latte",
+    "plot": {
+      "primary": "#1e66f5",
+      "secondary": "#fe640b",
+      "tertiary": "#40a02b",
+      "error": "#d20f39",
+      "neutral": "#6c6f85"
+    },
+    "data_types": {
+      "grammar_lexical": "#1e66f5",
+      "lexical_only": "#fe640b",
+      "grammar_only": "#40a02b"
+    },
+    "modes": {
+      "spoken": "#1e66f5",
+      "written": "#fe640b"
+    },
+    "varieties": {
+      "England": "#1e66f5",
+      "Scotland": "#fe640b",
+      "US": "#40a02b",
+      "Wales": "#d20f39",
+      "Ireland": "#8839ef",
+      "Canada": "#df8e1d",
+      "Australia": "#ea76cb",
+      "New Zealand": "#7c7f93",
+      "South Africa": "#179299",
+      "India": "#04a5e5",
+      "Singapore": "#dd7878",
+      "Hong Kong": "#c6a0f6",
+      "Philippines": "#dc8a78",
+      "Jamaica": "#e64553",
+      "Trinidad and Tobago": "#9ca0b0",
+      "Nigeria": "#f0c6c6",
+      "Kenya": "#7dc4e4",
+      "Ghana": "#4c4f69",
+      "Tanzania": "#5c5f77",
+      "Fiji": "#6c6f85",
+      "Pakistan": "#7c7f93"
+    },
+    "scales": {
+      "heatmap_blue": "Blues_r",
+      "heatmap_teal": "YlGnBu",
+      "heatmap_continuous": "Blues"
+    },
+    "ui": {
+      "icon_primary": "#1e66f5",
+      "background_light": "#eff1f5",
+      "background_gradient_start": "#eff1f5",
+      "background_gradient_end": "#e6e9ef",
+      "badge_success": "#40a02b"
+    },
+    "rating": {
+      "Correct": "#40a02b",
+      "Mostly correct": "#7db669",
+      "Partly correct": "#df8e1d",
+      "Mostly wrong": "#fe640b",
+      "Wrong": "#d20f39"
+    },
+    "gender": {
+      "Male": "#1e66f5",
+      "Female": "#fe640b",
+      "Non-binary": "#40a02b"
+    },
+    "variety_type": {
+      "ENL": "#1e66f5",
+      "ESL": "#fe640b",
+      "EFL": "#40a02b"
+    }
+  },
+  "catppuccin-macchiato": {
+    "name": "catppuccin-macchiato",
+    "plot": {
+      "primary": "#8aadf4",
+      "secondary": "#f5a97f",
+      "tertiary": "#a6da95",
+      "error": "#ed8796",
+      "neutral": "#5b6078"
+    },
+    "data_types": {
+      "grammar_lexical": "#8aadf4",
+      "lexical_only": "#f5a97f",
+      "grammar_only": "#a6da95"
+    },
+    "modes": {
+      "spoken": "#8aadf4",
+      "written": "#f5a97f"
+    },
+    "varieties": {
+      "England": "#8aadf4",
+      "Scotland": "#f5a97f",
+      "US": "#a6da95",
+      "Wales": "#ed8796",
+      "Ireland": "#c6a0f6",
+      "Canada": "#eed49f",
+      "Australia": "#f5bde6",
+      "New Zealand": "#6e738d",
+      "South Africa": "#8bd5ca",
+      "India": "#91d7e3",
+      "Singapore": "#f0c6c6",
+      "Hong Kong": "#b7bdf8",
+      "Philippines": "#f4dbd6",
+      "Jamaica": "#ee99a0",
+      "Trinidad and Tobago": "#939ab7",
+      "Nigeria": "#f2d5cf",
+      "Kenya": "#7dc4e4",
+      "Ghana": "#cad3f5",
+      "Tanzania": "#b8c0e0",
+      "Fiji": "#a5adcb",
+      "Pakistan": "#939ab7"
+    },
+    "scales": {
+      "heatmap_blue": "Blues_r",
+      "heatmap_teal": "YlGnBu",
+      "heatmap_continuous": "Blues"
+    },
+    "ui": {
+      "icon_primary": "#8aadf4",
+      "background_light": "#24273a",
+      "background_gradient_start": "#24273a",
+      "background_gradient_end": "#1e2030",
+      "badge_success": "#a6da95"
+    },
+    "rating": {
+      "Correct": "#a6da95",
+      "Mostly correct": "#c3e5ba",
+      "Partly correct": "#eed49f",
+      "Mostly wrong": "#f5a97f",
+      "Wrong": "#ed8796"
+    },
+    "gender": {
+      "Male": "#8aadf4",
+      "Female": "#f5a97f",
+      "Non-binary": "#a6da95"
+    },
+    "variety_type": {
+      "ENL": "#8aadf4",
+      "ESL": "#f5a97f",
+      "EFL": "#a6da95"
+    }
+  }
+}

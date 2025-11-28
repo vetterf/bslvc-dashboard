@@ -244,7 +244,7 @@ def performLeidenClustering(data, n_neighbors=15, resolution=0.5, mode="connecti
     partition = la.find_partition(g, la.ModularityVertexPartition)
     return partition.membership
 
-def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='cosine',pairs=False, **kwargs):
+def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='cosine',pairs=False, regional_mapping=False, **kwargs):
     """
     Generate UMAP plot for grammar data with Leiden clustering
     
@@ -313,8 +313,9 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
         return hashlib.md5(str(sorted(lst)).encode()).hexdigest() if lst else "all"
     umap_informants_hash = _hash_list(umap_informants) # Cache based on actual informants used for UMAP
     items_hash = _hash_list(items)
-    # --- include distance_metric in the hash/filename ---
-    preset_filename = f"umap_{umap_informants_hash}_{items_hash}_{n_neighbours}_{min_dist}_{distance_metric}_{standardize}_{densemap}.pkl"
+    # --- include distance_metric and regional_mapping in the hash/filename ---
+    regional_suffix = "_regional" if regional_mapping else ""
+    preset_filename = f"umap_{umap_informants_hash}_{items_hash}_{n_neighbours}_{min_dist}_{distance_metric}_{standardize}_{densemap}{regional_suffix}.pkl"
     preset_path = os.path.join(preset_dir, preset_filename)
     if os.path.exists(preset_path) and not force_rerender:
         try:

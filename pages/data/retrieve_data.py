@@ -73,11 +73,27 @@ def get_color_for_variety(type="lexical"):
         "Slovenia": "#7f7f7f",
         "Germany": "#bcbd22",
         "Sweden": "#17becf",
+        "Spain (Balearic Islands)": "#393b79",
         "Other": "#c49c94"
     }
     
     return fixed_color_map
 
+
+def get_database_version():
+    """Get the database version from the DatabaseMetadata table"""
+    try:
+        if Conf.source == 'sqlite':
+            db_connection = sqlite3.connect(Conf.sqliteFile)
+            cursor = db_connection.cursor()
+            cursor.execute("SELECT Version FROM DatabaseMetadata LIMIT 1")
+            result = cursor.fetchone()
+            db_connection.close()
+            if result:
+                return result[0]
+    except Exception as e:
+        print(f"[WARNING] Could not retrieve database version: {e}")
+    return "Unknown"
 
 
 if Conf.source == 'sql_server':

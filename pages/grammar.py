@@ -131,7 +131,8 @@ def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_m
         distance_metric=distance_metric,
         standardize=standardize,
         densemap=densemap,
-        pairs=pairs
+        pairs=pairs,
+        regional_mapping=regional_mapping
     )
     
     # Cache the result for 24 hours
@@ -829,6 +830,17 @@ informantSelectionAccordion = dmc.AccordionItem(
                     dmc.Button("Select All", id='select-all-participants', size="xs", variant="outline"),
                     dmc.Button("Deselect All", id='deselect-all-participants', size="xs", variant="outline"),
                 ], mb="xs"),
+                
+                # Regional mapping switch
+                dmc.Group([
+                    dmc.Switch(
+                        id='regional-mapping-switch',
+                        label="Split England into regions (North/South)",
+                        size="sm",
+                        checked=False,
+                    )
+                ], mb="sm"),
+                
                 # Batch Operations - Quick Selection
                 dmc.Accordion(
                     children=[
@@ -1607,7 +1619,8 @@ GrammaticalItems = dmc.Container([dmc.Grid(children=[
 
 layout = html.Div([
 
-    customSetWarningModal, 
+    customSetWarningModal,
+    dcc.Location(id='url', refresh=False),  # URL location component for parsing URL parameters
     dcc.Store(id="england-mapping-param", storage_type="memory", data=False),  # Store for EnglandMapping URL parameter
     dcc.Store(id="UMAPgroup", storage_type="memory",data=0),
     dcc.Store(id="UMAPparticipants",storage_type="memory",data=[]), # Start empty - no auto-selection
@@ -3796,6 +3809,7 @@ def generate_umap_plots_for_all_presets(grammarData, GrammarItemsCols, Informant
 
     n_neighbours = 25
     min_dist = 0.1
+    regional_mapping = False  # Generate presets for default (non-regional) view
 
     for preset in item_presets:
         preset_items = preset['value']
@@ -3803,7 +3817,9 @@ def generate_umap_plots_for_all_presets(grammarData, GrammarItemsCols, Informant
             continue  # skip empty presets
         participants_hash = _hash_list(all_informants)
         items_hash = _hash_list(preset_items)
-        preset_filename = f"umap_{participants_hash}_{items_hash}_{n_neighbours}_{min_dist}.pkl"
+        # Include regional_mapping in filename
+        regional_suffix = "_regional" if regional_mapping else ""
+        preset_filename = f"umap_{participants_hash}_{items_hash}_{n_neighbours}_{min_dist}{regional_suffix}.pkl"
         filename = os.path.join(output_dir, preset_filename)
         fig = getUMAPplot(
             grammarData=grammarData,
@@ -4187,26 +4203,43 @@ def update_grammar_items_tree(type_switch_checked):
 @callback(
     [Output('england-mapping-param', 'data'),
      Output('informants-store', 'data'),
-     Output('participantsTree', 'data')],
-    Input('url', 'search'),
-    prevent_initial_call=False
+     Output('participantsTree', 'data'),
+     Output('participantsTree', 'checked', allow_duplicate=True),
+     Output('regional-mapping-switch', 'checked')],
+    [Input('url', 'search'),
+     Input('regional-mapping-switch', 'checked')],
+    prevent_initial_call='initial_duplicate'
 )
-def parse_url_parameters(search):
+def update_regional_mapping(search, switch_checked):
     """
-    Parse URL search parameters and extract RegionalMapping flag.
-    Also reload informants data based on the flag.
+    Update regional mapping based on URL parameters or switch toggle.
+    Also reload informants data and rebuild participant tree.
+    Accepts both 'RegionalMapping' and 'regional_variation' URL parameters.
     """
+    from dash import ctx
+    
     regional_mapping = False
     
-    if search:
-        # Parse the URL parameters
-        from urllib.parse import parse_qs
-        params = parse_qs(search.lstrip('?'))
-        
-        # Check for RegionalMapping parameter (renamed from EnglandMapping)
-        if 'RegionalMapping' in params:
-            value = params['RegionalMapping'][0].lower()
-            regional_mapping = value in ['true', '1', 'yes']
+    # Determine which input triggered the callback
+    triggered_id = ctx.triggered_id if ctx.triggered else None
+    
+    if triggered_id == 'regional-mapping-switch':
+        # Switch was toggled - use its state
+        regional_mapping = switch_checked if switch_checked is not None else False
+    else:
+        # URL parameter or initial load
+        if search:
+            # Parse the URL parameters
+            from urllib.parse import parse_qs
+            params = parse_qs(search.lstrip('?'))
+            
+            # Check for RegionalMapping parameter (supports multiple spellings)
+            if 'RegionalMapping' in params:
+                value = params['RegionalMapping'][0].lower()
+                regional_mapping = value in ['true', '1', 'yes']
+            elif 'regional_variation' in params:
+                value = params['regional_variation'][0].lower()
+                regional_mapping = value in ['true', '1', 'yes']
     
     # Reload informants data with the regional mapping flag
     informants = retrieve_data.getInformantDataGrammar(imputed=True, regional_mapping=regional_mapping)
@@ -4214,4 +4247,5 @@ def parse_url_parameters(search):
     # Rebuild the participants tree with the updated informants data
     tree_data = drawParticipantsTree(informants)
     
-    return regional_mapping, informants.to_dict("records"), tree_data
+    # Clear checked items when regional mapping changes to force user to reselect
+    return regional_mapping, informants.to_dict("records"), tree_data, [], regional_mapping

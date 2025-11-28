@@ -46,6 +46,9 @@ from flask import request
 #_dash_renderer._set_react_version("18.2.0")
 launch_uid = uuid4()
 
+# Get database version
+DB_VERSION = rd.get_database_version()
+
 def get_icon(icon):
     return DashIconify(icon=icon, height=16)
 
@@ -125,7 +128,14 @@ def invalidate_cache_if_requested():
         pass
     return False
 
-app = Dash(__name__,external_stylesheets=dmc.styles.ALL, use_pages=True,suppress_callback_exceptions=True,background_callback_manager=background_callback_manager)
+app = Dash(
+    __name__,
+    external_stylesheets=dmc.styles.ALL, 
+    use_pages=True,
+    suppress_callback_exceptions=True,
+    background_callback_manager=background_callback_manager,
+    assets_ignore='.*\\.db$|.*\\.sqlite$|.*\\.sqlite3$|data/.*'  # Ignore database files and data directory
+)
 app.title = 'BSLVC Dashboard'
 server = app.server
 
@@ -133,6 +143,23 @@ server = app.server
 @server.before_request
 def check_cache_invalidation():
     invalidate_cache_if_requested()
+
+# Block direct access to database files
+@server.before_request
+def block_database_access():
+    """Prevent direct access to database files via HTTP requests"""
+    from flask import abort
+    
+    # Get the requested path
+    path = request.path
+    
+    # Block access to database files
+    if path.endswith('.db') or path.endswith('.sqlite') or path.endswith('.sqlite3'):
+        abort(404)
+    
+    # Block access to data directory
+    if '/assets/data/' in path:
+        abort(404)
 
 def create_main_link(icon, label, href):
     return dmc.Anchor(
@@ -307,7 +334,7 @@ app_shell = dmc.AppShell(
                             target="_blank",
                             c="blue"
                         ),
-                        " | v0.1.2"
+                        f" | v0.1.3 (DB: {DB_VERSION})"
                     ], size="sm", c="dimmed"),
                 ],
                 justify="center",
