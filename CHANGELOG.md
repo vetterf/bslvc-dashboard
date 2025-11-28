@@ -2,6 +2,13 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
+## [0.1.3] - 2025-11-28
+
+### Changed
+- **Regional mapping**: Added a switch in the interface instead of URL parameter
+- **DB Version**: Now visible in footer
+- **DB**: Added DB Version, added data for Balearic Islands, switched imputation from missForest to hdImpute
+
 ## [0.1.2] - 2025-11-18
 
 ### Added
