@@ -20,6 +20,7 @@ Vetter, Fabian. 2025. BSLVC Dashboard (Version 0.1.3). https://doi.org/10.17605/
 Data Set Citation:
 
 The BSLVC data set is currently unpublished. We expect to release the full data set in 2027 at the latest. Until then, please cite as follows:
+
 Krug, Manfred, Fabian Vetter & Lukas Sönning. To appear. The Bamberg Survey of Language Variation and Change (Version 251118) [Data set]. University of Bamberg.
 
 ## Installation
