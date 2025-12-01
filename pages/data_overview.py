@@ -247,7 +247,8 @@ def create_participants_map():
         'Germany': {'lat': 51.1657, 'lon': 10.4515},
         'Italy': {'lat': 41.8719, 'lon': 12.5674},
         'Denmark': {'lat': 56.2639, 'lon': 9.5018},
-        'Sweden': {'lat': 60.1282, 'lon': 18.6435}
+        'Sweden': {'lat': 60.1282, 'lon': 18.6435},
+        'Spain (Balearic Islands)': {'lat': 39.6953, 'lon': 3.0176}  # Mallorca coordinates
     }
     
     # Collect marker data

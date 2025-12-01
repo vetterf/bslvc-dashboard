@@ -36,6 +36,14 @@ class Conf:
                                                          'assets', 'data')),
                                               'BSLVC_sqlite.db'))
     
+    # England mapping CSV file path - construct from data directory (same pattern as database)
+    englandMappingFile: str = os.environ.get('ENGLAND_MAPPING_PATH',
+                                           os.path.join(os.environ.get('DATA_DIR',
+                                                      os.path.join(os.environ.get('APP_DIR',
+                                                                 os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+                                                                 'assets', 'data')),
+                                                      'england_N_S_mapping.csv'))
+    
     dataFileName: str = 'Questionnaire_db_export_all_inkl_grammar_231002.csv'
     columnsFileName: str = 'column_mapping_lexical.csv'
     metaFileName: str = 'meta_info.csv'
@@ -364,8 +372,8 @@ def getInformantDataGrammar(columns = None, participants = None, varieties = Non
 
     # Apply England North/South mapping if requested
     if regional_mapping:
-        # Load the England mapping CSV
-        regional_mapping_file = os.path.join(Conf.dataDir, 'england_N_S_mapping.csv')
+        # Load the England mapping CSV - use configured path like database file
+        regional_mapping_file = Conf.englandMappingFile
         if os.path.exists(regional_mapping_file):
             regional_map_df = pd.read_csv(regional_mapping_file)
             # Create a dictionary for quick lookup (note: CSV has "Informant ID" with space)
@@ -653,8 +661,8 @@ def getGrammarData(imputed=False,pairs=False, regional_mapping=False, **kwargs):
 
     # Apply England North/South mapping if requested
     if regional_mapping:
-        # Load the England mapping CSV
-        regional_mapping_file = os.path.join(Conf.dataDir, 'england_N_S_mapping.csv')
+        # Load the England mapping CSV - use configured path like database file
+        regional_mapping_file = Conf.englandMappingFile
         if os.path.exists(regional_mapping_file):
             regional_map_df = pd.read_csv(regional_mapping_file)
             # Create a dictionary for quick lookup (note: CSV has "Informant ID" with space)

@@ -4,6 +4,7 @@ FROM python:3.13.2-slim-bookworm
 ENV APP_DIR=/app
 ENV DATA_DIR=/app/assets/data
 ENV DATABASE_PATH=/assets/data/BSLVC_sqlite.db
+ENV ENGLAND_MAPPING_PATH=/assets/data/england_N_S_mapping.csv
 # Optional: Set custom cache directories
 ENV CACHE_DIR=/app/cache
 ENV MPLCONFIGDIR=/tmp/matplotlib
