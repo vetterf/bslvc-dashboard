@@ -76,9 +76,8 @@ For more information, please visit the project homepage.
             # Dashboard Citation
             dmc.Stack([
                 dmc.Text("Dashboard Citation:", fw=600, size="sm"),
-                dmc.Text("The Dashboard will have its own DOI and OSF repo soon. For the time being, cite as follows:"),
                 dmc.Text(
-                    "Vetter, Fabian. 2025. BSLVC Dashboard (Version 0.1.2) [Software]. University of Bamberg. https://bslvc.eng-ling.uni-bamberg.de",
+                    "Vetter, Fabian. 2025. BSLVC Dashboard (Version 0.1.3). https://doi.org/10.17605/OSF.IO/4BUEF",
                 ),
                 
                 dmc.Space(h="md"),
@@ -87,7 +86,7 @@ For more information, please visit the project homepage.
                 dmc.Text("Data Set Citation:", fw=600, size="sm"),
                 dmc.Text("The BSLVC data set is currently unpublished. We expect to release the full data set in 2027 at the latest. Until then, please cite as follows:"),
                 dmc.Text(
-                    "Krug, Manfred, Fabian Vetter & Lukas Sönning. 2025. The Bamberg Survey of Language Variation and Change (Version 251118) [Data set]. University of Bamberg.",
+                    "Krug, Manfred, Fabian Vetter & Lukas Sönning. 2025. The Bamberg Survey of Language Variation and Change (Version 251118). University of Bamberg.",
                 ),
                 
                 dmc.Space(h="md"),

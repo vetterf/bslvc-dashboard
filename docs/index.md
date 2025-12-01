@@ -23,17 +23,15 @@ For details on all available functions, see the [Documentation](documentation.md
 
 ## Quick Links
 
-- **[Documentation](documentation.md)**: Description of all available functions
-- **[Live Dashboard](https://bslvc.eng-ling.uni-bamberg.de)**: Access the application. As the BSLVC data is yet unpublished, the dashboard is in demo mode (i.e., access is password protected). If you need access to the dashboard, please contact Fabian Vetter.
+- **[Live Dashboard](https://bslvc.eng-ling.uni-bamberg.de)**: Access the application. As the BSLVC data is yet unpublished, the dashboard is in demo mode (i.e., access is password protected). If you require access to the dashboard, please contact Fabian Vetter.
 - **[Project Homepage](https://www.uni-bamberg.de/en/eng-ling/forschung/the-bslvc-project-dfg-funded/)**
 - **[Chair of English Linguistics @ University of Bamberg](https://uni-bamberg.de/en/eng-ling/)**
 
 
 ## Support
 
-- **Issues & Bug Reports**: [GitHub Issues](https://github.com/yourusername/bslvc-dashboard/issues)
-- **Project Homepage**: [BSLVC Project](https://www.uni-bamberg.de/en/eng-ling/forschung/the-bslvc-project-dfg-funded/)
-- **Contact**: [Chair of English Linguistics, University of Bamberg](https://www.uni-bamberg.de/en/eng-ling/)
+- **Issues & Bug Reports**: [GitHub Issues](https://github.com/vetterf/bslvc-dashboard/issues)
+- **Contact**: [Fabian Vetter @ Chair of English Linguistics](https://www.uni-bamberg.de/en/eng-ling/staff/fabian-vetter/))
 
 ## License
 

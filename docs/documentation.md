@@ -130,6 +130,12 @@ Participants can be selected via the participant tree, either by clicking the ch
 
 ![Participant advanced selection](img/UI_participant_advanced.png)
 
+##### Advanced Regional Mapping
+
+The switch "Split England into regions (North/South")" controls whether participants from England should be divided into England_North, England_South and England_UNCLEAR.
+
+![Regional mapping activated](img/UI_regional_mapping.png)
+
 #### Grammar Item Selection
 All grammar items can be selected in the grammar items tree. They are first grouped by mode, then by feature group. Items can be either selected by clicking the checkboxes, by using presets or the buttons above the tree, or via the grammar items table in the main view. The getting started section in the app describes how the grammar items table can be used for custom item selections.
 
@@ -197,15 +203,6 @@ This is only available if mode is set to "Participant Similarity". These functio
 - **Paste Settings**: Paste settings from clipboard. This button takes the base64 code created with the "Copy Settings" function to restore settings.
 - **Save Settings**: Save current settings locally. Helpful for temporarily saving the settings.
 - **Restore Settings**: Restore previously saved settings with the "Save Settings" function.
-
-#### URL Parameters: Regional Mapping
-
-The dashboard currently supports one URL parameter for controlling regional mapping participants:
-- `regional_mapping=true`: When set to true, participants from England are divided into England_North, England_South and England_UNCLEAR.
-
-You can activate this function by adding `?regional_mapping=true` to the URL (e.g., open the grammar analysis module with the following URL: https://bslvc.eng-ling.uni-bamberg.de/grammar?regional_mapping=true)
-
-![Regional mapping activated](img/UI_regional_mapping.png)
 
 #### Custom Group Comparison
 
