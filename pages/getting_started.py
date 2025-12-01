@@ -231,7 +231,7 @@ Alternatively, you can use the "Select All" and "Deselect All" buttons, or choos
 
 - ENL: Select all L1 varieties (England, Scotland, US)
 - ESL: Select all L2 varieties (Gibraltar, India, Malta, Puerto Rico)
-- EFL: Select all EFL varieties (Germany, Slovenia, Sweden)
+- EFL: Select all EFL varieties (Germany, Slovenia, Sweden, Spain (Balearic Islands))
 - Balanced: Select a balanced sample across all varieties
 - Age Groups: Select participants from specific age groups
 - Gender:

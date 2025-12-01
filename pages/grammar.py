@@ -2020,7 +2020,7 @@ def batch_select_participants(*args):
             return "ENL"
         elif variety in ["Gibraltar", "Malta", "India", "Puerto Rico"]:
             return "ESL"
-        elif variety in ["Slovenia", "Germany", "Sweden"]:
+        elif variety in ["Slovenia", "Germany", "Sweden", "Spain (Balearic Islands)"]:
             return "EFL"
         return "Other"
     
@@ -3725,7 +3725,7 @@ clientside_callback(
     function getVarietyType(mainVariety) {
         if (["US","England","Scotland"].includes(mainVariety)) return "ENL";
         if (["Gibraltar","Malta","India","Puerto Rico"].includes(mainVariety)) return "ESL";
-        if (["Slovenia","Germany","Sweden"].includes(mainVariety)) return "EFL";
+        if (["Slovenia","Germany","Sweden","Spain (Balearic Islands)"].includes(mainVariety)) return "EFL";
         return "Other";
     }
 
