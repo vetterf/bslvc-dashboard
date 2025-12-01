@@ -86,7 +86,7 @@ For more information, please visit the project homepage.
                 dmc.Text("Data Set Citation:", fw=600, size="sm"),
                 dmc.Text("The BSLVC data set is currently unpublished. We expect to release the full data set in 2027 at the latest. Until then, please cite as follows:"),
                 dmc.Text(
-                    "Krug, Manfred, Fabian Vetter & Lukas Sönning. 2025. The Bamberg Survey of Language Variation and Change (Version 251118). University of Bamberg.",
+                    "Krug, Manfred, Fabian Vetter & Lukas Sönning. To appear. The Bamberg Survey of Language Variation and Change (Version 251118). University of Bamberg.",
                 ),
                 
                 dmc.Space(h="md"),

@@ -249,7 +249,7 @@ navbar = dmc.AppShellNavbar(
                     label="Documentation",
                     leftSection=get_icon(icon="tabler:book-2"),
                 ),
-                href="https://github.com/vetterf/bslvc-dashboard/documentation",
+                href="https://vetterf.github.io/bslvc-dashboard",
                 target="_blank",
                 underline=False
             ),

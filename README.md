@@ -11,12 +11,11 @@ For details on all available functions, see the documentation.
 
 ## Citation
 
-If you use the BSLVC Dashboard or data from the BSLVC project in your research, please cite it appropriately:
+If you use the BSLVC Dashboard or data from the BSLVC project in your research, please cite it as follows:
 
 Dashboard Citation:
 
-The Dashboard will have its own DOI and OSF repo soon. For the time being, cite as follows:
-Vetter, Fabian. 2025. BSLVC Dashboard (Version 0.1.2) [Software]. University of Bamberg. https://bslvc.eng-ling.uni-bamberg.de
+Vetter, Fabian. 2025. BSLVC Dashboard (Version 0.1.3). https://doi.org/10.17605/OSF.IO/4BUEF
 
 Data Set Citation:
 

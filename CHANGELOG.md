@@ -8,6 +8,11 @@ All notable changes to the BSLVC Dashboard will be documented in this file.
 - **Regional mapping**: Added a switch in the interface instead of URL parameter
 - **DB Version**: Now visible in footer
 - **DB**: Added DB Version, added data for Balearic Islands, switched imputation from missForest to hdImpute
+- **Citation**: Updated citation info
+
+### Fixed
+- **Regional mapping**: Switch was not working in production as paths for mapping CSV file were off in Docker file
+- **Spain (Balearic Islands)**: Data point was not drawn on overview plot.
 
 ## [0.1.2] - 2025-11-18
 
