@@ -69,7 +69,7 @@ For more information, please visit the project homepage.
                 dmc.Title("How to Cite", order=4)
             ], gap="sm", mb="md"),
             dmc.Text(
-                "If you use the BSLVC Dashboard or data from the BSLVC project in your research, please cite it appropriately:",
+                "If you use the BSLVC Dashboard or data from the BSLVC project in your research, please cite it as follows:",
                 mb="md"
             ),
             
