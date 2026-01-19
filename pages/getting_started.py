@@ -442,7 +442,6 @@ A comprehensive documentation of the Dashboard's features and functionalities wi
         
         # Working with Grammar Data Section (combines workflow + case studies)
         dmc.Group([
-            DashIconify(icon="tabler:language", width=28),
             dmc.Title("Working with the Grammar Data", order=3, mt="xl", mb="md")
         ], gap="sm", mt="xl", mb="md"),
         dmc.Text("Follow the basic workflow to get started, or explore practical examples through case studies.", c="dimmed", mb="md"),

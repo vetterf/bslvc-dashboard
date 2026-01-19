@@ -198,7 +198,23 @@ This is only available if mode is set to "Participant Similarity". These functio
 
 ![Advanced actions](img/UI_advanced_actions.png)
 
-- **Export Data**: Download current data selection. By default, this includes all sociodemographic columns, but only the selected participants and grammar items.
+##### Data Export
+
+The data export section provides multiple options for exporting your selection:
+
+- **Export Data**: Download current data selection with flexible format options:
+  - **Include sociodemographic data** (checked by default): When enabled, includes participant metadata columns (Age, Gender, MainVariety, etc.) in the export. When disabled, exports only InformantID and rating data.
+  - **Include item metadata** (unchecked by default): When enabled, transposes the data so items become rows and participants become columns, with item metadata columns (section, feature, group, sentence, etc.) added at the beginning.
+  - **Combined options**:
+    - Neither checked: Minimal export (InformantID + ratings only)
+    - Only sociodemographic: Standard wide format (participants as rows, items as columns, with participant metadata)
+    - Only item metadata: Transposed format (items as rows, participants as columns, with item metadata)
+    - Both checked: Transposed format with participant metadata as header rows
+- **Export Distance Matrix** (visible only in Participant Similarity mode): Downloads a pairwise distance matrix using the same settings as the UMAP plot (distance metric, standardization, selected participants and items). Participant IDs are used as both row and column labels.
+
+
+##### Settings
+
 - **Copy Settings**: Copy current settings to clipboard. This function converts the current settings into a base64 code and copies it to the clipboard. This code can be used to share settings with other users or save the settings in a text file for later use.
 - **Paste Settings**: Paste settings from clipboard. This button takes the base64 code created with the "Copy Settings" function to restore settings.
 - **Save Settings**: Save current settings locally. Helpful for temporarily saving the settings.
@@ -239,7 +255,7 @@ Some grammar items have been flagged as problematic due to various issues that m
 
 E22: *This is exactly that I wanted*. Our Swedish speaker autocorrected this item to *This is exactly what I wanted*, effectively turning this into a control item. All other varieties are unaffected.
 
-D12: *I'll tell Jane when I meets her*. Our Scottish speaker aspirates the *ts* in *meets* heavily, thus somewhat blurring the line between the standard use *when I meet her* and the non-standard *when I meets her*.
+D12: *I'll tell Jane when I meets her*. Our Scottish and Swedish speaker aspirates the *ts* in *meets* heavily, thus somewhat blurring the line between the standard use *when I meet her* and the non-standard *when I meets her*.
 
 E6: *I'm learning French, because is a beautiful language*. Again the rendering by our Scottish speaker blurs the line between non-standard *is* and *it's*.
 

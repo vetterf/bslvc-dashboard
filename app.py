@@ -20,7 +20,7 @@ if not os.path.exists(os.environ['MPLCONFIGDIR']):
 import os
 import dash
 
-from dash import Dash,_dash_renderer, html, dcc, Input, Output, State, page_container, callback, get_relative_path,DiskcacheManager, CeleryManager
+from dash import Dash,_dash_renderer, html, dcc, Input, Output, State, page_container, callback, get_relative_path,DiskcacheManager, CeleryManager, ctx
 from dataclasses import dataclass
 
 import io
@@ -262,25 +262,40 @@ navbar = dmc.AppShellNavbar(
 header = dmc.Group(children=[
                       dmc.Group(
                           children=[
-                                dmc.Burger(
+                                dmc.ActionIcon(
+                                    DashIconify(icon="tabler:layout-sidebar-left-collapse", width=20),
                                     id="mobile-burger",
-                                    size="sm",
+                                    variant="subtle",
+                                    size="lg",
                                     hiddenFrom="sm",
-                                    opened=False,
                                 ),
-                                dmc.Burger(
+                                dmc.ActionIcon(
+                                    DashIconify(icon="tabler:layout-sidebar-left-collapse", width=20),
                                     id="desktop-burger",
-                                    size="sm",
+                                    variant="subtle",
+                                    size="lg",
                                     visibleFrom="sm",
-                                    opened=True,
+                                    style={"left": "10px", "top": "10px", "position": "absolute"}
                                 ),
-                              dmc.Image(
-                                  src="/assets/img/bslvc_logo.png",
-                                  h=40,
-                                  w="auto",
-                                  fit="contain"
+                              dmc.Group(
+                                  children=[
+                                      dmc.Image(
+                                          src="/assets/img/bslvc_logo.png",
+                                          h=40,
+                                          w="auto",
+                                          fit="contain",
+                                      ),
+                                      dmc.Text(
+                                          "Bamberg Survey of Language Variation and Change", 
+                                          c="black", 
+                                          style={"marginBottom": "-2px"},
+                                          className="mantine-Accordion-label"  # use the accordeon label class for consistent font
+                                      )
+                                  ],
+                                  gap="xs",
+                                  align="flex-end",
+                                  style={"paddingLeft": "20px"}
                               ),
-                              dmc.Title("BSLVC Dashboard", c="black", order=4)
                               ],align="center",justify="flex-start", gap="md")
                 ],
                 h="100%",
@@ -334,7 +349,7 @@ app_shell = dmc.AppShell(
                             target="_blank",
                             c="blue"
                         ),
-                        f" | v0.1.3 (DB: {DB_VERSION})"
+                        f" | v0.1.4 (DB: {DB_VERSION})"
                     ], size="sm", c="dimmed"),
                 ],
                 justify="center",
@@ -429,15 +444,23 @@ app.layout = dmc.MantineProvider(
 
 @callback(
     Output("appshell", "navbar"),
-    Input("mobile-burger", "opened"),
-    Input("desktop-burger", "opened"),
+    Input("mobile-burger", "n_clicks"),
+    Input("desktop-burger", "n_clicks"),
     State("appshell", "navbar"),
 )
-def toggle_navbar(mobile_opened, desktop_opened, navbar):
-    navbar["collapsed"] = {
-        "mobile": not mobile_opened,
-        "desktop": not desktop_opened,
-    }
+def toggle_navbar(mobile_clicks, desktop_clicks, navbar):
+    """Toggle navbar collapsed state based on which button was clicked"""
+    triggered = ctx.triggered_id
+    
+    # Initialize collapsed dict if needed
+    if "collapsed" not in navbar:
+        navbar["collapsed"] = {"mobile": True, "desktop": False}
+    
+    if triggered == "mobile-burger" and mobile_clicks:
+        navbar["collapsed"]["mobile"] = not navbar["collapsed"].get("mobile", True)
+    elif triggered == "desktop-burger" and desktop_clicks:
+        navbar["collapsed"]["desktop"] = not navbar["collapsed"].get("desktop", False)
+    
     return navbar
 
 @callback(

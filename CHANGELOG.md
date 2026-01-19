@@ -2,6 +2,35 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
+## [0.1.4] - 2026-01-13
+
+### Added
+- **Export Distance Matrix Button**: New button in Advanced Actions (visible only in Participant Similarity mode)
+  - Exports pairwise distance matrix as CSV using the same settings as the UMAP plot
+  - Uses selected distance metric (cosine/euclidean/manhattan), standardization, participants, and items
+  - Participant IDs used as both row and column labels
+- **Download Participant Metadata Button**: New button in Advanced Actions (visible in all analysis modes)
+  - Downloads sociodemographic details for selected participants from database
+  - Respects imputed/non-imputed data switch setting
+  - Automatically removes sensitive columns (NameSchool, signature, CommentsTimeline)
+- **Flexible Data Export Options**: Added two checkboxes in Data Export section for customizing export format
+  - **Include sociodemographic data** (default: checked): Controls whether participant metadata columns are included
+  - **Include item metadata** (default: unchecked): Controls whether to transpose data and add item metadata columns
+  - Four export formats available:
+    - Neither checked: Minimal format (InformantID + ratings only)
+    - Only sociodemographic: Standard wide format (participants as rows, with metadata)
+    - Only item metadata: Transposed format (items as rows, participants as columns, with item metadata)
+    - Both checked: Transposed format with participant metadata as header rows
+  - Filenames automatically indicate format type (minimal/wide/transposed)
+- ** Items Table Download**: Added a download button for the grammar items
+
+### Changed
+- **Advanced Actions Restructuring**: Reorganized into two clear sections
+  - **Data Export** section: All export/download buttons grouped together
+  - **Settings** section: Copy/Paste and Save/Restore Settings grouped together
+- **DB**: Updated database with new metadata for features.
+- **UI Tweaks**: Minor ui tweaks
+
 ## [0.1.3] - 2025-11-28
 
 ### Changed

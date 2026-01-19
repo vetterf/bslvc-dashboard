@@ -443,10 +443,12 @@ def create_age_gender_histogram():
         barmode='group',
         template='simple_white',
         color_discrete_map={
-            'Female': '#2a9d8f',  # Teal
-            'Male': '#e76f51',    # Coral/Orange
-            'Non-binary': '#9b59b6'  # Purple
+            'Female': '#1f77b4',   # Blue (matching England variety color)
+            'Male': '#ff7f0e',     # Orange (matching Scotland variety color)
+            'Non-binary': '#9467bd',  # Purple (matching Malta variety color)
+            'NA': '#7f7f7f'        # Gray (matching Slovenia variety color)
         },
+        category_orders={'Gender': ['Female', 'Male', 'Non-binary', 'NA']},
         height=350
     )
     

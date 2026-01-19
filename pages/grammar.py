@@ -217,47 +217,6 @@ grammarMetaPairs = retrieve_data.getGrammarMeta("item_pairs")
 # Get minimal informants data for initial tree display
 Informants = retrieve_data.getInformantDataGrammar(imputed=True)
 
-def generate_dynamic_presets(meta_df):
-    """Generate presets dynamically from meta data columns"""
-    presets = []
-    
-    # Base presets
-    presets.extend([
-        {'label':'Top 15 spoken','value':['A8','B14','B22','C12','D1','D4','D22','E11','E12','E18','E19','F22','F2','F12','F20']},
-    ])
-    
-    # Dynamic presets from section column (Mode: prefix)
-    if 'section' in meta_df.columns:
-        section_groups = meta_df.groupby('section', observed=True)['question_code'].apply(list).to_dict()
-        for section, codes in sorted(section_groups.items()):
-            if section and pd.notna(section):
-                presets.append({
-                    'label': f'Mode: {section}',
-                    'value': codes
-                })
-    
-    # Dynamic presets from group_finegrained column (Group: prefix)
-    if 'group_finegrained' in meta_df.columns:
-        group_groups = meta_df.groupby('group_finegrained', observed=True)['question_code'].apply(list).to_dict()
-        for group, codes in sorted(group_groups.items()):
-            if group and pd.notna(group) and group.strip():
-                presets.append({
-                    'label': f'Group: {group}',
-                    'value': codes
-                })
-    
-    # Dynamic presets from feature_ewave column (eWAVE: prefix)
-    if 'feature_ewave' in meta_df.columns:
-        ewave_groups = meta_df.groupby('feature_ewave', observed=True)['question_code'].apply(list).to_dict()
-        for feature, codes in sorted(ewave_groups.items()):
-            if feature and pd.notna(feature) and feature.strip():
-                presets.append({
-                    'label': f'eWAVE: {feature}',
-                    'value': codes
-                })
-    
-    return presets
-
 # Create simple empty plots for initial display
 UMAP_Grammar_initialPlot = go.Figure()
 UMAP_Grammar_initialPlot.update_layout(
@@ -272,61 +231,9 @@ itemPlot_Grammar_initialPlot.update_layout(
 initial_hoverinfo = construct_initial_hoverinfo(UMAP_Grammar_initialPlot)
 
 # presets
-# Dynamically generated from meta table
+# Dynamically generated from meta table (using imported function from grammarFunctions)
 item_presets = generate_dynamic_presets(grammarMeta)
-
-# Build MultiSelect data with proper grouping structure for dmc.MultiSelect
-def build_preset_multiselect_data(presets):
-    # Organize presets into groups
-    groups = {
-        'Manual presets': [],
-        'Mode presets': [],
-        'Group presets': [],
-        'eWAVE feature groups': [],
-        'Other': []
-    }
-    
-    for p in presets:
-        label = p.get('label')
-        value = p.get('label')
-        item = {'label': label, 'value': value}
-        
-        # Categorize into appropriate group
-        if label.startswith('Mode:'):
-            groups['Mode presets'].append(item)
-        elif label.startswith('Group:'):
-            groups['Group presets'].append(item)
-        elif label.startswith('eWAVE:'):
-            groups['eWAVE feature groups'].append(item)
-        else:
-            # Everything else goes to Manual presets (e.g., "Top 15 spoken")
-            groups['Manual presets'].append(item)
-    
-    # Build the grouped data structure for dmc.MultiSelect
-    data = []
-    for group_name in ['Manual presets', 'Mode presets', 'Group presets', 'eWAVE feature groups', 'Other']:
-        if groups[group_name]:  # Only add non-empty groups
-            data.append({
-                'group': group_name,
-                'items': groups[group_name]
-            })
-    
-    return data
-
 labels_dict = build_preset_multiselect_data(item_presets)
-
-# Helper to expand a list of selected preset labels into a unioned list of item codes
-def expand_presets_to_items(selected_preset_labels, presets_list):
-    if not selected_preset_labels:
-        return []
-    
-    selected_items = []
-    for lbl in selected_preset_labels:
-        match = next((p for p in presets_list if p['label'] == lbl), None)
-        if match:
-            selected_items.extend(match.get('value', []))
-    # Return unique sorted list
-    return sorted(list(set(selected_items)))
 
 
 
@@ -553,121 +460,185 @@ PIAccordion = dmc.Accordion(
 )
 
 InformantsGrid = html.Div(children = [
-
-    # Grid to mimic questionnaire layout
-    dmc.Card(children=[
-        dmc.CardSection(children=[
-            dmc.Image(src='../assets/img/UB_logo.png',styles={"root" : {"width":"100px","height":"100px","float":"right","margin-bottom":"10px"}}),
-            dmc.Text("University of Bamberg",size="xl",styles={"root":{"line-height":"1.1"}}),
-            dmc.Text("Chair of English Linguistics",size="sm",styles={"root":{"padding-bottom":"10px"}}),
-            dmc.Text("Bamberg Survey of Language Variation and Change",fw=700,size="sm"),
-            dmc.Text("Participant Information Sheet",size="sm"),
-            dmc.Divider(styles={"root":{"margin-top":"20px"}}),
-        ],styles={"section":{"margin":"20px"}}),
-        dmc.CardSection(children=[
-            dmc.Grid(children=[ 
-                # "Personal Information" & "Location Timeline"
-                dmc.GridCol(children=[
-                    dmc.Card(children=[
-                        dmc.Text("Personal Information",fw=700),
-                        #Age,
-                        #dmc.Divider(),
-                        #Gender,
-                        #dmc.Divider(),
-                        AgeGender,
-                        dmc.Divider(),
-                        MainVarieties,
-                        dmc.Divider(),
-                        PIAccordion,
-                        #LanguagesHome,
-                        #dmc.Divider(),
-                        #LanguageMother,
-                        #dmc.Divider(),
-                        #LanguageFather
-                        ],
-                        withBorder=True,
-                        shadow="sm",
-                        radius="md"),
-                    dmc.Card(children=[
-                        dmc.Text("Location Timeline",fw=500),
-                        YearsLivedOutside,
-                        dmc.Divider(),
-                        YearsLivedOtherE,
-                        dmc.Divider(),
-                        RatioMainVariety],
-                        withBorder=True,
-                        shadow="sm",
-                        radius="md")
-                    ],span=6),
-                # "Education Profile"
-                dmc.GridCol(children=[
-                    dmc.Card(children=[
-                        dmc.Text("Education Profile",fw=500),
-                        PrimarySchool,
-                        dmc.Divider(),
-                        SecondarySchool,
-                        dmc.Divider(),
-                        Qualifications],
-                        withBorder=True,
-                        shadow="sm",
-                        radius="md"),
-                    ],span=6),
-            ])
-        ],styles={"section":{"margin-left":"20px","margin-right":"20px","margin-bottom":"20px"}}),
-    ],withBorder=True,shadow="sm",radius="md"),
-    # --- Add informants table below plots ---
-    dmc.Card(
+    # View toggle switch at the top
+    dmc.Group([
+        dmc.SegmentedControl(
+            id="informants-view-toggle",
+            data=[
+                {"value": "table", "label": "Table View"},
+                {"value": "plots", "label": "Plot View"},
+            ],
+            value="table",
+            color="blue",
+            size="sm"
+        ),
+    ], justify="center", mb="lg"),
+    
+    # Table view (default)
+    html.Div(
+        id="informants-table-view",
         children=[
-            dmc.Text("Informants Data Table", fw=700, mb=5),
-            dmc.Text("💡 Click headers to sort • Drag column borders to resize • Use filter boxes below headers to search.", 
-                     size="sm", c="dimmed", mb=10, 
-                     style={"fontStyle": "italic", "backgroundColor": "#f8f9fa", "padding": "8px", "borderRadius": "4px", "border": "1px solid #e9ecef"}),
-            # Table will be updated by callback, initial data is all informants
+            dmc.Stack([
+                dmc.Group([
+                    dmc.Text("Participant Data Table", fw=700),
+                    dmc.Button(
+                        "Download Table Data",
+                        id="download-informants-table-button",
+                        size="xs",
+                        variant="light",
+                        leftSection=DashIconify(icon="tabler:download", width=16)
+                    ),
+                ], justify="space-between", mb="xs"),
+                
+                # Column selection checkboxes
+                dmc.Accordion(
+                    children=[
+                        dmc.AccordionItem(
+                            [
+                                dmc.AccordionControl("Select Columns to Display", style={"fontSize": "14px"}),
+                                dmc.AccordionPanel(
+                                    dmc.Stack(gap="xs", children=[
+                                        dmc.Group([
+                                            dmc.Button("Select All", id="select-all-columns-button", size="xs", variant="outline"),
+                                            dmc.Button("Deselect All", id="deselect-all-columns-button", size="xs", variant="outline"),
+                                        ], mb="xs"),
+                                        dmc.CheckboxGroup(
+                                            id="informants-columns-checkbox",
+                                            children=[
+                                                dmc.Grid([
+                                                    dmc.GridCol(dmc.Checkbox(label=col.replace("_", " ").replace("ID", " ID").replace("Occup", "Occupation").replace("Quali", "Qualification"), 
+                                                                            value=col, size="xs"), span=3)
+                                                    for col in ['Age', 'Gender', 'MainVariety', 'AdditionalVarieties',
+                                                               'YearsLivedInMainVariety', 'RatioMainVariety', 'CountryCollection', 'Year',
+                                                               'Nationality', 'EthnicSelfID', 'CountryID', 'YearsLivedOutside', 
+                                                               'YearsLivedInside', 'YearsLivedOtherEnglish', 'LanguageHome_normalized',
+                                                               'LanguageFather_normalized', 'LanguageMother_normalized', 'Qualifications_normalized',
+                                                               'QualiMother_normalized', 'QualiFather_normalized', 'QualiPartner_normalized',
+                                                               'PrimarySchool', 'SecondarySchool', 'Occupation', 'OccupMother', 'OccupFather',
+                                                               'OccupPartner'] if col in Informants.columns
+                                                ])
+                                            ],
+                                            value=['Age', 'Gender', 'MainVariety','AdditionalVarieties',
+                                                               'YearsLivedInMainVariety', 'RatioMainVariety', 'CountryCollection', 'Year','LanguageHome_normalized',
+                                                               'LanguageFather_normalized', 'LanguageMother_normalized'],
+                                            persistence=persist_UI,
+                                            persistence_type=persistence_type
+                                        )
+                                    ])
+                                ),
+                            ],
+                            value="column-selection",
+                        ),
+                    ],
+                    variant="contained",
+                    mb="xs"
+                ),
+            ], gap="xs", mb="xs", style={"backgroundColor": "#f8f9fa", "padding": "8px", "borderRadius": "4px", "border": "1px solid #e9ecef","display": "flex","flex-direction":"column"}),
+            
+            # Table will be updated by callback
             dag.AgGrid(
                 id="informants-table",
-                rowData=Informants.to_dict("records"),
-                columnDefs=[
-                    {
-                        "field": col, 
-                        "headerName": col.replace("ID", " ID").replace("Occup", "Occupation").replace("Quali", "Qualification").replace("Ethnic", "Ethnic "),
-                        "filter": "agTextColumnFilter", 
-                        "sortable": True,
-                        "resizable": True,
-                        "minWidth": 120 if "Language" in col or "Variety" in col else 100,
-                        "flex": 1,
-                        "cellStyle": {"textAlign": "left"},
-                        "headerTooltip": f"Click to sort by {col}. Use filter below to search."
-                    } 
-                    for col in Informants.columns
-                ],
-                defaultColDef={
-                    "filter": "agTextColumnFilter",
-                    "sortable": True,
-                    "resizable": True,
-                    "minWidth": 100,
-                    "flex": 1,
-                    "headerTooltip": "Click header to sort, drag borders to resize, use filter below to search"
-                },
-                className="ag-theme-quartz compact",
-                columnSize="autoSize",
-                style={"height": "400px"},
-                dashGridOptions={
-                    "suppressMenuHide": True,
-                    "animateRows": True,
-                    "enableRangeSelection": True,
-                    "pagination": True,
-                    "paginationPageSize": 30,
-                    "headerHeight": 30,
-                    "suppressColumnVirtualisation": True,
-                    "enableBrowserTooltips": True,
-                    "tooltipShowDelay": 500
-                }
-            )
+                rowData=[],  # Initialize empty for performance
+                        columnDefs=[
+                            {
+                                "field": col, 
+                                "headerName": col.replace("ID", " ID").replace("_", " ").replace("Occup", "Occupation").replace("Quali", "Qualification").replace("Ethnic", "Ethnic "),
+                                "filter": "agTextColumnFilter", 
+                                "sortable": True,
+                                "resizable": True,
+                                "minWidth": 120 if "Language" in col or "Variety" in col else 100,
+                                "flex": 1,
+                                "cellStyle": {"textAlign": "left"},
+                                "headerTooltip": f"Click to sort by {col}. Use filter below to search."
+                            } 
+                            for col in ['InformantID', 'Age', 'Gender', 'MainVariety', 'Year'] if col in Informants.columns
+                        ],
+                        defaultColDef={
+                            "filter": "agTextColumnFilter",
+                            "sortable": True,
+                            "resizable": True,
+                            "minWidth": 100,
+                            "flex": 1,
+                            "headerTooltip": "Click header to sort, drag borders to resize, use filter below to search"
+                        },
+                        className="ag-theme-quartz compact",
+                        columnSize="autoSize",
+                        style={"flex": "1"},
+                        dashGridOptions={
+                            "suppressMenuHide": True,
+                            "animateRows": True,
+                            "enableRangeSelection": True,
+                            "pagination": True,
+                            "paginationPageSize": 30,
+                            "headerHeight": 30,
+                            "suppressColumnVirtualisation": True,
+                            "enableBrowserTooltips": True,
+                            "tooltipShowDelay": 500
+                        }
+                )
         ],
-        withBorder=True,
-        shadow="sm",
-        radius="md",
-        style={"marginTop": "20px"}
+        style={"display": "block"}
+    ),
+    html.Div(
+        id="informants-plot-view",
+        children=[
+            dmc.Card(children=[
+                dmc.CardSection(children=[
+                    dmc.Image(src='../assets/img/UB_logo.png',styles={"root" : {"width":"100px","height":"100px","float":"right","margin-bottom":"10px"}}),
+                    dmc.Text("University of Bamberg",size="xl",styles={"root":{"line-height":"1.1"}}),
+                    dmc.Text("Chair of English Linguistics",size="sm",styles={"root":{"padding-bottom":"10px"}}),
+                    dmc.Text("Bamberg Survey of Language Variation and Change",fw=700,size="sm"),
+                    dmc.Text("Participant Information Sheet",size="sm"),
+                    dmc.Divider(styles={"root":{"margin-top":"20px"}}),
+                ],styles={"section":{"margin":"20px"}}),
+                dmc.CardSection(children=[
+                    dmc.Grid(children=[ 
+                        # "Personal Information" & "Location Timeline"
+                        dmc.GridCol(children=[
+                            dmc.Card(children=[
+                                dmc.Text("Personal Information",fw=700),
+                                AgeGender,
+                                dmc.Divider(),
+                                MainVarieties,
+                                dmc.Divider(),
+                                PIAccordion,
+                                ],
+                                withBorder=True,
+                                shadow="sm",
+                                radius="md"),
+                            dmc.Card(children=[
+                                dmc.Text("Location Timeline",fw=500),
+                                YearsLivedOutside,
+                                dmc.Divider(),
+                                YearsLivedOtherE,
+                                dmc.Divider(),
+                                RatioMainVariety],
+                                withBorder=True,
+                                shadow="sm",
+                                radius="md")
+                            ],span=6),
+                        # "Education Profile"
+                        dmc.GridCol(children=[
+                            dmc.Card(children=[
+                                dmc.Text("Education Profile",fw=500),
+                                PrimarySchool,
+                                dmc.Divider(),
+                                SecondarySchool,
+                                dmc.Divider(),
+                                Qualifications],
+                                withBorder=True,
+                                shadow="sm",
+                                radius="md"),
+                            ],span=6),
+                    ])
+                ],styles={"section":{"margin-left":"20px","margin-right":"20px","margin-bottom":"20px"}}),
+            ],withBorder=True,shadow="sm",radius="md",style={
+                "maxHeight": "calc(100vh - 230px)",
+                "overflowY": "auto",
+                "overflowX": "hidden"
+            })
+        ],
+        style={"display": "none"}
     )
 ])
 
@@ -830,6 +801,26 @@ informantSelectionAccordion = dmc.AccordionItem(
                     dmc.Button("Select All", id='select-all-participants', size="xs", variant="outline"),
                     dmc.Button("Deselect All", id='deselect-all-participants', size="xs", variant="outline"),
                 ], mb="xs"),
+                html.Div(id="lasso-selection-buttons", children=[
+                    dmc.Group(children=[
+                        dmc.Button(
+                            "Select Lasso",
+                            id='select-only-lasso-participants',
+                            size="xs",
+                            variant="outline",
+                            disabled=True,
+                            leftSection=DashIconify(icon="tabler:lasso", width=16),
+                        ),
+                        dmc.Button(
+                            "Deselect Lasso",
+                            id='deselect-selected-participants',
+                            size="xs",
+                            variant="outline",
+                            disabled=True,
+                            leftSection=DashIconify(icon="tabler:lasso-off", width=16),
+                        ),
+                    ], mb="xs", wrap="wrap", gap="xs"),
+                ]),  # Visible by default (UMAP is default now)
                 
                 # Regional mapping switch
                 dmc.Group([
@@ -1286,7 +1277,7 @@ umapGroupCompAccordion = dmc.AccordionItem(
         )
 
 # Merged Settings for Grammar Analysis (Item Plot + UMAP)
-SettingsGrammarAnalysis = dmc.Container([
+SettingsGrammarAnalysis = dmc.Card([
     # Collapsible Quick Stats Panel
     dmc.Accordion(
         children=[
@@ -1359,25 +1350,6 @@ SettingsGrammarAnalysis = dmc.Container([
         wrap="nowrap",
         mb="md"),
         dmc.Group(children=[
-            dmc.Button(
-                "Select Only Lasso Selection", 
-                id='select-only-lasso-participants', 
-                variant="outline",
-                disabled=True,
-                leftSection=DashIconify(icon="tabler:lasso", width=16),
-            ),
-            dmc.Button(
-                "Deselect Lasso Selection", 
-                id='deselect-selected-participants', 
-                variant="outline",
-                disabled=True,
-                leftSection=DashIconify(icon="tabler:lasso-off", width=16),
-            ),
-        ],
-        grow=True,
-        wrap="nowrap",
-        mb="md"),
-        dmc.Group(children=[
             dmc.Button('Compare Selected Groups', id='render-rf-plot', variant="outline", loading=False, disabled=True),
         ],
         grow=True,
@@ -1426,15 +1398,30 @@ SettingsGrammarAnalysis = dmc.Container([
                         ], gap="xs")
                     ),
                     dmc.AccordionPanel([
-                        # Export Actions (Color-coded)
+                        # Data Export Section
                         dmc.Stack([
                             dmc.Group([
-                                DashIconify(icon="tabler:download", width=16),
-                                dmc.Text("Export & Share", size="sm", fw=500)
+                                DashIconify(icon="tabler:database-export", width=16),
+                                dmc.Text("Data Export", size="sm", fw=500)
+                            ], gap="xs", mb="xs"),
+                            # Export format options
+                            dmc.Stack([
+                                dmc.Checkbox(
+                                    id='export-include-sociodemographic-checkbox',
+                                    label="Include sociodemographic data",
+                                    checked=True,
+                                    size="xs"
+                                ),
+                                dmc.Checkbox(
+                                    id='export-include-item-metadata-checkbox',
+                                    label="Include item metadata",
+                                    checked=False,
+                                    size="xs"
+                                ),
                             ], gap="xs", mb="xs"),
                             dmc.Group([
                                 dmc.Button(
-                                    "Export Data",
+                                    "Export Raw Data",
                                     id='export-data-button',
                                     size="xs",
                                     variant="light",
@@ -1442,6 +1429,32 @@ SettingsGrammarAnalysis = dmc.Container([
                                     fullWidth=True
                                 ),
                             ], grow=True),
+                            dmc.Divider(orientation="horizontal", variant="solid", color="gray", mt="xs", mb="xs"),
+                            # Export Distance Matrix button (only visible in Participant Similarity mode)
+                            html.Div(
+                                id='export-distance-matrix-container',
+                                children=[
+                                    dmc.Group([
+                                        dmc.Button(
+                                            "Export Distance Matrix",
+                                            id='export-distance-matrix-button',
+                                            size="xs",
+                                            variant="light",
+                                            leftSection=DashIconify(icon="tabler:chart-dots", width=14),
+                                            fullWidth=True
+                                        ),
+                                    ], grow=True),
+                                ],
+                                style={"display": "block"}  # Visible by default (UMAP is default)
+                            ),
+                        ], gap="xs", mb="md"),
+                        
+                        # Settings Section
+                        dmc.Stack([
+                            dmc.Group([
+                                DashIconify(icon="tabler:settings", width=16),
+                                dmc.Text("Settings", size="sm", fw=500)
+                            ], gap="xs", mb="xs"),
                             dmc.Group([
                                 dmc.Button(
                                     "Copy Settings",
@@ -1460,14 +1473,6 @@ SettingsGrammarAnalysis = dmc.Container([
                                     fullWidth=True
                                 ),
                             ], grow=True),
-                        ], gap="xs", mb="md"),
-                        
-                        # Settings Memory (Color-coded)
-                        dmc.Stack([
-                            dmc.Group([
-                                DashIconify(icon="tabler:device-floppy", width=16),
-                                dmc.Text("Settings Memory", size="sm", fw=500)
-                            ], gap="xs", mb="xs"),
                             dmc.Group([
                                 dmc.Button(
                                     "Save Settings",
@@ -1500,6 +1505,7 @@ SettingsGrammarAnalysis = dmc.Container([
     
     # Download components (hidden)
     dcc.Download(id="download-data"),
+    dcc.Download(id="download-distance-matrix"),
     
     # Clipboard store for settings (client-side only)
     dcc.Store(id='clipboard-settings-store', storage_type='memory'),
@@ -1533,7 +1539,7 @@ SettingsGrammarAnalysis = dmc.Container([
     
 
     
-], fluid=True)
+], withBorder=True, shadow="sm", radius="md", p="md", style={"height": "calc(100vh - 160px)", "overflowY": "auto"})
 
 # Deleted: SettingsInformants (deprecated - merged into Grammar Analysis)
 
@@ -1554,6 +1560,19 @@ SettingsLeiden = dmc.Container([
 # Merged Grammar Analysis Container (replaces legacy itemC and umapC containers)
 grammarAnalysisC = dmc.Grid([
     dmc.GridCol(html.Div(children=[
+        # Collapse toggle button
+        dmc.ActionIcon(
+            DashIconify(icon="tabler:layout-sidebar-right-collapse", width=20),
+            id="toggle-sidebar-button",
+            variant="subtle",
+            size="lg",
+            style={
+                "position": "absolute",
+                "right": "10px",
+                "top": "10px",
+                "zIndex": 1000
+            }
+        ),
         dmc.Card(children=[
             dmc.Tabs(
                 [
@@ -1587,14 +1606,21 @@ grammarAnalysisC = dmc.Grid([
                 color="blue",
                 orientation="horizontal",
                 variant="default",
-                value="plot-view"
+                value="plot-view",
+                style={"height": "calc(100vh - 180px)"}  # Full height minus header/footer
             )
-        ], withBorder=True, shadow="sm", radius="md")],
+        ], withBorder=True, shadow="sm", radius="md", style={"height": "calc(100vh - 160px)"})],
         id="grammar-analysis-tab-content",
-        style={"paddingTop": 10}),
+        style={"height": "calc(100vh - 150px)"}),
+        id="main-content-col",
         span=8),
-    dmc.GridCol(SettingsGrammarAnalysis, span=4, style={"padding-top":"10px","margin-top": "5px","border-left": "1px solid #f0f0f0","padding-left": "10px"}),
-], gutter="xl")
+    dmc.GridCol(
+        SettingsGrammarAnalysis,
+        id="sidebar-col",
+        span=4,
+        style={}
+    ),
+], gutter="xl", id="grammar-analysis-grid")
 
 # Deleted: informantsC container (deprecated - merged into grammarAnalysisC)
 
@@ -1838,6 +1864,37 @@ def update_participants_selection(select_all_clicks, deselect_all_clicks):
         return []
     return no_update
 
+# Callback to toggle sidebar visibility
+@callback(
+    [Output('sidebar-col', 'span'),
+     Output('sidebar-col', 'style'),
+     Output('main-content-col', 'span'),
+     Output('toggle-sidebar-button', 'children')],
+    Input('toggle-sidebar-button', 'n_clicks'),
+    State('sidebar-col', 'span'),
+    prevent_initial_call=True
+)
+def toggle_sidebar(n_clicks, current_span):
+    """Toggle sidebar between visible (span=4) and hidden (span=0)"""
+    if current_span == 4:
+        # Collapse sidebar
+        return (
+            0,
+            {"display": "none"},
+            12,
+            DashIconify(icon="tabler:layout-sidebar-right-expand", width=20)
+        )
+    else:
+        # Expand sidebar
+        return (
+            4,
+            {
+                "height": "calc(100vh - 150px)"
+            },
+            8,
+            DashIconify(icon="tabler:layout-sidebar-right-collapse", width=20)
+        )
+
 # Callback to show/hide UI elements based on plot type selection
 @callback(
     [Output('item-plot-settings-container', 'style'),
@@ -1845,10 +1902,12 @@ def update_participants_selection(select_all_clicks, deselect_all_clicks):
      Output('item-plot-display', 'style'),
      Output('umap-plot-display', 'style'),
      Output('umap-group-buttons', 'style'),
+     Output('lasso-selection-buttons', 'style'),
      Output('Umap-add-group', 'disabled', allow_duplicate=True),
      Output('Umap-clear-groups', 'disabled', allow_duplicate=True),
      Output('render-rf-plot', 'disabled', allow_duplicate=True),
-     Output('plot-type-description', 'children')],
+     Output('plot-type-description', 'children'),
+     Output('export-distance-matrix-container', 'style')],
     Input('grammar-plot-type', 'value'),
     prevent_initial_call=True
 )
@@ -1862,10 +1921,12 @@ def toggle_plot_type_ui(plot_type):
             {"display": "block"},  # item plot display
             {"display": "none"},   # umap plot display
             {"display": "none"},   # umap group buttons
+            {"display": "none"},   # lasso selection buttons
             True,                  # disable add group
             True,                  # disable clear groups
             True,                  # disable compare groups
-            "Compare how different groups rate grammar items"  # description
+            "Compare how different groups rate grammar items",  # description
+            {"display": "none"}    # hide distance matrix button
         )
     else:  # plot_type == 'umap'
         # Show UMAP settings and display, hide item plot
@@ -1876,10 +1937,12 @@ def toggle_plot_type_ui(plot_type):
             {"display": "none"},   # item plot display
             {"display": "block"},  # umap plot display
             {"display": "block"},  # umap group buttons
+            {"display": "block"},  # lasso selection buttons
             False,                 # enable add group (errors handled via notifications)
             False,                 # enable clear groups (errors handled via notifications)
             False,                 # enable compare groups (errors handled via notifications)
-            "Apply dimensionality reduction (UMAP) to explore how similar participants are to each other based on their grammar ratings"  # description
+            "Apply dimensionality reduction (UMAP) to explore how similar participants are to each other based on their grammar ratings",  # description
+            {"display": "block"}   # show distance matrix button
         )
 
 # Callback to manage imputed data switch based on plot type
@@ -2091,37 +2154,221 @@ def batch_select_participants(*args):
     [State('participantsTree', 'checked'),
      State('grammarItemsTree', 'checked'),
      State('grammar-type-switch', 'checked'),
-     State('use-imputed-data-switch', 'checked')],
+     State('use-imputed-data-switch', 'checked'),
+     State('export-include-sociodemographic-checkbox', 'checked'),
+     State('export-include-item-metadata-checkbox', 'checked'),
+     State('england-mapping-param', 'data')],
     prevent_initial_call=True
 )
-def export_data(n_clicks, participants, items, pairs, use_imputed):
-    """Export current selection as CSV"""
+def export_data(n_clicks, participants, items, pairs, use_imputed, include_sociodem, include_item_meta, regional_mapping):
+    """Export current selection as CSV with optional metadata"""
     if not n_clicks or not participants or not items:
         return no_update
     
     from datetime import datetime
+    import pages.data.grammarFunctions as gf
     
     # Get the data
     data = retrieve_data.getGrammarData(
         imputed=use_imputed,
         participants=participants,
-        items=items,  # Fixed: changed from columns=items to items=items
-        pairs=pairs
+        items=items,
+        pairs=pairs,
+        regional_mapping=regional_mapping
     )
     
-    # Remove NameSchool column if it exists (privacy protection)
-    if 'NameSchool' in data.columns:
-        data = data.drop(columns=['NameSchool'])
-    if 'signature' in data.columns:
-        data = data.drop(columns=['signature'])
-    if 'CommentsTimeline' in data.columns:
-        data = data.drop(columns=['CommentsTimeline'])
+    # Remove sensitive columns (privacy protection)
+    data = gf.remove_sensitive_columns(data)
     
-    # Generate filename
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"grammar_data_{timestamp}.csv"
     
-    return dict(content=data.to_csv(index=False), filename=filename)
+    # Identify participant metadata columns
+    metadata_cols = ['InformantID', 'Age', 'Gender', 'MainVariety', 'AdditionalVarieties',
+                    'YearsLivedInMainVariety', 'RatioMainVariety', 'CountryCollection', 'Year',
+                    'Nationality', 'EthnicSelfID', 'CountryID', 'YearsLivedOutside', 
+                    'YearsLivedInside', 'YearsLivedOtherEnglish', 'LanguageHome_normalized',
+                    'LanguageFather_normalized', 'LanguageMother_normalized', 'Qualifications_normalized',
+                    'QualiMother_normalized', 'QualiFather_normalized', 'QualiPartner_normalized',
+                    'PrimarySchool', 'SecondarySchool', 'Occupation', 'OccupMother', 'OccupFather',
+                    'OccupPartner']
+    participant_cols = [col for col in metadata_cols if col in data.columns]
+    
+    # Filter to only the requested item columns (those in the items parameter)
+    # This ensures we only export the items the user selected
+    item_cols = [col for col in items if col in data.columns]
+    
+    if include_item_meta:
+        # TRANSPOSED FORMAT: Items as rows, participants as columns
+        
+        # Get grammar item metadata
+        if pairs:
+            item_meta = retrieve_data.getGrammarMeta(type="item_pairs")
+            item_meta = item_meta.rename(columns={'question_code': 'item_code'})
+        else:
+            item_meta = retrieve_data.getGrammarMeta(type="all_items")
+            item_meta = item_meta.rename(columns={'question_code': 'item_code'})
+        
+        # Create item metadata dataframe
+        item_meta_cols = ['item_code', 'section', 'feature', 'group_finegrained', 
+                         'group_ewave', 'feature_ewave', 'item', 'variant_detail']
+        
+        # Use extracted function for transposition
+        result = gf.transpose_grammar_data_with_metadata(
+            data, item_cols, item_meta, item_meta_cols, 
+            participant_cols, include_sociodem
+        )
+        
+        if include_sociodem:
+            base_filename = f"grammar_data_transposed_with_metadata_{timestamp}"
+        else:
+            base_filename = f"grammar_data_transposed_{timestamp}"
+    
+    else:
+        # STANDARD FORMAT: Participants as rows, items as columns
+        if include_sociodem:
+            # WIDE: Include all participant metadata columns (limited to metadata_cols)
+            result = data[participant_cols + item_cols].copy()
+            base_filename = f"grammar_data_wide_{timestamp}"
+        else:
+            # MINIMAL: Only InformantID and item ratings (no sociodemographic details)
+            result = data[['InformantID'] + item_cols].copy()
+            base_filename = f"grammar_data_minimal_{timestamp}"
+    
+    # Create log content and ZIP file using extracted functions
+    export_format = "Transposed (items as rows)" if include_item_meta else "Standard (participants as rows)"
+    log_content = gf.create_export_log_grammar(
+        participants, items, result, use_imputed, pairs,
+        regional_mapping, include_sociodem, include_item_meta, export_format
+    )
+    
+    return gf.create_zip_download(base_filename, result.to_csv(index=False), log_content)
+
+# Callback to export distance matrix
+@callback(
+    Output("download-distance-matrix", "data"),
+    Input("export-distance-matrix-button", "n_clicks"),
+    [State('participantsTree', 'checked'),
+     State('grammarItemsTree', 'checked'),
+     State('UMAP_neighbours','value'),
+     State('UMAP_mindist','value'),
+     State('umap-distance-metric-dropdown', 'value'),
+     State('umap-standardize-checkbox', 'checked'),
+     State('grammar-type-switch', 'checked'),
+     State('use-imputed-data-switch', 'checked'),
+     State('informants-store', 'data'),
+     State('england-mapping-param', 'data')],
+    prevent_initial_call=True
+)
+def export_distance_matrix(n_clicks, participants, items, n_neighbours, min_dist, 
+                          distance_metric, standardize, pairs, use_imputed, informants, regional_mapping):
+    """Export distance matrix using UMAP settings as ZIP with log file"""
+    if not n_clicks or not participants or not items:
+        return no_update
+    
+    from datetime import datetime
+    import pages.data.grammarFunctions as gf
+    import zipfile
+    import io
+    
+    # Get the data (always use imputed data for distance matrix calculation)
+    data = retrieve_data.getGrammarData(
+        imputed=True,  # Distance matrix requires complete data
+        participants=participants,
+        items=items,
+        pairs=pairs,
+        regional_mapping=regional_mapping
+    )
+    
+    # Get grammar items columns
+    if pairs:
+        GrammarItemsCols = retrieve_data.getGrammarItemsCols(type="item_pairs")
+    else:
+        GrammarItemsCols = retrieve_data.getGrammarItemsCols()
+    
+    # Get informants dataframe
+    informants_df = pd.DataFrame(informants)
+    
+    # Compute distance matrix using the same settings as UMAP
+    distance_df = gf.computeDistanceMatrix(
+        grammarData=data,
+        GrammarItemsCols=GrammarItemsCols,
+        distance_metric=distance_metric,
+        standardize=standardize,
+        items=items,
+        informants=informants_df
+    )
+    
+    # Generate timestamp and create log/ZIP using extracted functions
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    log_content = gf.create_export_log_distance_matrix(
+        participants, items, distance_df, distance_metric,
+        standardize, pairs, regional_mapping
+    )
+    
+    return gf.create_zip_download(f"distance_matrix_{timestamp}", distance_df.to_csv(), log_content)
+
+
+# Notify user that distance matrix export is processing
+@callback(
+    Output("notify-container", "children", allow_duplicate=True),
+    Input("export-distance-matrix-button", "n_clicks"),
+    [State('participantsTree', 'checked'), State('grammarItemsTree', 'checked')],
+    prevent_initial_call=True
+)
+def notify_distance_matrix_processing(n_clicks, participants, items):
+    if not n_clicks:
+        return no_update
+
+    if not participants or not items:
+        return create_info_notification(
+            "Please select participants and items before exporting the distance matrix.",
+            color="red",
+            autoClose=4000
+        )
+
+    return create_info_notification(
+        "Processing distance matrix... the download will start shortly.",
+        color="blue",
+        autoClose=4000
+    )
+
+# Clientside export for grammar items table (exports currently visible/filtered rows)
+clientside_callback(
+    """
+    function(n_clicks) {
+        if (!n_clicks) {
+            return window.dash_clientside.no_update;
+        }
+        const api = window.dash_ag_grid && window.dash_ag_grid.getApi('grammar-items-table');
+        if (!api) {
+            return [{
+                action: "show",
+                message: "Table not ready yet. Please try again.",
+                title: "Export",
+                color: "red",
+                autoClose: 4000
+            }];
+        }
+        const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+        api.exportDataAsCsv({
+            fileName: `grammar_items_${timestamp}.csv`,
+            onlySelected: false,
+            allColumns: true,
+        });
+        return [{
+            action: "show",
+            message: "Exporting currently visible rows...",
+            title: "Export",
+            color: "blue",
+            autoClose: 2000
+        }];
+    }
+    """,
+    Output("notify-container", "children", allow_duplicate=True),
+    Input("download-grammar-items-table-button", "n_clicks"),
+    prevent_initial_call=True
+)
 
 # Callback to filter grammar items table based on preset selection
 @callback(
@@ -3641,10 +3888,11 @@ def update_item_tree_based_on_select(checked_items,selected_presets, current_ite
         Input('grammar-analysis-tabs', 'value'),  # Trigger when tab changes
         Input('participantsTree', 'checked')  # Also trigger when participant selection changes
     ],
-    [State('last-sociodemographic-settings', 'data')],
+    [State('last-sociodemographic-settings', 'data'),
+     State('informants-store', 'data')],
     prevent_initial_call=False
 )
-def auto_update_sociodemographic_plots(active_tab, selected_participants, last_settings):
+def auto_update_sociodemographic_plots(active_tab, selected_participants, last_settings, informants_data):
     """
     Automatically update sociodemographic plots when:
     1. Switching to the Sociodemographic Details tab
@@ -3682,16 +3930,18 @@ def auto_update_sociodemographic_plots(active_tab, selected_participants, last_s
         raise PreventUpdate
     
     # Settings have changed, render plots
-    informants = Informants.loc[Informants['InformantID'].isin(selected_participants), :]
+    # Use informants from store (respects regional mapping)
+    informants_df = pd.DataFrame(informants_data)
+    informants = informants_df.loc[informants_df['InformantID'].isin(selected_participants), :]
     
     AgeGenderPlot = getAgeGenderPlot(informants)
     MainVarietiesPlot = getMainVarietiesPlot(informants)
     NationalityPlot = getCategoryHistogramPlot(informants, "Nationality", True, "")
     EIDPlot = getCategoryHistogramPlot(informants, "EthnicSelfID", True, "")
     CIDPlot = getCategoryHistogramPlot(informants, "CountryID", True, ",")
-    LanguagesHomePlot = getCategoryHistogramPlot(informants, "LanguageHome", True, ",")
-    LanguagesMotherPlot = getCategoryHistogramPlot(informants, "LanguageMother", True, ",")
-    LanguagesFatherPlot = getCategoryHistogramPlot(informants, "LanguageFather", True, ",")
+    LanguagesHomePlot = getCategoryHistogramPlot(informants, "LanguageHome_normalized", True, ",")
+    LanguagesMotherPlot = getCategoryHistogramPlot(informants, "LanguageMother_normalized", True, ",")
+    LanguagesFatherPlot = getCategoryHistogramPlot(informants, "LanguageFather_normalized", True, ",")
     PrimarySchoolPlot = getCategoryHistogramPlot(informants, "PrimarySchool", True)
     SecondarySchoolPlot = getCategoryHistogramPlot(informants, "SecondarySchool", True)
     QualiPlot = getCategoryHistogramPlot(informants, "Qualifications", True)
@@ -3706,6 +3956,110 @@ def auto_update_sociodemographic_plots(active_tab, selected_participants, last_s
         RatioMainVarietyPlot, informants.to_dict("records"),
         current_settings  # Update the cache
     )
+
+# Callback to toggle between table and plot views
+@callback(
+    [Output("informants-table-view", "style"),
+     Output("informants-plot-view", "style")],
+    Input("informants-view-toggle", "value"),
+    prevent_initial_call=False
+)
+def toggle_informants_view(view_mode):
+    """Toggle between table and plot views"""
+    if view_mode == "table":
+        return {"display": "flex", "flex-direction": "column", "height" : "calc(-285px + 100vh)"}, {"display": "none"}
+    else:
+        return {"display": "none"}, {"display": "flex", "flex-direction": "column", "height": "calc(-285px + 100vh)"}
+
+# Callback to update table columns based on checkbox selection
+@callback(
+    Output("informants-table", "columnDefs"),
+    Input("informants-columns-checkbox", "value"),
+    prevent_initial_call=False
+)
+def update_informants_table_columns(selected_columns):
+    """Update visible columns in informants table based on checkbox selection"""
+    if not selected_columns:
+        selected_columns = []
+    
+    # Always include InformantID as the first column
+    columns_to_show = ['InformantID'] + [col for col in selected_columns if col != 'InformantID']
+    
+    # Filter to only columns that exist in the data
+    available_columns = [col for col in columns_to_show if col in Informants.columns]
+    
+    columnDefs = [
+        {
+            "field": col,
+            "headerName": col.replace("ID", " ID").replace("_", " ").replace("Occup", "Occupation").replace("Quali", "Qualification").replace("Ethnic", "Ethnic "),
+            "filter": "agTextColumnFilter",
+            "sortable": True,
+            "resizable": True,
+            "minWidth": 120 if "Language" in col or "Variety" in col else 100,
+            "flex": 1,
+            "cellStyle": {"textAlign": "left"},
+            "headerTooltip": f"Click to sort by {col}. Use filter below to search."
+        }
+        for col in available_columns
+    ]
+    
+    return columnDefs
+
+# Callback for Select All/Deselect All column buttons
+@callback(
+    Output("informants-columns-checkbox", "value"),
+    [Input("select-all-columns-button", "n_clicks"),
+     Input("deselect-all-columns-button", "n_clicks")],
+    State("informants-columns-checkbox", "value"),
+    prevent_initial_call=True
+)
+def toggle_all_columns(select_clicks, deselect_clicks, current_value):
+    """Select or deselect all columns"""
+    ctx_triggered = ctx.triggered_id
+    
+    all_columns = ['InformantID', 'Age', 'Gender', 'MainVariety', 'AdditionalVarieties',
+                  'YearsLivedInMainVariety', 'RatioMainVariety', 'CountryCollection', 'Year',
+                  'Nationality', 'EthnicSelfID', 'CountryID', 'YearsLivedOutside', 
+                  'YearsLivedInside', 'YearsLivedOtherEnglish', 'LanguageHome_normalized',
+                  'LanguageFather_normalized', 'LanguageMother_normalized', 'Qualifications_normalized',
+                  'QualiMother_normalized', 'QualiFather_normalized', 'QualiPartner_normalized',
+                  'PrimarySchool', 'SecondarySchool', 'Occupation', 'OccupMother', 'OccupFather',
+                  'OccupPartner']
+    
+    # Filter to only columns that exist in the data
+    available_columns = [col for col in all_columns if col in Informants.columns]
+    
+    if ctx_triggered == "select-all-columns-button":
+        return available_columns
+    elif ctx_triggered == "deselect-all-columns-button":
+        return []
+    
+    return current_value
+
+# Clientside callback to download informants table data
+clientside_callback(
+    """
+    function(n_clicks) {
+        if (!n_clicks) {
+            return window.dash_clientside.no_update;
+        }
+        const api = window.dash_ag_grid && window.dash_ag_grid.getApi('informants-table');
+        if (!api) {
+            return window.dash_clientside.no_update;
+        }
+        const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+        api.exportDataAsCsv({
+            fileName: `informants_table_${timestamp}.csv`,
+            onlySelected: false,
+            allColumns: true,
+        });
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output("download-informants-table-button", "n_clicks"),
+    Input("download-informants-table-button", "n_clicks"),
+    prevent_initial_call=True
+)
 
 # Deleted: Commented-out clientside callback for filtering by hoverinfo (unused)
 

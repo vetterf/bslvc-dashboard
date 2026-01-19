@@ -752,12 +752,12 @@ def getGrammarMeta(type="all_items"):
         SQLstatement = "SELECT * FROM bslvc_meta"
     elif type == "item_pairs":
         # Use SQLite string concatenation syntax (||) instead of CONCAT
-        SQLstatement = "SELECT question_code, (question_code || '-' || also_in_question) as item_pair, also_in_question as question_code_written,  section, item, feature, group_ewave,group_finegrained, variant_detail, feature_ewave FROM bslvc_meta where section = 'Spoken'"
+        SQLstatement = "SELECT question_code, (question_code || '-' || also_in_item) as item_pair, also_in_item as question_code_written,  section, item, feature, group_ewave,group_finegrained, variant_detail, feature_ewave FROM bslvc_meta where section = 'Spoken'"
     if Conf.source == 'sqlite':
         db_connection = sqlite3.connect(Conf.sqliteFile)
     data = pd.read_sql(SQLstatement, con=db_connection)
     if Conf.source == 'sqlite':
         db_connection.close()
-    data.replace({'also_in_question':'x'},'',inplace=True)
+    data.replace({'also_in_item':'x'},'',inplace=True)
     data.fillna('')
     return data

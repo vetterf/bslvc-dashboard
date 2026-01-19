@@ -359,6 +359,14 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
     )
     embedding = reducer.fit_transform(filtered_data)
 
+    # Calculate distance matrix with cosine metric
+    # from sklearn.metrics import pairwise_distances
+    # distance_matrix = pairwise_distances(filtered_data, metric='cosine')
+    
+    # Convert to dataframe and map sociodemographic details back
+    # distance_df = pd.DataFrame(distance_matrix, 
+    #                          index=data['InformantID'], 
+    #                           columns=data['InformantID'])
 
     # to dataframe for plotting
     embedding = pd.DataFrame(embedding, columns=['x', 'y'])
@@ -517,6 +525,71 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
         pass  # Ignore errors in saving
 
     return fig
+
+def computeDistanceMatrix(grammarData, GrammarItemsCols, distance_metric='cosine', standardize=False, **kwargs):
+    """
+    Compute distance matrix for grammar data using the same settings as UMAP
+    
+    Args:
+        grammarData (pd.DataFrame): Grammar data
+        GrammarItemsCols (list): List of grammar item columns
+        distance_metric (str): Distance metric ['euclidean','manhattan','cosine']
+        standardize (bool): Whether to apply row-wise Z-score standardization
+        **kwargs: Additional parameters (items, informants, selected_informants)
+    
+    Returns:
+        pd.DataFrame: Distance matrix with participant IDs as index and columns
+    """
+    from sklearn.metrics import pairwise_distances
+    
+    data = grammarData
+    items = []
+    selected_informants = []
+    dataCols = GrammarItemsCols
+    
+    # Parse kwargs
+    for key, value in kwargs.items():
+        if key == 'items':
+            items = value
+        if key == 'informants':
+            informants = value
+            informants = informants['InformantID'].to_list()
+        if key == 'selected_informants':
+            selected_informants = value
+    
+    # Determine which informants to use
+    if selected_informants and len(selected_informants) > 0:
+        data = data.loc[data['InformantID'].isin(selected_informants)].reset_index()
+    else:
+        data = data.loc[data['InformantID'].isin(informants)].reset_index()
+    
+    # Filter items if specified
+    if len(items) > 0:
+        dataCols = [item for item in dataCols if item in items]
+    
+    filtered_data = data.loc[:, dataCols]
+    
+    if standardize:
+        # Standardize (Z-score) each participant's data row-wise
+        filtered_data = filtered_data.apply(pd.to_numeric, errors='coerce')
+        # Compute row-wise mean and std
+        row_means = filtered_data.mean(axis=1)
+        row_stds = filtered_data.std(axis=1).replace(0, 1).fillna(1)
+        # Standardize row-wise (Z-score)
+        filtered_data = filtered_data.sub(row_means, axis=0)
+        filtered_data = filtered_data.div(row_stds, axis=0)
+    
+    # Calculate distance matrix
+    distance_matrix = pairwise_distances(filtered_data, metric=distance_metric)
+    
+    # Convert to dataframe with participant IDs as index and columns
+    distance_df = pd.DataFrame(
+        distance_matrix, 
+        index=data['InformantID'], 
+        columns=data['InformantID']
+    )
+    
+    return distance_df
 
 def trainRF(GrammarItemsCols,data,datacols,groupcol="MainVariety",pairs=False,use_zscores=False):
     if datacols is None:
@@ -688,11 +761,11 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                             lower_ci_vals.append(row['lower_ci'])
                             
                             # Prepare custom data for hover
-                            if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']):
+                            if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']):
                                 custom_data_vals.append([row['item'], row['group'], row['mean'], row['count'], 
                                                        row.get('sentence', 'N/A'), row.get('variant_detail', 'N/A'), 
                                                        row.get('group_finegrained', 'N/A'), row.get('feature_ewave', 'N/A'), 
-                                                       row.get('also_in_question', 'N/A')])
+                                                       row.get('also_in_item', 'N/A')])
                     
                     if x_vals:  # Only add trace if there are data points
                         fig.add_trace(
@@ -756,7 +829,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                                     array=tempDF['upper_ci'],
                                     arrayminus=tempDF['lower_ci']
                                 ),
-                                customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']) else None,
+                                customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                                 hovertemplate='<br>'.join([
                                     'Item: %{customdata[0]}',
                                     'Group: %{customdata[1]}',
@@ -767,7 +840,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                                     'Item group: %{customdata[6]}',
                                     'Ewave feature: %{customdata[7]}',
                                     'Twin item: %{customdata[8]}'
-                                ]) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']) else None,
+                                ]) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                                 hoverinfo='text'
                             ), secondary_y=False
                         )
@@ -788,7 +861,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                                         array=tempDF['upper_ci'],
                                         arrayminus=tempDF['lower_ci']
                                     ),
-                                    customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']) else None,
+                                    customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                                     hovertemplate='<br>'.join([
                                         'Item: %{customdata[0]}',
                                         'Group: %{customdata[1]}',
@@ -799,7 +872,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                                         'Item group: %{customdata[6]}',
                                         'Ewave feature: %{customdata[7]}',
                                         'Twin item: %{customdata[8]}'
-                                    ]) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']) else None,
+                                    ]) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                                     hoverinfo='text'
                                 ), secondary_y=False
                             )
@@ -817,7 +890,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                                         array=tempDF['upper_ci'],
                                         arrayminus=tempDF['lower_ci']
                                     ),
-                                    customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']) else None,
+                                    customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                                     hovertemplate='<br>'.join([
                                         'Item: %{customdata[0]}',
                                         'Group: %{customdata[1]}',
@@ -828,7 +901,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                                         'Item group: %{customdata[6]}',
                                         'Ewave feature: %{customdata[7]}',
                                         'Twin item: %{customdata[8]}'
-                                    ]) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']) else None,
+                                    ]) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                                     hoverinfo='text'
                                 ), secondary_y=False
                             )
@@ -899,7 +972,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                                 array=tempDF['upper_ci'],
                                 arrayminus=tempDF['lower_ci']
                             ),
-                            customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']) else None,
+                            customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                             hovertemplate='<br>'.join([
                                 'Item: %{customdata[0]}',
                                 'Group: %{customdata[1]}',
@@ -931,7 +1004,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                                     array=tempDF['upper_ci'],
                                     arrayminus=tempDF['lower_ci']
                                 ),
-                                customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave',]] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']) else None,
+                                customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave',]] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                                 hovertemplate='<br>'.join([
                                     'Item: %{customdata[0]}',
                                     'Group: %{customdata[1]}',
@@ -960,7 +1033,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                                     array=tempDF['upper_ci'],
                                     arrayminus=tempDF['lower_ci']
                                 ),
-                                customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']) else None,
+                                customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                                 hovertemplate='<br>'.join([
                                     'Item: %{customdata[0]}',
                                     'Group: %{customdata[1]}',
@@ -1086,7 +1159,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                             custom_data_vals.append([data_row['item'], data_row['group'], data_row['mean'], data_row['count'], 
                                                    data_row.get('sentence', 'N/A'), data_row.get('variant_detail', 'N/A'), 
                                                    data_row.get('group_finegrained', 'N/A'), data_row.get('feature_ewave', 'N/A'), 
-                                                   data_row.get('also_in_question', 'N/A')])
+                                                   data_row.get('also_in_item', 'N/A')])
                     
                     if x_vals:  # Only add trace if there are data points
                         fig.add_trace(
@@ -1159,7 +1232,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                                 array=tempDF['upper_ci'],
                                 arrayminus=tempDF['lower_ci']
                                 ),
-                            customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']],
+                            customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']],
                             hovertemplate='<br>'.join([
                                 'Item: %{customdata[0]}',
                                 'Group: %{customdata[1]}',
@@ -1187,7 +1260,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                                     array=tempDF['upper_ci'],
                                     arrayminus=tempDF['lower_ci']
                                 ),
-                                customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']],
+                                customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']],
                                 hovertemplate='<br>'.join([
                                     'Item: %{customdata[0]}',
                                     'Group: %{customdata[1]}',
@@ -1330,6 +1403,8 @@ def getAuxiliaryTable(Informants,participants):
     return table
 
 def getMetaTable(data, pairs=False, preset_data=None):
+    # style for surrounding div
+    style = {"height": "calc(-230px + 100vh)", "display": "flex", "flex-direction": "column"}
     if pairs:
         # For item pairs, filter to only show items with twins and format appropriately
         # Filter out rows without a twin item (question_code_written should not be empty)
@@ -1382,7 +1457,7 @@ def getMetaTable(data, pairs=False, preset_data=None):
                 id="grammar-items-quick-filter",
                 placeholder="Quick search across all columns...",
                 leftSection=DashIconify(icon="tabler:search", width=14),
-                style={"width": "300px"},
+                style={"width": "300px", "minWidth": "220px", "flex": "1 1 240px"},
                 size="xs"
             ),
             dmc.Button(
@@ -1391,6 +1466,7 @@ def getMetaTable(data, pairs=False, preset_data=None):
                 size="xs",
                 variant="light",
                 color="blue",
+                style={"minWidth": "140px"},
                 leftSection=DashIconify(icon="tabler:filter", width=14),
             ),
             dmc.Button(
@@ -1399,7 +1475,17 @@ def getMetaTable(data, pairs=False, preset_data=None):
                 size="xs",
                 variant="light",
                 color="gray",
+                style={"minWidth": "120px"},
                 leftSection=DashIconify(icon="tabler:filter-off", width=14),
+            ),
+            dmc.Button(
+                "Download table",
+                id="download-grammar-items-table-button",
+                size="xs",
+                variant="light",
+                color="blue",
+                style={"minWidth": "140px"},
+                leftSection=DashIconify(icon="tabler:download", width=14),
             ),
             dmc.Button(
                 "Select rows",
@@ -1407,6 +1493,7 @@ def getMetaTable(data, pairs=False, preset_data=None):
                 size="xs",
                 variant="filled",
                 color="green",
+                style={"minWidth": "140px"},
                 leftSection=DashIconify(icon="tabler:check", width=14),
             ),
             dmc.Button(
@@ -1415,9 +1502,10 @@ def getMetaTable(data, pairs=False, preset_data=None):
                 size="xs",
                 variant="filled",
                 color="red",
+                style={"minWidth": "140px"},
                 leftSection=DashIconify(icon="tabler:x", width=14),
             ),
-        ], gap="xs"),
+        ], gap="xs", wrap="wrap", style={"rowGap": 6}),
         dmc.MultiSelect(
             id="grammar-items-preset-filter",
             label="Filter by Preset",
@@ -1428,11 +1516,6 @@ def getMetaTable(data, pairs=False, preset_data=None):
             size="xs",
             maxDropdownHeight=300,
             style={"width": "100%"}
-        ),
-        dmc.Text(
-            "💡 Click rows to select • Click headers to sort • Use the quick search and preset filter above to search.", 
-            size="sm", c="dimmed", 
-            style={"fontStyle": "italic"}
         ),
     ], gap="xs", mb=10, style={"backgroundColor": "#f8f9fa", "padding": "8px", "borderRadius": "4px", "border": "1px solid #e9ecef"})
     
@@ -1479,7 +1562,7 @@ def getMetaTable(data, pairs=False, preset_data=None):
                     },
                     className="ag-theme-quartz compact",
                     columnSize="sizeToFit",
-                    style={"height": "80vh"},
+                    style={"flex": "1"},
                     dashGridOptions={
                         "suppressMenuHide": True,
                         "animateRows": True,
@@ -1497,7 +1580,7 @@ def getMetaTable(data, pairs=False, preset_data=None):
                     )
     
     # Return both controls and table
-    return html.Div([controls, table])
+    return html.Div([controls, table], style=style)
 
 def get_balanced_informants(informants, groupby):
     """Apply balanced random sampling for variety types if needed"""
@@ -1616,7 +1699,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
         
         for item in meandf['item']:
             if item in meta['question_code'].values:
-                twin_item = meta[meta['question_code'] == item]['also_in_question'].iloc[0]
+                twin_item = meta[meta['question_code'] == item]['also_in_item'].iloc[0]
                 if pd.notna(twin_item) and twin_item != '' and twin_item in meandf['item'].values:
                     item_twins[item] = twin_item
         
@@ -1833,11 +1916,11 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                     lower_ci_vals.append(row['lower_ci'])
                     
                     # Prepare custom data for hover
-                    if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']):
+                    if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']):
                         custom_data_vals.append([row['item'], row['group'], row['mean'], row['count'], 
                                                row.get('sentence', 'N/A'), row.get('variant_detail', 'N/A'), 
                                                row.get('group_finegrained', 'N/A'), row.get('feature_ewave', 'N/A'), 
-                                               row.get('also_in_question', 'N/A')])
+                                               row.get('also_in_item', 'N/A')])
             
             if x_vals:  # Only add trace if there are data points
                 fig.add_trace(
@@ -2046,7 +2129,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                         arrayminus=tempDF['lower_ci']
                         ),
                         legendrank=legend_rank,  # Maintain legend order
-                        customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']) else None,
+                        customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                         hovertemplate='<br>'.join([
                             'Item: %{customdata[0]}',
                             'Group: %{customdata[1]}',
@@ -2057,7 +2140,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                             'Item group: %{customdata[6]}',
                             'Ewave feature: %{customdata[7]}',
                             'Twin item: %{customdata[8]}'
-                        ]) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']) else None,
+                        ]) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                         hoverinfo='text'
                     ),secondary_y=False
                 )
@@ -2076,7 +2159,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                         arrayminus=tempDF['lower_ci']
                         ),
                         legendrank=legend_rank,  # Maintain legend order
-                        customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']) else None,
+                        customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                         hovertemplate='<br>'.join([
                             'Item: %{customdata[0]}',
                             'Group: %{customdata[1]}',
@@ -2087,7 +2170,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                             'Item group: %{customdata[6]}',
                             'Ewave feature: %{customdata[7]}',
                             'Twin item: %{customdata[8]}'
-                        ]) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']) else None,
+                        ]) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                         hoverinfo='text'
                     ),secondary_y=False
                 )
@@ -2222,7 +2305,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                             arrayminus=tempDF['lower_ci']
                             ),
                         legendrank=legend_rank,  # Maintain legend order
-                        customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']],
+                        customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']],
                         hovertemplate='<br>'.join([
                             'Item: %{customdata[0]}',
                             'Group: %{customdata[1]}',
@@ -2251,7 +2334,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                             arrayminus=tempDF['lower_ci']
                             ),
                         legendrank=legend_rank,  # Maintain legend order
-                        customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']],
+                        customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']],
                         hovertemplate='<br>'.join([
                             'Item: %{customdata[0]}',
                             'Group: %{customdata[1]}',
@@ -2506,16 +2589,23 @@ def getAgeGenderPlot(informants):
     # Get age and gender data from informants
     try:
         data = informants.copy(deep=True)
-        # Count NaN values in the Age and Gender columns
-        nan_rows = data[data['Age'].isna() | data['Gender'].isna()]
-        nan_count = len(nan_rows)  # Count of NaN rows
         
-        # Drop rows with NaN in 'Age' or 'Gender'
-        data = data.dropna(subset=['Age', 'Gender'])
+        # Drop rows with missing Age (required for histogram)
+        data = data.dropna(subset=['Age'])
+        
+        # Fill missing Gender values with 'NA' to show in plots
+        data['Gender'] = data['Gender'].fillna('NA')
         
         # Convert Age to float for plotting
         data['Age'] = data['Age'].astype(float)
         
+        # Define consistent gender color mapping harmonizing with variety colors (blue-orange palette)
+        gender_color_map = {
+            'Female': '#1f77b4',   # Blue (matching England variety color)
+            'Male': '#ff7f0e',     # Orange (matching Scotland variety color)
+            'Non-binary': '#9467bd',  # Purple (matching Malta variety color)
+            'NA': '#7f7f7f'        # Gray (matching Slovenia variety color)
+        }
 
         # Create a histogram using Plotly's built-in histogram
         fig = px.histogram(
@@ -2524,6 +2614,7 @@ def getAgeGenderPlot(informants):
             color='Gender',
             template="simple_white",
             category_orders={"Gender": ["Female", "Male", "Non-binary", "NA"]},  # Order of gender categories
+            color_discrete_map=gender_color_map,  # Consistent color mapping
             nbins=25  # Adjust the number of bins as needed
         )
         
@@ -2546,6 +2637,10 @@ def getMainVarietiesPlot(informants):
         # Get main variety data from informants
         data = informants.copy(deep=True)
         
+        # Check if required columns exist
+        if 'MainVariety' not in data.columns:
+            return getEmptyPlot("MainVariety column not found")
+        
         # Count occurrences of each variety
         variety_counts = data['MainVariety'].value_counts()
         
@@ -2554,45 +2649,71 @@ def getMainVarietiesPlot(informants):
             lambda x: x if variety_counts[x] >= 10 else 'Other'
         )
         
-        # Recalculate counts grouped by MainVariety and Year
-        grouped_counts = data.groupby(['MainVariety', 'Year'], observed=True).size().reset_index(name='counts')
+        # Use Gender column for grouping (prefer normalized if available)
+        gender_col = 'Gender_normalized' if 'Gender_normalized' in data.columns else 'Gender'
+        
+        # Define consistent gender color mapping harmonizing with variety colors (blue-orange palette)
+        gender_color_map = {
+            'Female': '#1f77b4',   # Blue (matching England variety color)
+            'Male': '#ff7f0e',     # Orange (matching Scotland variety color)
+            'Non-binary': '#9467bd',  # Purple (matching Malta variety color)
+            'NA': '#7f7f7f'        # Gray (matching Slovenia variety color)
+        }
+        
+        # Check if Gender column exists for grouping
+        if gender_col in data.columns and not data[gender_col].isna().all():
+            # Fill missing values with 'NA' to show in plots
+            data[gender_col] = data[gender_col].fillna('NA')
+            
+            # Recalculate counts grouped by MainVariety and Gender
+            grouped_counts = data.groupby(['MainVariety', gender_col], observed=True).size().reset_index(name='counts')
+            
+            # Sort by Gender to ensure consistent ordering (Female, Male, Non-binary, NA)
+            gender_order = ['Female', 'Male', 'Non-binary', 'NA']
+            grouped_counts[gender_col] = pd.Categorical(grouped_counts[gender_col], categories=gender_order, ordered=True)
+            grouped_counts = grouped_counts.sort_values(by=[gender_col])
+        else:
+            # If no Gender column, just group by MainVariety
+            grouped_counts = data.groupby(['MainVariety'], observed=True).size().reset_index(name='counts')
+            grouped_counts[gender_col] = 'Unknown'  # Placeholder for plotting
         
         # Calculate overall frequency of each variety for sorting
         overall_counts = grouped_counts.groupby('MainVariety', observed=True)['counts'].sum().reset_index()
         overall_counts = overall_counts.sort_values(by='counts', ascending=False)
         
-        # Ensure years are ordered
-        grouped_counts['Year'] = grouped_counts['Year'].astype(int)  # Convert Year to string for consistent ordering
         grouped_counts = grouped_counts.merge(overall_counts, on='MainVariety', suffixes=('', '_total'))
-        grouped_counts = grouped_counts.sort_values(by=['Year'],ascending=True)
+        grouped_counts = grouped_counts.sort_values(by=['counts_total', gender_col], ascending=[False, True])
         VarietyOrder = overall_counts['MainVariety'].tolist() + ['Other'] if 'Other' in overall_counts['MainVariety'].tolist() else overall_counts['MainVariety'].tolist()
         height = len(VarietyOrder) * 25
         if height < 150:
             height = 150
-        # Create a bar plot with the grouped varieties, colored by year, and swap axes
+        
+        # Create a bar plot with the grouped varieties, colored by gender
         fig = px.bar(
             grouped_counts,
             y='MainVariety',
             x='counts',
-            color='Year',
+            color=gender_col,
             template="simple_white",
-            barmode='stack',  
-            color_continuous_scale='Blues_r',
+            barmode='stack',
             category_orders={
-                'MainVariety': VarietyOrder},
+                'MainVariety': VarietyOrder,
+                gender_col: ['Female', 'Male', 'Non-binary', 'NA']
+            },
+            color_discrete_map=gender_color_map,  # Consistent color mapping
             height=height,
-            hover_data={'counts': True, 'counts_total': True}   # Adjust height based on number of varieties
+            hover_data={'counts': True, 'counts_total': True}
         )
         
         # Update axes and layout
         fig.update_xaxes(title_text='Informants')
         fig.update_traces(marker_line_width=0.5, marker_line_color="gray")
-        fig.update_yaxes(title_text='Main Variety',automargin=True)  # Ensure all y-axis labels are visible
+        fig.update_yaxes(title_text='Main Variety', automargin=True)
         fig.update_layout(
-            margin=dict(l=10, r=10, t=10, b=10),  # Minimize padding
-            showlegend=False,  # Show legend for years
+            margin=dict(l=10, r=10, t=10, b=10),
+            showlegend=True,  # Show legend for gender
         )
-        fig.update_layout(modebar_remove=True)  # Disable modebar
+        fig.update_layout(modebar_remove=True)
     except Exception as e:
         #print(f"Error creating histogram: {e}")
         fig = getEmptyPlot()  # Use an empty plot if there's an error
@@ -2801,6 +2922,9 @@ def getCategoryHistogramPlot(informants, ColName="PrimarySchool", GroupOther=Tru
             data[ColName] = data[ColName].str.strip().str.capitalize()
 
         if GenderDistribution:
+            # Fill missing Gender values with 'NA' to show in plots
+            data['Gender'] = data['Gender'].fillna('NA')
+            
             col_counts = data.groupby([ColName,'Gender'], observed=True).size().reset_index(name='counts')
             col_counts.columns = [ColName, 'Gender', 'counts']
             # group catergories with fewer than 10 occurrences per Gender into "Other
@@ -2831,6 +2955,14 @@ def getCategoryHistogramPlot(informants, ColName="PrimarySchool", GroupOther=Tru
         if height < 200:
             height = 200
     
+        # Define consistent gender color mapping harmonizing with variety colors (blue-orange palette)
+        gender_color_map = {
+            'Female': '#1f77b4',   # Blue (matching England variety color)
+            'Male': '#ff7f0e',     # Orange (matching Scotland variety color)
+            'Non-binary': '#9467bd',  # Purple (matching Malta variety color)
+            'NA': '#7f7f7f'        # Gray (matching Slovenia variety color)
+        }
+    
         # If GenderDistribution is True, include Gender in the plot
         if GenderDistribution:
             
@@ -2842,7 +2974,11 @@ def getCategoryHistogramPlot(informants, ColName="PrimarySchool", GroupOther=Tru
                 color='Gender',
                 template="simple_white",
                 barmode='stack',
-                category_orders={ColName: col_Order},
+                category_orders={
+                    ColName: col_Order,
+                    'Gender': ['Female', 'Male', 'Non-binary', 'NA']
+                },
+                color_discrete_map=gender_color_map,  # Consistent color mapping
                 height=height,
                 hover_data={'counts': True}
             )
@@ -3785,7 +3921,7 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
                         array=tempDF['upper_ci'],
                         arrayminus=tempDF['lower_ci']
                     ),
-                    customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']) else None,
+                    customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                     hovertemplate='<br>'.join([
                         'Item: %{customdata[0]}',
                         'Group: %{customdata[1]}',
@@ -3796,7 +3932,7 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
                         'Item group: %{customdata[6]}',
                         'Ewave feature: %{customdata[7]}',
                         'Twin item: %{customdata[8]}'
-                    ]) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']) else None,
+                    ]) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                     hoverinfo='text'
                 )
             )
@@ -3837,7 +3973,7 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
             # Get item data to check for twin
             item_data = df[df['item'] == item]
             if not item_data.empty:
-                twin_item = item_data['also_in_question'].iloc[0] if 'also_in_question' in item_data.columns else None
+                twin_item = item_data['also_in_item'].iloc[0] if 'also_in_item' in item_data.columns else None
                 mode = item_data['section'].iloc[0] if 'section' in item_data.columns else ""
                 
                 # Format mode with proper capitalization
@@ -3948,7 +4084,7 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
         # Multiple modes - group twin items together
         plot_groups = sorted(df['group'].unique())
         
-        # Group items by their twin pairs from also_in_question column
+        # Group items by their twin pairs from also_in_item column
         # Use the meandf order which already accounts for sorting
         item_pairs = {}
         standalone_items = set()
@@ -3957,7 +4093,7 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
         for item in ordered_items:
             item_data = df[df['item'] == item]
             if not item_data.empty:
-                twin_item = item_data['also_in_question'].iloc[0] if 'also_in_question' in item_data.columns else None
+                twin_item = item_data['also_in_item'].iloc[0] if 'also_in_item' in item_data.columns else None
                 
                 if pd.notna(twin_item) and twin_item != '' and twin_item in df['item'].unique():
                     # Create a sorted pair key to avoid duplicates
@@ -3983,7 +4119,7 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
             twin_item = None
             item_data = df[df['item'] == item]
             if not item_data.empty:
-                potential_twin = item_data['also_in_question'].iloc[0] if 'also_in_question' in item_data.columns else None
+                potential_twin = item_data['also_in_item'].iloc[0] if 'also_in_item' in item_data.columns else None
                 if pd.notna(potential_twin) and potential_twin != '' and potential_twin in ordered_items:
                     twin_item = potential_twin
             
@@ -4063,7 +4199,7 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
                             array=tempDF['upper_ci'],
                             arrayminus=tempDF['lower_ci']
                         ),
-                        customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_question']],
+                        customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']],
                         hovertemplate='<br>'.join([
                             'Item: %{customdata[0]}',
                             'Group: %{customdata[1]}',
@@ -4576,3 +4712,398 @@ def create_missing_values_heatmap(items, informants, pairs=False, sortby="mean",
     fig.update_xaxes(tickangle=45)
     
     return fig
+
+
+# ============================================================================
+# DATA EXPORT UTILITIES (Phase 1)
+# ============================================================================
+
+def create_export_log_grammar(participants, items, result, use_imputed, pairs, 
+                               regional_mapping, include_sociodem, include_item_meta, export_format):
+    """
+    Generate a log file for grammar data exports.
+    
+    Parameters:
+    -----------
+    participants : list
+        List of participant IDs
+    items : list
+        List of item codes
+    result : pd.DataFrame
+        The exported data frame
+    use_imputed : bool
+        Whether imputed data was used
+    pairs : bool
+        Whether item pairs mode is enabled
+    regional_mapping : bool
+        Whether regional mapping (England split) is enabled
+    include_sociodem : bool
+        Whether sociodemographic data is included
+    include_item_meta : bool
+        Whether item metadata is included (transposed format)
+    export_format : str
+        Description of the export format
+    
+    Returns:
+    --------
+    str : The log file content
+    """
+    from datetime import datetime
+    
+    log_content = f"""BSLVC Grammar Data Export Log
+==================================
+
+Export Information:
+-------------------
+Export Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Application Version: 0.1.3
+Database Version: {retrieve_data.get_database_version()}
+
+Export Settings:
+----------------
+Data Format: {export_format}
+Include Sociodemographic Data: {"Yes" if include_sociodem else "No"}
+Include Item Metadata: {"Yes" if include_item_meta else "No"}
+Imputed Data: {"Yes" if use_imputed else "No"}
+Item Pairs Mode: {"Yes (spoken-written difference)" if pairs else "No (raw ratings)"}
+Regional Mapping: {"Enabled (England split into North/South)" if regional_mapping else "Disabled"}
+
+Data Selection:
+---------------
+Number of Participants: {len(participants)}
+Number of Items: {len(items)}
+
+Participant IDs ({len(participants)} total):
+{", ".join(sorted(participants))}
+
+Item Codes ({len(items)} total):
+{", ".join(sorted(items))}
+
+Data Dimensions:
+----------------
+Rows: {result.shape[0]}
+Columns: {result.shape[1]}
+"""
+    return log_content
+
+
+def create_export_log_distance_matrix(participants, items, distance_df, distance_metric, 
+                                       standardize, pairs, regional_mapping):
+    """
+    Generate a log file for distance matrix exports.
+    
+    Parameters:
+    -----------
+    participants : list
+        List of participant IDs
+    items : list
+        List of item codes
+    distance_df : pd.DataFrame
+        The distance matrix
+    distance_metric : str
+        Distance metric used
+    standardize : bool
+        Whether standardization was applied
+    pairs : bool
+        Whether item pairs mode is enabled
+    regional_mapping : bool
+        Whether regional mapping is enabled
+    
+    Returns:
+    --------
+    str : The log file content
+    """
+    from datetime import datetime
+    
+    log_content = f"""BSLVC Distance Matrix Export Log
+=====================================
+
+Export Information:
+-------------------
+Export Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Application Version: 0.1.3
+Database Version: {retrieve_data.get_database_version()}
+
+Analysis Settings:
+------------------
+Distance Metric: {distance_metric}
+Standardization: {"Enabled" if standardize else "Disabled"}
+Item Pairs Mode: {"Enabled (spoken-written difference)" if pairs else "Disabled (raw ratings)"}
+Imputed Data: Always True (required for distance matrix)
+Regional Mapping: {"Enabled (England split into North/South)" if regional_mapping else "Disabled"}
+
+Data Selection:
+---------------
+Number of Participants: {len(participants)}
+Number of Items: {len(items)}
+
+Participant IDs ({len(participants)} total):
+{", ".join(sorted(participants))}
+
+Item Codes ({len(items)} total):
+{", ".join(sorted(items))}
+
+Notes:
+------
+- Distance matrix computed using {distance_metric} distance metric
+- Matrix dimensions: {distance_df.shape[0]} x {distance_df.shape[1]}
+- All missing values were imputed prior to distance calculation
+"""
+    return log_content
+
+
+def create_zip_download(base_filename, csv_content, log_content):
+    """
+    Create a ZIP file containing CSV data and log file for download.
+    
+    Parameters:
+    -----------
+    base_filename : str
+        Base filename (without extension) for the files
+    csv_content : str
+        CSV file content as string
+    log_content : str
+        Log file content as string
+    
+    Returns:
+    --------
+    dict : Download dictionary with base64-encoded ZIP content
+    """
+    import zipfile
+    import io
+    import base64
+    
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        # Add data CSV
+        zip_file.writestr(f"{base_filename}.csv", csv_content)
+        # Add log file
+        zip_file.writestr(f"{base_filename}_log.txt", log_content)
+    
+    zip_buffer.seek(0)
+    zip_content = base64.b64encode(zip_buffer.getvalue()).decode('utf-8')
+    
+    return dict(
+        content=zip_content,
+        filename=f"{base_filename}.zip",
+        base64=True
+    )
+
+
+# ============================================================================
+# DATA TRANSFORMATION UTILITIES (Phase 2)
+# ============================================================================
+
+def remove_sensitive_columns(data):
+    """
+    Remove sensitive columns from data for privacy protection.
+    
+    Parameters:
+    -----------
+    data : pd.DataFrame
+        The data frame to clean
+    
+    Returns:
+    --------
+    pd.DataFrame : Data with sensitive columns removed
+    """
+    sensitive_cols = ['NameSchool', 'signature', 'CommentsTimeline']
+    return data.drop(columns=[col for col in sensitive_cols if col in data.columns])
+
+
+def transpose_grammar_data_with_metadata(data, item_cols, item_meta, item_meta_cols, 
+                                          participant_cols, include_sociodem):
+    """
+    Transpose grammar data with items as rows and participants as columns.
+    Optionally includes sociodemographic metadata as header rows.
+    
+    Parameters:
+    -----------
+    data : pd.DataFrame
+        The grammar data with participants as rows
+    item_cols : list
+        List of item columns to transpose
+    item_meta : pd.DataFrame
+        Item metadata dataframe
+    item_meta_cols : list
+        Columns to include from item metadata
+    participant_cols : list
+        List of participant metadata columns
+    include_sociodem : bool
+        Whether to include sociodemographic data as header rows
+    
+    Returns:
+    --------
+    pd.DataFrame : Transposed data with optional metadata rows
+    """
+    # Create item metadata subset
+    item_meta_subset = item_meta[[col for col in item_meta_cols if col in item_meta.columns]]
+    
+    # Transpose the ratings data (items become rows, participants become columns)
+    ratings_only = data[item_cols].copy()
+    ratings_only.index = data['InformantID']
+    ratings_transposed = ratings_only.T
+    ratings_transposed['item_code'] = ratings_transposed.index
+    ratings_transposed = ratings_transposed.reset_index(drop=True)
+    
+    # Merge item metadata with transposed ratings
+    result = item_meta_subset.merge(ratings_transposed, on='item_code', how='right')
+    
+    if include_sociodem:
+        # Add participant metadata as header rows
+        sociodem_to_include = [col for col in participant_cols if col != 'InformantID']
+        
+        # Create participant info dictionary
+        participant_info = data[['InformantID'] + sociodem_to_include].set_index('InformantID').to_dict('index')
+        
+        # Build header rows
+        header_rows = []
+        for var in sociodem_to_include:
+            row_dict = {col: '' for col in result.columns}
+            row_dict['item_code'] = f'[{var}]'
+            for participant_id in ratings_transposed.columns:
+                if participant_id != 'item_code' and participant_id in participant_info:
+                    row_dict[participant_id] = participant_info[participant_id].get(var, '')
+            header_rows.append(row_dict)
+        
+        # Combine header rows with data
+        header_df = pd.DataFrame(header_rows)
+        result = pd.concat([header_df, result], ignore_index=True)
+    
+    return result
+
+
+# ============================================================================
+# PRESET UTILITIES (Phase 3)
+# ============================================================================
+
+def generate_dynamic_presets(meta_df):
+    """
+    Generate item presets dynamically from meta data columns.
+    Creates grouped presets based on section, group_finegrained, and feature_ewave.
+    
+    Parameters:
+    -----------
+    meta_df : pd.DataFrame
+        Grammar items metadata with question_code and grouping columns
+    
+    Returns:
+    --------
+    list : List of preset dictionaries with 'label' and 'value' keys
+    """
+    presets = []
+    
+    # Base presets
+    presets.extend([
+        {'label':'Top 15 spoken','value':['A8','B14','B22','C12','D1','D4','D22','E11','E12','E18','E19','F22','F2','F12','F20']},
+    ])
+    
+    # Dynamic presets from section column (Mode: prefix)
+    if 'section' in meta_df.columns:
+        section_groups = meta_df.groupby('section', observed=True)['question_code'].apply(list).to_dict()
+        for section, codes in sorted(section_groups.items()):
+            if section and pd.notna(section):
+                presets.append({
+                    'label': f'Mode: {section}',
+                    'value': codes
+                })
+    
+    # Dynamic presets from group_finegrained column (Group: prefix)
+    if 'group_finegrained' in meta_df.columns:
+        group_groups = meta_df.groupby('group_finegrained', observed=True)['question_code'].apply(list).to_dict()
+        for group, codes in sorted(group_groups.items()):
+            if group and pd.notna(group) and group.strip():
+                presets.append({
+                    'label': f'Group: {group}',
+                    'value': codes
+                })
+    
+    # Dynamic presets from feature_ewave column (eWAVE: prefix)
+    if 'feature_ewave' in meta_df.columns:
+        ewave_groups = meta_df.groupby('feature_ewave', observed=True)['question_code'].apply(list).to_dict()
+        for feature, codes in sorted(ewave_groups.items()):
+            if feature and pd.notna(feature) and feature.strip():
+                presets.append({
+                    'label': f'eWAVE: {feature}',
+                    'value': codes
+                })
+    
+    return presets
+
+
+def build_preset_multiselect_data(presets):
+    """
+    Build MultiSelect data with proper grouping structure for dmc.MultiSelect.
+    Organizes presets into categories: Manual, Mode, Group, eWAVE.
+    
+    Parameters:
+    -----------
+    presets : list
+        List of preset dictionaries with 'label' and 'value' keys
+    
+    Returns:
+    --------
+    list : Grouped data structure for dmc.MultiSelect
+    """
+    # Organize presets into groups
+    groups = {
+        'Manual presets': [],
+        'Mode presets': [],
+        'Group presets': [],
+        'eWAVE feature groups': [],
+        'Other': []
+    }
+    
+    for p in presets:
+        label = p.get('label')
+        value = p.get('label')
+        item = {'label': label, 'value': value}
+        
+        # Categorize into appropriate group
+        if label.startswith('Mode:'):
+            groups['Mode presets'].append(item)
+        elif label.startswith('Group:'):
+            groups['Group presets'].append(item)
+        elif label.startswith('eWAVE:'):
+            groups['eWAVE feature groups'].append(item)
+        else:
+            # Everything else goes to Manual presets (e.g., "Top 15 spoken")
+            groups['Manual presets'].append(item)
+    
+    # Build the grouped data structure for dmc.MultiSelect
+    data = []
+    for group_name in ['Manual presets', 'Mode presets', 'Group presets', 'eWAVE feature groups', 'Other']:
+        if groups[group_name]:  # Only add non-empty groups
+            data.append({
+                'group': group_name,
+                'items': groups[group_name]
+            })
+    
+    return data
+
+
+def expand_presets_to_items(selected_preset_labels, presets_list):
+    """
+    Expand a list of selected preset labels into a unioned list of item codes.
+    
+    Parameters:
+    -----------
+    selected_preset_labels : list
+        List of selected preset labels
+    presets_list : list
+        List of all available preset dictionaries
+    
+    Returns:
+    --------
+    list : Sorted unique list of item codes from all selected presets
+    """
+    if not selected_preset_labels:
+        return []
+    
+    selected_items = []
+    for lbl in selected_preset_labels:
+        match = next((p for p in presets_list if p['label'] == lbl), None)
+        if match:
+            selected_items.extend(match.get('value', []))
+    # Return unique sorted list
+    return sorted(list(set(selected_items)))
