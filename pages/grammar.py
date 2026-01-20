@@ -501,6 +501,7 @@ InformantsGrid = html.Div(children = [
                                         dmc.Group([
                                             dmc.Button("Select All", id="select-all-columns-button", size="xs", variant="outline"),
                                             dmc.Button("Deselect All", id="deselect-all-columns-button", size="xs", variant="outline"),
+                                            dmc.Button("Reset to Default", id="reset-default-columns-button", size="xs", variant="outline", color="blue"),
                                         ], mb="xs"),
                                         dmc.CheckboxGroup(
                                             id="informants-columns-checkbox",
@@ -4005,16 +4006,17 @@ def update_informants_table_columns(selected_columns):
     
     return columnDefs
 
-# Callback for Select All/Deselect All column buttons
+# Callback for Select All/Deselect All/Reset Default column buttons
 @callback(
     Output("informants-columns-checkbox", "value"),
     [Input("select-all-columns-button", "n_clicks"),
-     Input("deselect-all-columns-button", "n_clicks")],
+     Input("deselect-all-columns-button", "n_clicks"),
+     Input("reset-default-columns-button", "n_clicks")],
     State("informants-columns-checkbox", "value"),
     prevent_initial_call=True
 )
-def toggle_all_columns(select_clicks, deselect_clicks, current_value):
-    """Select or deselect all columns"""
+def toggle_all_columns(select_clicks, deselect_clicks, reset_clicks, current_value):
+    """Select all, deselect all, or reset to default columns"""
     ctx_triggered = ctx.triggered_id
     
     all_columns = ['InformantID', 'Age', 'Gender', 'MainVariety', 'AdditionalVarieties',
@@ -4026,13 +4028,21 @@ def toggle_all_columns(select_clicks, deselect_clicks, current_value):
                   'PrimarySchool', 'SecondarySchool', 'Occupation', 'OccupMother', 'OccupFather',
                   'OccupPartner']
     
+    # Default columns selection (matches the initial value in the UI)
+    default_columns = ['Age', 'Gender', 'MainVariety', 'AdditionalVarieties',
+                      'YearsLivedInMainVariety', 'RatioMainVariety', 'CountryCollection', 'Year',
+                      'LanguageHome_normalized', 'LanguageFather_normalized', 'LanguageMother_normalized']
+    
     # Filter to only columns that exist in the data
     available_columns = [col for col in all_columns if col in Informants.columns]
+    available_default_columns = [col for col in default_columns if col in Informants.columns]
     
     if ctx_triggered == "select-all-columns-button":
         return available_columns
     elif ctx_triggered == "deselect-all-columns-button":
         return []
+    elif ctx_triggered == "reset-default-columns-button":
+        return available_default_columns
     
     return current_value
 
