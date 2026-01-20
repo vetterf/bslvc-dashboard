@@ -4749,6 +4749,7 @@ def create_export_log_grammar(participants, items, result, use_imputed, pairs,
     str : The log file content
     """
     from datetime import datetime
+    from version import __version__
     
     log_content = f"""BSLVC Grammar Data Export Log
 ==================================
@@ -4756,7 +4757,7 @@ def create_export_log_grammar(participants, items, result, use_imputed, pairs,
 Export Information:
 -------------------
 Export Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-Application Version: 0.1.3
+Application Version: {__version__}
 Database Version: {retrieve_data.get_database_version()}
 
 Export Settings:
@@ -4814,6 +4815,7 @@ def create_export_log_distance_matrix(participants, items, distance_df, distance
     str : The log file content
     """
     from datetime import datetime
+    from version import __version__
     
     log_content = f"""BSLVC Distance Matrix Export Log
 =====================================
@@ -4821,7 +4823,7 @@ def create_export_log_distance_matrix(participants, items, distance_df, distance
 Export Information:
 -------------------
 Export Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-Application Version: 0.1.3
+Application Version: {__version__}
 Database Version: {retrieve_data.get_database_version()}
 
 Analysis Settings:

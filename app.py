@@ -40,6 +40,7 @@ from uuid import uuid4
 import diskcache
 import pickle
 from flask import request
+from version import __version__
 
 ############################################################################################################
 
@@ -349,7 +350,7 @@ app_shell = dmc.AppShell(
                             target="_blank",
                             c="blue"
                         ),
-                        f" | v0.1.4 (DB: {DB_VERSION})"
+                        f" | v{__version__} (DB: {DB_VERSION})"
                     ], size="sm", c="dimmed"),
                 ],
                 justify="center",
