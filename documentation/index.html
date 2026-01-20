@@ -505,6 +505,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Advanced Actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Export
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -944,6 +972,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Advanced Actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Export
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -1352,8 +1408,23 @@ Note: The group comparison plot uses the same settings that were used for the di
 </ul>
 <h4 id="advanced-actions">Advanced Actions<a class="headerlink" href="#advanced-actions" title="Permanent link">¶</a></h4>
 <p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_advanced_actions.png" data-desc-position="bottom"><img alt="Advanced actions" src="../img/UI_advanced_actions.png"></a></p>
+<h5 id="data-export">Data Export<a class="headerlink" href="#data-export" title="Permanent link">¶</a></h5>
+<p>The data export section provides multiple options for exporting your selection:</p>
 <ul>
-<li><strong>Export Data</strong>: Download current data selection. By default, this includes all sociodemographic columns, but only the selected participants and grammar items.</li>
+<li><strong>Export Data</strong>: Download current data selection with flexible format options:</li>
+<li><strong>Include sociodemographic data</strong> (checked by default): When enabled, includes participant metadata columns (Age, Gender, MainVariety, etc.) in the export. When disabled, exports only InformantID and rating data.</li>
+<li><strong>Include item metadata</strong> (unchecked by default): When enabled, transposes the data so items become rows and participants become columns, with item metadata columns (section, feature, group, sentence, etc.) added at the beginning.</li>
+<li><strong>Combined options</strong>:<ul>
+<li>Neither checked: Minimal export (InformantID + ratings only)</li>
+<li>Only sociodemographic: Standard wide format (participants as rows, items as columns, with participant metadata)</li>
+<li>Only item metadata: Transposed format (items as rows, participants as columns, with item metadata)</li>
+<li>Both checked: Transposed format with participant metadata as header rows</li>
+</ul>
+</li>
+<li><strong>Export Distance Matrix</strong> (visible only in Participant Similarity mode): Downloads a pairwise distance matrix using the same settings as the UMAP plot (distance metric, standardization, selected participants and items). Participant IDs are used as both row and column labels.</li>
+</ul>
+<h5 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">¶</a></h5>
+<ul>
 <li><strong>Copy Settings</strong>: Copy current settings to clipboard. This function converts the current settings into a base64 code and copies it to the clipboard. This code can be used to share settings with other users or save the settings in a text file for later use.</li>
 <li><strong>Paste Settings</strong>: Paste settings from clipboard. This button takes the base64 code created with the "Copy Settings" function to restore settings.</li>
 <li><strong>Save Settings</strong>: Save current settings locally. Helpful for temporarily saving the settings.</li>
@@ -1386,7 +1457,7 @@ Note: The group comparison plot uses the same settings that were used for the di
 <p><strong>Rendering Issues:</strong>
 - 'E22', 'D12', 'E6': These items have different renderings in some varieties:</p>
 <p>E22: <em>This is exactly that I wanted</em>. Our Swedish speaker autocorrected this item to <em>This is exactly what I wanted</em>, effectively turning this into a control item. All other varieties are unaffected.</p>
-<p>D12: <em>I'll tell Jane when I meets her</em>. Our Scottish speaker aspirates the <em>ts</em> in <em>meets</em> heavily, thus somewhat blurring the line between the standard use <em>when I meet her</em> and the non-standard <em>when I meets her</em>.</p>
+<p>D12: <em>I'll tell Jane when I meets her</em>. Our Scottish and Swedish speaker aspirates the <em>ts</em> in <em>meets</em> heavily, thus somewhat blurring the line between the standard use <em>when I meet her</em> and the non-standard <em>when I meets her</em>.</p>
 <p>E6: <em>I'm learning French, because is a beautiful language</em>. Again the rendering by our Scottish speaker blurs the line between non-standard <em>is</em> and <em>it's</em>.</p>
 <p>The "Problematic" button in the Grammar Item Selection section automatically deselects these items. Users should be aware of these issues when interpreting results that include these items.</p>
 <h3 id="lexicon-analysis-module">Lexicon Analysis Module<a class="headerlink" href="#lexicon-analysis-module" title="Permanent link">¶</a></h3>
