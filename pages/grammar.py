@@ -1409,13 +1409,13 @@ SettingsGrammarAnalysis = dmc.Card([
                             dmc.Stack([
                                 dmc.Checkbox(
                                     id='export-include-sociodemographic-checkbox',
-                                    label="Include sociodemographic data",
+                                    label="Include Sociodemographic Data",
                                     checked=True,
                                     size="xs"
                                 ),
                                 dmc.Checkbox(
                                     id='export-include-item-metadata-checkbox',
-                                    label="Include item metadata",
+                                    label="Include Item Metadata",
                                     checked=False,
                                     size="xs"
                                 ),
