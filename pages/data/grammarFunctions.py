@@ -508,9 +508,12 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
 
     fig.update_layout(template="simple_white")
     if leiden:
-        fig.update_yaxes(scaleanchor="x", scaleratio=1, row=1, col=1)
+        fig.update_xaxes(title_text="UMAP Dimension 1", row=1, col=1)
+        fig.update_yaxes(title_text="UMAP Dimension 2", scaleanchor="x", scaleratio=1, row=1, col=1)
     else:
+        fig.update_xaxes(title_text="UMAP Dimension 1")
         fig.update_yaxes(
+        title_text="UMAP Dimension 2",
         scaleanchor="x",
         scaleratio=1,
         )
@@ -917,6 +920,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                         x=tempDF['item'],
                         xaxis='x',
                         name="RF importance",
+                        visible='legendonly',
                     ), secondary_y=True
                 )
             else:
@@ -942,8 +946,9 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                         x=importance_x_vals,
                         name="RF importance",
                         mode="markers+lines",
-                        line=dict(color="red", dash="dash"),
-                        marker=dict(color="red", symbol="diamond")
+                        line=dict(color="black", dash="dash"),
+                        marker=dict(color="black", symbol="diamond"),
+                        visible='legendonly',
                     ), secondary_y=True
                 )
             
@@ -1060,6 +1065,8 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                         x=tempDF['item'],
                         xaxis='x',
                         name="RF importance",
+                        visible='legendonly',
+                        marker=dict(color="black"),
                     ), secondary_y=True
                 )
             else:
@@ -1085,8 +1092,9 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                         x=importance_x_vals,
                         name="RF importance",
                         mode="markers+lines",
-                        line=dict(color="red", dash="dash"),
-                        marker=dict(color="red", symbol="diamond")
+                        line=dict(color="black", dash="dash"),
+                        marker=dict(color="black", symbol="diamond"),
+                        visible='legendonly',
                     ), secondary_y=True
                 )
             
@@ -1286,6 +1294,8 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                         y=tempDF['importance'],
                         x=tempDF['item'],
                         name=f"RF importance ({mode})",
+                        visible='legendonly',
+                        marker=dict(color="black"),
                     ),row=row,col=1, secondary_y=True
                 )
             else:
@@ -1308,8 +1318,9 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                         x=importance_x_vals,
                         name=f"RF importance ({mode})",
                         mode="markers+lines",
-                        line=dict(color="red", dash="dash"),
-                        marker=dict(color="red", symbol="diamond")
+                        line=dict(color="black", dash="dash"),
+                        marker=dict(color="black", symbol="diamond"),
+                        visible='legendonly',
                     ),row=row,col=1, secondary_y=True
                 )
         
@@ -1820,10 +1831,20 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
         pl.mean('value').alias('mean'),
         pl.std('value').alias('std')
     )
-    plf = plf.with_columns(pl.lit(1.96).alias('ci'))
-    plf = plf.with_columns(plf['ci']*(plf['std']/pl.col('count').sqrt().alias('ci')))
-    plf = plf.with_columns(plf['ci'].alias('lower_ci')) # plotting function expects difference, not absoulte y values
-    plf = plf.with_columns(plf['ci'].alias('upper_ci'))
+    # Calculate 95% confidence intervals
+    plf = plf.with_columns((pl.lit(1.96) * (plf['std'] / pl.col('count').sqrt())).alias('ci_margin'))
+    # Clip CI bounds based on mode: [-5, 5] for pairs (item differences), [0, 5] for regular ratings
+    if pairs:
+        plf = plf.with_columns((plf['mean'] - plf['ci_margin']).clip(-5, None).alias('lower_ci_abs'))
+        plf = plf.with_columns((plf['mean'] + plf['ci_margin']).clip(None, 5).alias('upper_ci_abs'))
+    else:
+        plf = plf.with_columns((plf['mean'] - plf['ci_margin']).clip(0, None).alias('lower_ci_abs'))
+        plf = plf.with_columns((plf['mean'] + plf['ci_margin']).clip(None, 5).alias('upper_ci_abs'))
+    # Calculate error bar values (difference from mean) for plotting
+    plf = plf.with_columns((plf['mean'] - plf['lower_ci_abs']).alias('lower_ci'))
+    plf = plf.with_columns((plf['upper_ci_abs'] - plf['mean']).alias('upper_ci'))
+    # Drop temporary columns
+    plf = plf.drop(['ci_margin', 'lower_ci_abs', 'upper_ci_abs'])
     df = plf.to_pandas()
     # sort df by item column in meandf
     df['item'] = pd.Categorical(df['item'], categories=meandf['item'].to_list(), ordered=True)
@@ -4714,9 +4735,6 @@ def create_missing_values_heatmap(items, informants, pairs=False, sortby="mean",
     return fig
 
 
-# ============================================================================
-# DATA EXPORT UTILITIES (Phase 1)
-# ============================================================================
 
 def create_export_log_grammar(participants, items, result, use_imputed, pairs, 
                                regional_mapping, include_sociodem, include_item_meta, export_format):
@@ -4845,11 +4863,6 @@ Participant IDs ({len(participants)} total):
 Item Codes ({len(items)} total):
 {", ".join(sorted(items))}
 
-Notes:
-------
-- Distance matrix computed using {distance_metric} distance metric
-- Matrix dimensions: {distance_df.shape[0]} x {distance_df.shape[1]}
-- All missing values were imputed prior to distance calculation
 """
     return log_content
 
@@ -4973,11 +4986,6 @@ def transpose_grammar_data_with_metadata(data, item_cols, item_meta, item_meta_c
         result = pd.concat([header_df, result], ignore_index=True)
     
     return result
-
-
-# ============================================================================
-# PRESET UTILITIES (Phase 3)
-# ============================================================================
 
 def generate_dynamic_presets(meta_df):
     """
@@ -5109,3 +5117,239 @@ def expand_presets_to_items(selected_preset_labels, presets_list):
             selected_items.extend(match.get('value', []))
     # Return unique sorted list
     return sorted(list(set(selected_items)))
+
+
+def create_participant_group_mapping(data):
+    """
+    Create a CSV mapping of participants to their MainVariety groups.
+    
+    Parameters:
+    -----------
+    data : pd.DataFrame
+        Data containing InformantID and MainVariety columns
+    
+    Returns:
+    --------
+    str : CSV content with InformantID and MainVariety
+    """
+    mapping_df = data[['InformantID', 'MainVariety']].drop_duplicates().sort_values('MainVariety')
+    return mapping_df.to_csv(index=False)
+
+
+def create_sociodemographic_summary(data):
+    """
+    Create a long-format sociodemographic summary per MainVariety group.
+    
+    Format:
+    MainVariety,Variable,Value,Frequency
+    Germany,Gender,Male,25
+    Germany,Gender,Female,20
+    
+    Parameters:
+    -----------
+    data : pd.DataFrame
+        Data containing sociodemographic columns
+    
+    Returns:
+    --------
+    str : CSV content in long format
+    """
+    # Define sociodemographic variables to summarize
+    sociodem_vars = [
+        'Age', 'Gender',
+        'AdditionalVarieties', 'YearsLivedInMainVariety', 'RatioMainVariety', 'CountryCollection',
+        'Nationality', 'EthnicSelfID', 'CountryID',
+        'LanguageHome_normalized', 'LanguageFather_normalized', 'LanguageMother_normalized',
+        'Qualifications_normalized', 'QualiMother_normalized', 'QualiFather_normalized', 'QualiPartner_normalized',
+        'PrimarySchool', 'SecondarySchool'
+    ]
+    
+    # Filter to available columns
+    available_vars = [var for var in sociodem_vars if var in data.columns]
+    
+    # Define which variables should be treated as numeric (summary statistics instead of frequencies)
+    numeric_vars = ['Age', 'YearsLivedInMainVariety', 'RatioMainVariety']
+    
+    summary_rows = []
+    
+    for variety in sorted(data['MainVariety'].unique()):
+        variety_data = data[data['MainVariety'] == variety]
+        
+        for var in available_vars:
+            if var in numeric_vars:
+                # For numeric variables, provide summary statistics instead of frequencies
+                numeric_data = pd.to_numeric(variety_data[var], errors='coerce').dropna()
+                if len(numeric_data) > 0:
+                    summary_rows.append({
+                        'MainVariety': variety,
+                        'Variable': f'{var}_Mean',
+                        'Value': f"{numeric_data.mean():.2f}",
+                        'Frequency': len(numeric_data)
+                    })
+                    summary_rows.append({
+                        'MainVariety': variety,
+                        'Variable': f'{var}_Median',
+                        'Value': f"{numeric_data.median():.2f}",
+                        'Frequency': len(numeric_data)
+                    })
+                    summary_rows.append({
+                        'MainVariety': variety,
+                        'Variable': f'{var}_StdDev',
+                        'Value': f"{numeric_data.std():.2f}",
+                        'Frequency': len(numeric_data)
+                    })
+            else:
+                # For categorical variables, provide frequency counts
+                value_counts = variety_data[var].value_counts()
+                for value, freq in value_counts.items():
+                    if pd.notna(value) and value != '':
+                        summary_rows.append({
+                            'MainVariety': variety,
+                            'Variable': var,
+                            'Value': str(value),
+                            'Frequency': int(freq)
+                        })
+    
+    summary_df = pd.DataFrame(summary_rows)
+    return summary_df.to_csv(index=False)
+
+
+def create_export_log_aggregated_item_data(participants, items, aggregated_df, 
+                                           groupby, pairs, 
+                                           use_imputed, regional_mapping,
+                                           include_sociodem, include_item_meta,
+                                           participant_count, variety_counts):
+    """
+    Generate a log file for aggregated item data exports.
+    
+    Parameters:
+    -----------
+    participants : list
+        List of participant IDs
+    items : list
+        List of item codes
+    aggregated_df : pd.DataFrame
+        The aggregated data frame
+    groupby : str
+        Grouping method (variety, vtype, gender)
+    pairs : bool
+        Whether item pairs mode is enabled
+    use_imputed : bool
+        Whether imputed data was used
+    regional_mapping : bool
+        Whether regional mapping is enabled
+    include_sociodem : bool
+        Whether sociodemographic summary is included
+    include_item_meta : bool
+        Whether item metadata is included
+    participant_count : int
+        Total number of participants
+    variety_counts : dict
+        Counts per variety
+    
+    Returns:
+    --------
+    str : The log file content
+    """
+    from datetime import datetime
+    from version import __version__
+    
+    log_content = f"""BSLVC Aggregated Item Data Export Log
+========================================
+
+Export Information:
+-------------------
+Export Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Application Version: {__version__}
+
+Data Selection:
+---------------
+Number of Participants: {participant_count}
+Number of Items: {len(items)}
+Data Type: {'Imputed' if use_imputed else 'Raw (with missing values)'}
+Item Pairs Mode: {'Yes' if pairs else 'No'}
+Regional Mapping (England split): {'Yes' if regional_mapping else 'No'}
+
+Analysis Settings:
+------------------
+Grouping: {groupby}
+
+Participant Distribution by Group:
+----------------------------------
+{chr(10).join(f'{variety}: {count}' for variety, count in sorted(variety_counts.items()))}
+
+Items Included:
+---------------
+{', '.join(sorted(items))}
+
+Export Contents:
+----------------
+1. aggregated_data.csv - Mean ratings, median, std, CI, counts, and missing values per item and group
+   Columns: item, group, count, mean, median, std, missing_count, lower_ci, upper_ci"""
+    
+    if include_item_meta:
+        log_content += """
+   Plus item metadata: sentence, variant_detail, group_finegrained, feature_ewave, etc."""
+    
+    log_content += """
+
+2. participant_group_mapping.csv - Mapping of participants to their groups
+   Columns: InformantID, MainVariety"""
+    
+    if include_sociodem:
+        log_content += """
+
+3. sociodemographic_summary.csv - Summary statistics per group in long format
+   Columns: MainVariety, Variable, Value, Frequency
+   Includes: Gender, Age, Nationality, Languages, Education, Occupation, etc."""
+    
+    log_content += f"""
+
+Data Summary:
+-------------
+Total Rows in Aggregated Data: {len(aggregated_df)}
+Groups: {', '.join(sorted(aggregated_df['group'].unique()))}
+
+"""
+    
+    return log_content
+
+
+def create_zip_download_multi(base_filename, files_dict, log_content):
+    """
+    Create a ZIP file containing multiple CSV files and a log file for download.
+    
+    Parameters:
+    -----------
+    base_filename : str
+        Base filename (without extension) for the ZIP
+    files_dict : dict
+        Dictionary mapping filenames to their CSV content strings
+        Example: {'aggregated_data.csv': csv_content1, 'mapping.csv': csv_content2}
+    log_content : str
+        Log file content as string
+    
+    Returns:
+    --------
+    dict : Download dictionary with base64-encoded ZIP content
+    """
+    import zipfile
+    import io
+    import base64
+    
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        # Add all CSV files
+        for filename, content in files_dict.items():
+            zip_file.writestr(filename, content)
+        # Add log file
+        zip_file.writestr(f"{base_filename}_log.txt", log_content)
+    
+    zip_buffer.seek(0)
+    zip_content = base64.b64encode(zip_buffer.getvalue()).decode('utf-8')
+    
+    return dict(
+        content=zip_content,
+        filename=f"{base_filename}.zip",
+        base64=True
+    )

@@ -211,6 +211,11 @@ The data export section provides multiple options for exporting your selection:
     - Only item metadata: Transposed format (items as rows, participants as columns, with item metadata)
     - Both checked: Transposed format with participant metadata as header rows
 - **Export Distance Matrix** (visible only in Participant Similarity mode): Downloads a pairwise distance matrix using the same settings as the UMAP plot (distance metric, standardization, selected participants and items). Participant IDs are used as both row and column labels.
+- **Download Aggregated Item Data** (visible only in Item Ratings mode): Downloads aggregated statistics for the currently displayed item plot as a ZIP archive containing:
+  - `aggregated_data.csv`: Mean ratings, confidence intervals, standard deviations, medians, missing value counts, and participant counts for each item-group combination
+  - `participant_group_mapping.csv`: Mapping of participant IDs to their assigned groups
+  - `sociodemographic_summary.csv`: Sociodemographic summary statistics (mean age, gender distribution, etc.) for each group
+  - `log.txt`: Export metadata including timestamp, selections, and settings used
 
 
 ##### Settings
@@ -406,5 +411,5 @@ User selects participants, items, and UMAP settings (neighbors, distance metric,
 
 ---
 
-**Last Updated**: November 2025  
-**Version**: 0.1.2
+**Last Updated**: February 2026  
+**Version**: 0.1.5

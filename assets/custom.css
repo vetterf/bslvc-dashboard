@@ -44,8 +44,8 @@
 
 /* Enhanced accordion styling */
 .mantine-Accordion-item {
-    border-radius: 8px !important;
-    margin-bottom: 8px;
+   /* border-radius: 8px !important;
+    margin-bottom: 8px;*/
     transition: all 0.2s ease;
 }
 

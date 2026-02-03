@@ -19,7 +19,7 @@ def create_case_study_2(create_ui_location):
             ], gap="sm", mb="sm"),
             dcc.Markdown("""
 In case study 1, we found that Scottish participants have a markedly higher average rating than English participants for item D4: "What are you wanting?". 
-In this case study, we follow up on this finding, and investigate all features related to the eWAVE Feature 88 "Wider range of uses of progrssive be + V-ing than in StE: extension to stative verbs" (https://ewave-atlas.org/parameters/88) included in the BSLVC.
+In this case study, we follow up on this finding, and investigate all features related to the eWAVE Feature 88 "Wider range of uses of progressive be + V-ing than in StE: extension to stative verbs" (https://ewave-atlas.org/parameters/88) included in the BSLVC.
             """, className="markdown-content")
         ], p="md", withBorder=True, radius="md", mb="lg", style={"backgroundColor": "#f8f9fa"}),
         
@@ -68,6 +68,21 @@ Navigate to the **Grammar Sets** page and select **"Item Ratings"** from the ana
 
 This mode allows you to explore the distribution of ratings for individual grammatical features, making it ideal for comparing how different varieties rate specific constructions.
             """, className="markdown-content"),
+            dmc.Paper([
+                dmc.Stack([
+                    dmc.Text("Analysis Mode:", size="sm", fw=500, mb="xs"),
+                    dmc.SegmentedControl(
+                        data=[
+                            {"value": "umap", "label": "Participant Similarity"},
+                            {"value": "item", "label": "Item Ratings"},
+                        ],
+                        value="item",
+                        fullWidth=True,
+                        color="blue",
+                        size="sm"
+                    ),
+                ], gap="xs")
+            ], p="md", withBorder=True, radius="md", style={"backgroundColor": "#f8f9fa", "maxWidth": "400px", "marginTop": "1rem"}),
         ], p="md", withBorder=True, radius="md")
     
     elif step == 1:  # Step 2

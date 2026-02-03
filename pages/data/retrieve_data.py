@@ -748,8 +748,20 @@ def getAllData(imputed=False):
     return data
 
 def getGrammarMeta(type="all_items"):
+    # Columns to exclude from all queries
+    excluded_columns = [
+        "Reading instructions for recordings; stressed items = boldprint",
+        "Comment; 2nd feature",
+        "related_item"
+    ]
+    
     if type == "all_items":
-        SQLstatement = "SELECT * FROM bslvc_meta"
+        # Get all columns except the excluded ones
+        SQLstatement = """
+            SELECT question_code, section, item, flagged, control_item, feature, 
+                   group_ewave, group_finegrained, variant_detail, feature_ewave, also_in_item
+            FROM bslvc_meta
+        """
     elif type == "item_pairs":
         # Use SQLite string concatenation syntax (||) instead of CONCAT
         SQLstatement = "SELECT question_code, (question_code || '-' || also_in_item) as item_pair, also_in_item as question_code_written,  section, item, feature, group_ewave,group_finegrained, variant_detail, feature_ewave FROM bslvc_meta where section = 'Spoken'"

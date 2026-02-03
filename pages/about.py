@@ -77,7 +77,7 @@ For more information, please visit the project homepage.
             dmc.Stack([
                 dmc.Text("Dashboard Citation:", fw=600, size="sm"),
                 dmc.Text(
-                    "Vetter, Fabian. 2025. BSLVC Dashboard (Version 0.1.3). https://doi.org/10.17605/OSF.IO/4BUEF",
+                    "Vetter, Fabian. 2025. BSLVC Dashboard (Version 0.1.5). https://doi.org/10.17605/OSF.IO/4BUEF",
                 ),
                 
                 dmc.Space(h="md"),

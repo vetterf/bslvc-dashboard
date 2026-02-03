@@ -225,7 +225,9 @@ UMAP_Grammar_initialPlot.update_layout(
 
 itemPlot_Grammar_initialPlot = go.Figure()
 itemPlot_Grammar_initialPlot.update_layout(
-    template="simple_white"
+    template="simple_white",
+    autosize=True,
+    height=None
 )
 
 initial_hoverinfo = construct_initial_hoverinfo(UMAP_Grammar_initialPlot)
@@ -288,8 +290,6 @@ UmapPlotContainer = dmc.Container([
                             'toImageButtonOptions': {
                                 'format': 'svg',
                                 'filename': 'umap_plot',
-                                'height': 600,
-                                'width': 800,
                                 'scale': 1
                             }
                         })
@@ -305,8 +305,6 @@ UmapPlotContainer = dmc.Container([
                             'toImageButtonOptions': {
                                 'format': 'svg',
                                 'filename': 'rf_plot',
-                                'height': 600,
-                                'width': 800,
                                 'scale': 1
                             }
                         })
@@ -648,12 +646,11 @@ InformantsGrid = html.Div(children = [
 
 ItemPlotContainer = dmc.Container([dmc.Grid(children=[
             dmc.GridCol(children=[
-                dcc.Graph(id="ItemFig", figure=itemPlot_Grammar_initialPlot, style={'height': 'auto'}, config={
+                dcc.Graph(id="ItemFig", figure=itemPlot_Grammar_initialPlot, style={'height': 'calc(100vh - 210px)'}, config={
+                    'responsive': True,
                     'toImageButtonOptions': {
                         'format': 'svg',
                         'filename': 'item_plot',
-                        'height': 600,
-                        'width': 800,
                         'scale': 1
                     }
                 })
@@ -924,7 +921,8 @@ informantSelectionAccordion = dmc.AccordionItem(
                                                 marks=[{"value": 0, "label": "0"},
                                                        {"value": 110, "label": "110"}],
                                                 value=[0, 110],
-                                                persistence=persist_UI, persistence_type=persistence_type
+                                                persistence=persist_UI, persistence_type=persistence_type,
+                                                mb="md"
                                             ),
                                         ]),
                                         dmc.Stack(gap="xs", children=[
@@ -935,7 +933,8 @@ informantSelectionAccordion = dmc.AccordionItem(
                                                     label="Include NA",
                                                     value=True,
                                                     size="xs",
-                                                    persistence=persist_UI, persistence_type=persistence_type
+                                                    persistence=persist_UI, persistence_type=persistence_type,
+                                                    mb="md"
                                                 ),
                                             ], justify="space-between"),
                                             dmc.Text("Years in main variety / age", size="xs", c="dimmed"),
@@ -1297,9 +1296,9 @@ SettingsGrammarAnalysis = dmc.Card([
         mb="md"
     ),
     
-    # Simplified Analysis Type Selector
+    # Simplified Analysis Mode Selector
     dmc.Stack([
-        dmc.Text("Analysis Type:", size="sm", fw=500, mb="xs"),
+        dmc.Text("Analysis Mode:", size="sm", fw=500, mb="xs"),
         dmc.SegmentedControl(
             id="grammar-plot-type",
             data=[
@@ -1374,7 +1373,8 @@ SettingsGrammarAnalysis = dmc.Card([
             itemPlotSettingsAccordion,
         ], 
         variant="contained",
-        radius="md"),
+        radius="md",
+        mb="md"),
     ], style={"display": "none"}),  # Hidden by default (UMAP is default now)
     
     html.Div(id="umap-settings-container", children=[
@@ -1383,7 +1383,8 @@ SettingsGrammarAnalysis = dmc.Card([
             umapGroupCompAccordion
         ], 
         variant="contained",
-        radius="md"),
+        radius="md",
+        mb="md"),
     ]),  # Visible by default (UMAP is default now)
     
     # Collapsible Advanced Actions Section (Moved to bottom)
@@ -1448,6 +1449,23 @@ SettingsGrammarAnalysis = dmc.Card([
                                 ],
                                 style={"display": "block"}  # Visible by default (UMAP is default)
                             ),
+                            # Export Aggregated Item Data button (only visible in Item Ratings mode)
+                            html.Div(
+                                id='export-aggregated-item-data-container',
+                                children=[
+                                    dmc.Group([
+                                        dmc.Button(
+                                            "Export Aggregated Item Data",
+                                            id='export-aggregated-item-data-button',
+                                            size="xs",
+                                            variant="light",
+                                            leftSection=DashIconify(icon="tabler:chart-bar", width=14),
+                                            fullWidth=True
+                                        ),
+                                    ], grow=True),
+                                ],
+                                style={"display": "none"}  # Hidden by default (UMAP is default)
+                            ),
                         ], gap="xs", mb="md"),
                         
                         # Settings Section
@@ -1499,7 +1517,7 @@ SettingsGrammarAnalysis = dmc.Card([
                 ]
             )
         ],
-        variant="separated",
+        variant="contained",
         radius="md",
         mb="md"
     ),
@@ -1507,6 +1525,7 @@ SettingsGrammarAnalysis = dmc.Card([
     # Download components (hidden)
     dcc.Download(id="download-data"),
     dcc.Download(id="download-distance-matrix"),
+    dcc.Download(id="download-aggregated-item-data"),
     
     # Clipboard store for settings (client-side only)
     dcc.Store(id='clipboard-settings-store', storage_type='memory'),
@@ -1908,7 +1927,8 @@ def toggle_sidebar(n_clicks, current_span):
      Output('Umap-clear-groups', 'disabled', allow_duplicate=True),
      Output('render-rf-plot', 'disabled', allow_duplicate=True),
      Output('plot-type-description', 'children'),
-     Output('export-distance-matrix-container', 'style')],
+     Output('export-distance-matrix-container', 'style'),
+     Output('export-aggregated-item-data-container', 'style')],
     Input('grammar-plot-type', 'value'),
     prevent_initial_call=True
 )
@@ -1927,7 +1947,8 @@ def toggle_plot_type_ui(plot_type):
             True,                  # disable clear groups
             True,                  # disable compare groups
             "Compare how different groups rate grammar items",  # description
-            {"display": "none"}    # hide distance matrix button
+            {"display": "none"},   # hide distance matrix button
+            {"display": "block"}   # show aggregated item data button
         )
     else:  # plot_type == 'umap'
         # Show UMAP settings and display, hide item plot
@@ -1943,7 +1964,8 @@ def toggle_plot_type_ui(plot_type):
             False,                 # enable clear groups (errors handled via notifications)
             False,                 # enable compare groups (errors handled via notifications)
             "Apply dimensionality reduction (UMAP) to explore how similar participants are to each other based on their grammar ratings",  # description
-            {"display": "block"}   # show distance matrix button
+            {"display": "block"},  # show distance matrix button
+            {"display": "none"}    # hide aggregated item data button
         )
 
 # Callback to manage imputed data switch based on plot type
@@ -2331,6 +2353,180 @@ def notify_distance_matrix_processing(n_clicks, participants, items):
     return create_info_notification(
         "Processing distance matrix... the download will start shortly.",
         color="blue",
+        autoClose=3000
+    )
+
+
+# Callback to export aggregated item data
+@callback(
+    Output("download-aggregated-item-data", "data"),
+    Input("export-aggregated-item-data-button", "n_clicks"),
+    [State('participantsTree', 'checked'),
+     State('grammarItemsTree', 'checked'),
+     State('grammar-type-switch', 'checked'),
+     State('use-imputed-data-switch', 'checked'),
+     State('export-include-sociodemographic-checkbox', 'checked'),
+     State('export-include-item-metadata-checkbox', 'checked'),
+     State('england-mapping-param', 'data')],
+    prevent_initial_call=True
+)
+def export_aggregated_item_data(n_clicks, participants, items, pairs, use_imputed, 
+                                include_sociodem, include_item_meta, regional_mapping):
+    """Export aggregated item plot data as ZIP with multiple CSVs and log file"""
+    if not n_clicks or not participants or not items:
+        return no_update
+    
+    from datetime import datetime
+    import pages.data.grammarFunctions as gf
+    
+    # Always group by MainVariety for export
+    groupby = "variety"
+    
+    # Get the raw data to extract participant information
+    raw_data = retrieve_data.getGrammarData(
+        imputed=use_imputed,
+        participants=participants,
+        items=items,
+        pairs=pairs,
+        regional_mapping=regional_mapping
+    )
+    
+    # Apply balancing if needed (same logic as in getItemPlot)
+    balanced_informants = gf.get_balanced_informants(participants, groupby)
+    
+    # Get balanced data for aggregation
+    data = retrieve_data.getGrammarData(
+        imputed=use_imputed,
+        participants=balanced_informants,
+        items=items,
+        pairs=pairs,
+        regional_mapping=regional_mapping
+    )
+    
+    # Get item metadata
+    if not pairs:
+        meta = retrieve_data.getGrammarMeta()
+        meta = meta.rename(columns={'question_code': 'item_code'})
+    else:
+        meta = retrieve_data.getGrammarMeta(type='item_pairs')
+        meta = meta.rename(columns={'item_pair': 'item_code'})
+    
+    # Prepare grouping column
+    if groupby == "variety":
+        data['group'] = data['MainVariety']
+    elif groupby == "vtype" or groupby == "vtype_balanced":
+        variety_mapping = gf.get_variety_mapping()
+        data['group'] = data['MainVariety'].map(variety_mapping).fillna("Other")
+        data = data[data['group'] != "Other"]
+    elif groupby == "gender":
+        data['group'] = data['Gender_normalized'] if 'Gender_normalized' in data.columns else data['Gender']
+    
+    # Get informant columns for melting
+    infoCols = retrieve_data.getInformantDataGrammar(imputed=True).columns.to_list()
+    infoCols.remove('InformantID')
+    infoCols.append('group')
+    
+    # Melt the data
+    melted_df = data.melt(id_vars=infoCols, value_vars=items, var_name='item')
+    melted_df['value'] = pd.to_numeric(melted_df['value'], errors='coerce')
+    
+    # Calculate aggregated statistics using polars for speed
+    import polars as pl
+    plf = pl.from_pandas(melted_df)
+    plf = plf.group_by(['group', 'item']).agg(
+        pl.count('value').alias('count'),
+        pl.mean('value').alias('mean'),
+        pl.median('value').alias('median'),
+        pl.std('value').alias('std'),
+        (pl.col('value').is_null().sum()).alias('missing_count')
+    )
+    # Calculate 95% confidence intervals
+    plf = plf.with_columns((pl.lit(1.96) * (plf['std'] / pl.col('count').sqrt())).alias('ci_margin'))
+    # Clip CI bounds based on mode: [-5, 5] for pairs (item differences), [0, 5] for regular ratings
+    if pairs:
+        plf = plf.with_columns((plf['mean'] - plf['ci_margin']).clip(-5, None).alias('lower_ci'))  # Clip to min -5
+        plf = plf.with_columns((plf['mean'] + plf['ci_margin']).clip(None, 5).alias('upper_ci'))  # Clip to max 5
+    else:
+        plf = plf.with_columns((plf['mean'] - plf['ci_margin']).clip(0, None).alias('lower_ci'))  # Clip to min 0
+        plf = plf.with_columns((plf['mean'] + plf['ci_margin']).clip(None, 5).alias('upper_ci'))  # Clip to max 5
+    # Drop the temporary ci_margin column
+    plf = plf.drop('ci_margin')
+    aggregated_df = plf.to_pandas()
+    
+    # Add item metadata if requested
+    if include_item_meta:
+        aggregated_df = aggregated_df.merge(
+            meta, 
+            left_on="item", 
+            right_on="item_code", 
+            how="left"
+        )
+    
+    # Create CSVs for download
+    files_dict = {}
+    
+    # 1. Aggregated data
+    files_dict['aggregated_data.csv'] = aggregated_df.to_csv(index=False)
+    
+    # 2. Participant-group mapping (use raw_data to include all original participants)
+    files_dict['participant_group_mapping.csv'] = gf.create_participant_group_mapping(raw_data)
+    
+    # 3. Sociodemographic summary (if requested)
+    if include_sociodem:
+        files_dict['sociodemographic_summary.csv'] = gf.create_sociodemographic_summary(raw_data)
+    
+    # Calculate variety counts for log
+    variety_counts = raw_data['MainVariety'].value_counts().to_dict()
+    
+    # Create log
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_content = gf.create_export_log_aggregated_item_data(
+        participants=participants,
+        items=items,
+        aggregated_df=aggregated_df,
+        groupby=groupby,
+        pairs=pairs,
+        use_imputed=use_imputed,
+        regional_mapping=regional_mapping,
+        include_sociodem=include_sociodem,
+        include_item_meta=include_item_meta,
+        participant_count=len(raw_data),
+        variety_counts=variety_counts
+    )
+    
+    # Create ZIP file with all contents
+    # Build filename based on what's included
+    filename_parts = ["aggregated_item_data"]
+    if include_item_meta:
+        filename_parts.append("with_metadata")
+    if include_sociodem:
+        filename_parts.append("with_sociodem")
+    filename_parts.append(timestamp)
+    base_filename = "_".join(filename_parts)
+    return gf.create_zip_download_multi(base_filename, files_dict, log_content)
+
+
+# Notify user that aggregated item data export is processing
+@callback(
+    Output("notify-container", "children", allow_duplicate=True),
+    Input("export-aggregated-item-data-button", "n_clicks"),
+    [State('participantsTree', 'checked'), State('grammarItemsTree', 'checked')],
+    prevent_initial_call=True
+)
+def notify_aggregated_item_data_processing(n_clicks, participants, items):
+    if not n_clicks:
+        return no_update
+
+    if not participants or not items:
+        return create_info_notification(
+            "Please select participants and items before exporting aggregated data.",
+            color="red",
+            autoClose=4000
+        )
+
+    return create_info_notification(
+        "Processing aggregated item data... the download will start shortly.",
+        color="blue",
         autoClose=4000
     )
 
@@ -2368,6 +2564,28 @@ clientside_callback(
     """,
     Output("notify-container", "children", allow_duplicate=True),
     Input("download-grammar-items-table-button", "n_clicks"),
+    prevent_initial_call=True
+)
+
+# Clientside callback to resize ItemFig on figure updates
+clientside_callback(
+    """
+    function(figure) {
+        if (!figure) {
+            return window.dash_clientside.no_update;
+        }
+        const height = window.innerHeight - 210;
+        const updatedFigure = {...figure};
+        if (!updatedFigure.layout) {
+            updatedFigure.layout = {};
+        }
+        updatedFigure.layout.height = height;
+        updatedFigure.layout.autosize = true;
+        return updatedFigure;
+    }
+    """,
+    Output('ItemFig', 'figure', allow_duplicate=True),
+    Input('ItemFig', 'figure'),
     prevent_initial_call=True
 )
 
@@ -3751,6 +3969,20 @@ def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imput
                 id="my-notification",
                 title="No Items Selected",
                 message="Please select at least 1 grammar item.",
+                color="orange",
+                loading=False,
+                action="show",
+                autoClose=5000,
+                position="top-right"
+            )
+            return no_update, False, False, notification, no_update
+        
+        # Validation: Check correlation matrix feature limit
+        if plot_mode == "correlation_matrix" and items and len(items) > 30:
+            notification = dmc.Notification(
+                id="my-notification",
+                title="Too Many Features",
+                message=f"Correlation matrix is limited to 30 features. Currently selected: {len(items)}. Please reduce your selection.",
                 color="orange",
                 loading=False,
                 action="show",

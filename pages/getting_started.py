@@ -17,6 +17,29 @@ def load_markdown(filename):
     except FileNotFoundError:
         return f"Error: Could not find {filename}"
 
+# Helper function to create mock analysis mode selector
+def create_mock_analysis_selector(selected_value="umap"):
+    """Create a mock of the analysis mode selector for demonstration
+    
+    Args:
+        selected_value: Which option to show as selected ("umap" or "item")
+    """
+    return dmc.Paper([
+        dmc.Stack([
+            dmc.Text("Analysis Mode:", size="sm", fw=500, mb="xs"),
+            dmc.SegmentedControl(
+                data=[
+                    {"value": "umap", "label": "Participant Similarity"},
+                    {"value": "item", "label": "Item Ratings"},
+                ],
+                value=selected_value,
+                fullWidth=True,
+                color="blue",
+                size="sm"
+            ),
+        ], gap="xs")
+    ], p="md", withBorder=True, radius="md", style={"backgroundColor": "#f8f9fa", "maxWidth": "400px", "marginTop": "1rem"})
+
 # Helper function to create UI location visualizations
 def create_ui_location(highlight_section="", highlight_element="", highlight_tab="", highlight_nav="", highlight_right=False):
     """Create a visual representation of the UI with optional highlighting
@@ -67,7 +90,7 @@ def create_ui_location(highlight_section="", highlight_element="", highlight_tab
     is_grammar_highlighted = highlight_nav == "grammar"
     nav_items.append(
         dmc.Group([
-            DashIconify(icon="tabler:language", width=10, color="white" if is_grammar_highlighted else "#495057"),
+            DashIconify(icon="tabler:library", width=10, color="white" if is_grammar_highlighted else "#495057"),
             dmc.Text("Grammar Sets", size="xs", c="white" if is_grammar_highlighted else "dark", fw=600 if is_grammar_highlighted else 400)
         ], gap="xs", style={
             "backgroundColor": "#228be6" if is_grammar_highlighted else "#e9ecef",
@@ -146,7 +169,7 @@ def create_ui_location(highlight_section="", highlight_element="", highlight_tab
     options_elements = []
     element_configs = [
         ("render", "Render Plot", "tabler:chart-line", "blue"),
-        ("mode", "Analysis Mode", "tabler:cluster", "violet"),
+        ("mode", "Analysis Mode", "tabler:search", "violet"),
         ("participants", "Participants", "tabler:users-group", "blue"),
         ("grammar", "Grammar Items", "tabler:list-check", "teal"),
         ("plot", "Plot Options", "tabler:settings", "orange"),
@@ -216,7 +239,8 @@ The dashboard offers two different analysis modes for exploring the grammar data
 - **Item Ratings**: Choose this mode, if you want to explore the distribution of individual grammar features.
 
 Select your preferred mode in the options panel on the right.
-            """, className="markdown-content")
+            """, className="markdown-content"),
+            create_mock_analysis_selector(selected_value="umap")
         ], p="md", withBorder=True, radius="md")
     
     elif step == 2:  # Step 3
@@ -372,7 +396,13 @@ Hover over any plot and click the camera icon in the mode bar located at the top
 SVG files are ideal for publications as they maintain high quality at any scale. They can be manually post-processed in vector graphic software (e.g. Inkscape) if needed.
 
 **Export Data:**
-To export the data, use the "Export data" button in the Advanced Actions section to download filtered datasets. The Data are exported in CSV format and includec your current participant and feature selection.
+To export the data, use the "Export data" button in the Advanced Actions section to download filtered datasets. The data are exported in CSV format and include your current participant and feature selection.
+
+**Export Distance Matrix:**
+When viewing Participant Similarity plots, you can download a pairwise distance matrix using the "Export Distance Matrix" button. This matrix uses the same distance metric, standardization, and selections as your UMAP plot, making it useful for custom analyses.
+
+**Download Aggregated Item Data:**
+When viewing Item Ratings plots, you can download the aggregated statistics (means, confidence intervals, medians, etc.) that are displayed in the plot using the "Download Aggregated Item Data" button. This exports a ZIP file containing multiple CSV files with aggregated data, participant-group mappings, sociodemographic summaries, and a log file documenting the export settings.
             """, className="markdown-content")
         ], p="md", withBorder=True, radius="md")
 
@@ -397,7 +427,7 @@ A comprehensive documentation of the Dashboard's features and functionalities wi
                 dmc.Paper([
                     dmc.Stack([
                         dmc.ThemeIcon(
-                            DashIconify(icon="tabler:layout-sidebar-left", width=20),
+                            DashIconify(icon="tabler:compass", width=20),
                             size="lg",
                             radius="md",
                             variant="light",
@@ -407,7 +437,7 @@ A comprehensive documentation of the Dashboard's features and functionalities wi
                         #dmc.Text("Participants & Items", size="xs", c="dimmed", ta="center")
                     ], align="center", gap="xs", justify="center", style={"minHeight": "200px"})
                 ], withBorder=True, p="md", radius="md", style={"backgroundColor": "#f8f9fa"})
-            ], span=1),
+            ], span=2),
             dmc.GridCol([
                 dmc.Paper([
                     dmc.Stack([
@@ -422,7 +452,7 @@ A comprehensive documentation of the Dashboard's features and functionalities wi
                         dmc.Text("Text, plots & tables", size="sm", c="dimmed", ta="center")
                     ], align="center", gap="xs", justify="center", style={"minHeight": "200px"})
                 ], withBorder=True, p="lg", radius="md", style={"backgroundColor": "#f8f9fa"})
-            ], span=8),
+            ], span=7),
             dmc.GridCol([
                 dmc.Paper([
                     dmc.Stack([

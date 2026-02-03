@@ -315,7 +315,7 @@ app_shell = dmc.AppShell(
             dmc.Group(
                 [
                     dmc.Text([
-                        "Copyright © 2025 by ",
+                        "Copyright © 2026 by ",
                         dmc.Anchor(
                             "Fabian Vetter",
                             href="https://www.uni-bamberg.de/en/eng-ling/staff/fabian-vetter/",
@@ -351,7 +351,7 @@ app_shell = dmc.AppShell(
                             c="blue"
                         ),
                         f" | v{__version__} (DB: {DB_VERSION})"
-                    ], size="sm", c="dimmed"),
+                    ], size="sm", c="dimmed", style={"paddingLeft": "200px"}),
                 ],
                 justify="center",
                 align="center",

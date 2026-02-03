@@ -71,13 +71,21 @@ def get_case_study_1_step_content(step, create_ui_location):
              dcc.Markdown("""
 Navigate to the **Grammar Sets** page and select **"Participant Similarity"** from the analysis mode selector. This mode visualizes how similar participants are with respect to their intuition-based ratings of the grammar items.
             """, className="markdown-content"),
-            html.Img(
-                src="/assets/case_studies/screenshots/c1_analysis_type.png",
-                style={
-                    "maxWidth": "100%",
-                    "border": "1px solid #dee2e6",
-                    "borderRadius": "4px",
-                    "boxShadow": "0 2px 8px rgba(0,0,0,0.1)",
+            dmc.Paper([
+                dmc.Stack([
+                    dmc.Text("Analysis Mode:", size="sm", fw=500, mb="xs"),
+                    dmc.SegmentedControl(
+                        data=[
+                            {"value": "umap", "label": "Participant Similarity"},
+                            {"value": "item", "label": "Item Ratings"},
+                        ],
+                        value="umap",
+                        fullWidth=True,
+                        color="blue",
+                        size="sm"
+                    ),
+                ], gap="xs")
+            ], p="md", withBorder=True, radius="md", style={"backgroundColor": "#f8f9fa", "maxWidth": "400px",
                     "margin": "1rem 0",
                     "display": "block"
                 }
