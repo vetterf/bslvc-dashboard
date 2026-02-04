@@ -650,6 +650,24 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
         Rating_map = {'0':'No-one','1':'Few','2':'Some','3':'Many','4':'Most','5':'Everyone'}
     else:
         Rating_map = {'-5': 'Written only', '-4':'-4', '-3':'-3', '-2':'-2', '-1':'-1', '0':'Neutral', '1':'1', '2':'2', '3':'3', '4':'4', '5':'Spoken only'}
+    
+    # Helper function to create hover template based on pairs mode
+    def create_hover_template(pairs):
+        hover_items = [
+            'Item: %{customdata[0]}',
+            'Group: %{customdata[1]}',
+            'Avg rating: %{customdata[2]:.2f}',
+            'Number of participants: %{customdata[3]}',
+            'Sentence: %{customdata[4]}',
+            'Item name: %{customdata[5]}',
+            'Item group: %{customdata[6]}',
+            'Ewave feature: %{customdata[7]}'
+        ]
+        # Only add "Twin item" for non-pairs mode
+        if not pairs:
+            hover_items.append('Twin item: %{customdata[8]}')
+        return '<br>'.join(hover_items)
+    
     df = data.copy()
     # Ensure required columns exist
     required_cols = {'item', 'mean', 'group', 'mode'}
@@ -678,6 +696,9 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
         df = df.merge(meta, left_on="item", right_on="question_code", how="left")
     else:
         df = df.merge(meta, left_on="item", right_on="item_pair", how="left")
+        # In pairs mode, rename question_code_written to also_in_item for consistency
+        if 'question_code_written' in df.columns:
+            df['also_in_item'] = df['question_code_written']
 
     # Rename columns if needed
     if 'item_y' in df.columns and 'item_x' in df.columns:
@@ -785,17 +806,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                                     arrayminus=lower_ci_vals
                                 ),
                                 customdata=custom_data_vals if custom_data_vals else None,
-                                hovertemplate='<br>'.join([
-                                    'Item: %{customdata[0]}',
-                                    'Group: %{customdata[1]}',
-                                    'Avg rating: %{customdata[2]:.2f}',
-                                    'Number of participants: %{customdata[3]}',
-                                    'Sentence: %{customdata[4]}',
-                                    'Item name: %{customdata[5]}',
-                                    'Item group: %{customdata[6]}',
-                                    'Ewave feature: %{customdata[7]}',
-                                    'Twin item: %{customdata[8]}'
-                                ]) if custom_data_vals else None,
+                                hovertemplate=create_hover_template(pairs) if custom_data_vals else None,
                                 hoverinfo='text'
                             ), secondary_y=False
                         )
@@ -833,17 +844,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                                     arrayminus=tempDF['lower_ci']
                                 ),
                                 customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
-                                hovertemplate='<br>'.join([
-                                    'Item: %{customdata[0]}',
-                                    'Group: %{customdata[1]}',
-                                    'Avg rating: %{customdata[2]:.2f}',
-                                    'Number of participants: %{customdata[3]}',
-                                    'Sentence: %{customdata[4]}',
-                                    'Item name: %{customdata[5]}',
-                                    'Item group: %{customdata[6]}',
-                                    'Ewave feature: %{customdata[7]}',
-                                    'Twin item: %{customdata[8]}'
-                                ]) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
+                                hovertemplate=create_hover_template(pairs) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                                 hoverinfo='text'
                             ), secondary_y=False
                         )
@@ -865,17 +866,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                                         arrayminus=tempDF['lower_ci']
                                     ),
                                     customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
-                                    hovertemplate='<br>'.join([
-                                        'Item: %{customdata[0]}',
-                                        'Group: %{customdata[1]}',
-                                        'Avg rating: %{customdata[2]}',
-                            'Number of participants: %{customdata[3]}',
-                                        'Sentence: %{customdata[4]}',
-                                        'Item name: %{customdata[5]}',
-                                        'Item group: %{customdata[6]}',
-                                        'Ewave feature: %{customdata[7]}',
-                                        'Twin item: %{customdata[8]}'
-                                    ]) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
+                                    hovertemplate=create_hover_template(pairs) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                                     hoverinfo='text'
                                 ), secondary_y=False
                             )
@@ -894,17 +885,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                                         arrayminus=tempDF['lower_ci']
                                     ),
                                     customdata=tempDF[['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']] if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
-                                    hovertemplate='<br>'.join([
-                                        'Item: %{customdata[0]}',
-                                        'Group: %{customdata[1]}',
-                                        'Avg rating: %{customdata[2]}',
-                            'Number of participants: %{customdata[3]}',
-                                        'Sentence: %{customdata[4]}',
-                                        'Item name: %{customdata[5]}',
-                                        'Item group: %{customdata[6]}',
-                                        'Ewave feature: %{customdata[7]}',
-                                        'Twin item: %{customdata[8]}'
-                                    ]) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
+                                    hovertemplate=create_hover_template(pairs) if all(col in tempDF.columns for col in ['item','group','mean','count','sentence','variant_detail','group_finegrained','feature_ewave','also_in_item']) else None,
                                     hoverinfo='text'
                                 ), secondary_y=False
                             )
@@ -1343,9 +1324,8 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
 
     # Customize layout
     fig.update_layout(
-        title='Mean (95% CI)',
-        xaxis_title='Grammatical items',
-        yaxis_title='Mean ratings',
+        xaxis_title='Grammatical item',
+        yaxis_title='Rating (average + 95% CI)',
         template='simple_white')
     
     if not pairs:
@@ -1429,6 +1409,7 @@ def getMetaTable(data, pairs=False, preset_data=None):
             'combined_item_code': 'Item Code',
             'group_finegrained': 'Group',
             'feature_ewave': 'eWAVE',
+            'feature_ewave_id': 'eWAVE ID',
             'item': 'Item',
             'group_ewave': 'eWAVE Area',
             'feature': 'Feature',
@@ -1436,7 +1417,7 @@ def getMetaTable(data, pairs=False, preset_data=None):
         }
         
         # Select and reorder columns - Item Code, Group, eWAVE, Item first
-        selected_columns = ['combined_item_code', 'group_finegrained', 'feature_ewave', 'item', 'group_ewave', 'feature', 'section']
+        selected_columns = ['combined_item_code', 'group_finegrained', 'feature_ewave', 'feature_ewave_id', 'item', 'group_ewave', 'feature', 'section']
         data = data[selected_columns].copy()
         
         # Rename columns
@@ -1448,6 +1429,7 @@ def getMetaTable(data, pairs=False, preset_data=None):
             'question_code': 'Item Code',
             'group_finegrained': 'Group',
             'feature_ewave': 'eWAVE',
+            'feature_ewave_id': 'eWAVE ID',
             'item': 'Item',
             'group_ewave': 'eWAVE Area',
             'feature': 'Feature',
@@ -1455,7 +1437,7 @@ def getMetaTable(data, pairs=False, preset_data=None):
         }
         
         # Select and reorder columns - Item Code, Group, eWAVE, Item first
-        selected_columns = ['question_code', 'group_finegrained', 'feature_ewave', 'item', 'group_ewave', 'feature', 'section']
+        selected_columns = ['question_code', 'group_finegrained', 'feature_ewave', 'feature_ewave_id', 'item', 'group_ewave', 'feature', 'section']
         data = data[selected_columns].copy()
         
         # Rename columns
@@ -1531,13 +1513,14 @@ def getMetaTable(data, pairs=False, preset_data=None):
     ], gap="xs", mb=10, style={"backgroundColor": "#f8f9fa", "padding": "8px", "borderRadius": "4px", "border": "1px solid #e9ecef"})
     
     # Define which columns should have category filters (set filter) vs text filters
-    category_columns = ['Group', 'eWAVE', 'eWAVE Area', 'Feature']
+    category_columns = ['Group', 'eWAVE', 'eWAVE Area', 'eWAVE ID', 'Feature']
     
     # Define column widths and flex for better initial sizing
     column_config = {
         'Group': {'minWidth': 180, 'flex': 1},
         'eWAVE': {'minWidth': 120, 'flex': 1},
         'eWAVE Area': {'minWidth': 150, 'flex': 1},
+        'eWAVE ID': {'minWidth': 100, 'flex': 0.5},
         'Item': {'minWidth': 400, 'flex': 3},  # Longest content
         'Item Code': {'minWidth': 100, 'flex': 0.5},
         'Feature': {'minWidth': 200, 'flex': 2},
@@ -1982,8 +1965,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                 ticktext=x_labels,
                 # No angle rotation needed for y-axis labels
             ),
-            title='Mean (95% CI)',
-            xaxis_title='Mean ratings',  # Swapped: x-axis shows ratings
+            xaxis_title='Rating (average + 95% CI)',  # Swapped: x-axis shows ratings
             yaxis_title='Items by Group',  # Swapped: y-axis shows items
             template='simple_white',
             height=max(600, len(unique_items) * len(unique_groups) * 30)
@@ -2009,8 +1991,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                 showgrid=False,
                 zeroline=False
             ),
-            title='Mean (95% CI)',
-            xaxis_title='Mean ratings',
+            xaxis_title='Rating (average + 95% CI)',
             yaxis_title='Items by Group',
             template='simple_white',
             height=max(600, len(unique_items) * len(unique_groups) * 30)
@@ -2394,9 +2375,9 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
 
     # Customize layout
     fig.update_layout(
-        title='Mean (95% CI)',
-        xaxis_title='Grammatical items',
-        yaxis_title='Mean ratings',
+
+        xaxis_title='Grammatical item',
+        yaxis_title='Rating (average + 95% CI)',
         template='simple_white')
     
     # Add top x-axis mirror for better readability
@@ -3960,9 +3941,8 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
         
         # Update layout for rotated plot
         fig.update_layout(
-            title='Mean with 95% CI',
-            xaxis_title='Mean ratings',
-            yaxis_title='Grammatical items',
+            xaxis_title='Rating (average + 95% CI)',
+            yaxis_title='Grammatical item',
             template='simple_white',
             height=max(400, len(meandf) * 15),  # Adjust height based on number of items
             xaxis2=dict(
@@ -4066,9 +4046,8 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
         
         # Update layout for rotated pairs plot
         fig.update_layout(
-            title='Mean difference (95% CI)',
-            xaxis_title='Mean difference (spoken - written)',
-            yaxis_title='Grammatical items',
+            xaxis_title='Average difference in rating (spoken - written) + 95% CI',
+            yaxis_title='Grammatical item',
             template='simple_white',
             height=max(400, len(meandf) * 15),  # Adjust height based on number of items
             xaxis2=dict(
@@ -4238,9 +4217,8 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
                 )
         
         fig.update_layout(
-            title='Mean (95% CI) by mode (grouped twin items)',
-            xaxis_title='Mean ratings',
-            yaxis_title='Grammatical items',
+            xaxis_title='Rating (average + 95% CI)',
+            yaxis_title='Grammatical item',
             template='simple_white',
             height=max(600, len(y_labels) * 25)
         )
@@ -4260,7 +4238,7 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
             tickmode='array',
             tickvals=list(range(len(y_labels))),
             ticktext=y_labels,
-            title_text='Grammatical items'
+            title_text='Grammatical item'
         )
     
     return fig

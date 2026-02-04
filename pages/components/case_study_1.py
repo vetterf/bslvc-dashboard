@@ -112,9 +112,9 @@ In the **Participants** section of the settings panel, click the **"Select All"*
 In the **Grammar Items** section:
 
 1. Click the checkbox next to "Spoken" to include all spoken grammar features.
-2. Then click **"Problematic"** (marked with a filter icon) to exclude features that may have distorting effects.
+2. Then click **"Flagged"** (marked with a filter icon) to exclude features that may have distorting effects.
 
-For more details on problematic features, see either the basic workflow or the documentation.
+For more details on flagged features, see either the basic workflow or the documentation.
             """, className="markdown-content"),
             dmc.Image(h="auto", w=300, fit="contain", src="/assets/case_studies/screenshots/c1_select_grammar_items.png"),
         ], p="md", withBorder=True, radius="md")

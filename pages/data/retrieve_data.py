@@ -759,12 +759,12 @@ def getGrammarMeta(type="all_items"):
         # Get all columns except the excluded ones
         SQLstatement = """
             SELECT question_code, section, item, flagged, control_item, feature, 
-                   group_ewave, group_finegrained, variant_detail, feature_ewave, also_in_item
+                   group_ewave, group_finegrained, variant_detail, feature_ewave, feature_ewave_id, also_in_item
             FROM bslvc_meta
         """
     elif type == "item_pairs":
         # Use SQLite string concatenation syntax (||) instead of CONCAT
-        SQLstatement = "SELECT question_code, (question_code || '-' || also_in_item) as item_pair, also_in_item as question_code_written,  section, item, feature, group_ewave,group_finegrained, variant_detail, feature_ewave FROM bslvc_meta where section = 'Spoken'"
+        SQLstatement = "SELECT question_code, (question_code || '-' || also_in_item) as item_pair, also_in_item as question_code_written,  section, item, feature, group_ewave,group_finegrained, variant_detail, feature_ewave, feature_ewave_id FROM bslvc_meta where section = 'Spoken'"
     if Conf.source == 'sqlite':
         db_connection = sqlite3.connect(Conf.sqliteFile)
     data = pd.read_sql(SQLstatement, con=db_connection)

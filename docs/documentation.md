@@ -145,7 +145,7 @@ All grammar items can be selected in the grammar items tree. They are first grou
 
 - **Select All**: Select all grammar items.
 - **Deselect All**: Deselect all grammar items.
-- **Problematic**: Deselect problematic items. See [problematic items](#problematic-items) for more information. Currently the following items are flagged as problematic: 'M19', 'J23', 'C14' and 'A4' for use of currency; 'E22', 'D12' and 'E6' for different renderings of the item in some varieties.  
+- **Flagged**: Deselect flagged items. See [flagged items](#flagged-items) for more information. Currently the following items are flagged: 'M19', 'J23', 'C14' and 'A4' for use of currency; 'E22', 'D12' and 'E6' for different renderings of the item in some varieties.  
 - **Select a Preset**: Multi-select dropdown for item presets (mode, feature groups, eWAVE feature groups).
 - **Advanced Options**:
 
@@ -248,9 +248,9 @@ Custom group comparison allows you to compare groups of participants beyond the 
 - The "Deselect Lasso Selection" and "Select Only Lasso Selection" buttons can be used to refine your participant selection by excluding outliers visible in the UMAP plot
 
 
-#### Problematic Items
+#### Flagged Items
 
-Some grammar items have been flagged as problematic due to various issues that may affect analysis results:
+Some grammar items have been flagged due to various issues that may affect analysis results:
 
 **Currency/Unit Items:**
 - 'M19', 'J23', 'C14', 'A4': These items involve currency or unit measurements that may vary by region. An overview which item was used in which version of the questionnaire can be found in the BSLVC resources repo (https://github.com/vetterf/bslvc-resources; coming soon).
@@ -264,7 +264,7 @@ D12: *I'll tell Jane when I meets her*. Our Scottish and Swedish speaker aspirat
 
 E6: *I'm learning French, because is a beautiful language*. Again the rendering by our Scottish speaker blurs the line between non-standard *is* and *it's*.
 
-The "Problematic" button in the Grammar Item Selection section automatically deselects these items. Users should be aware of these issues when interpreting results that include these items.
+The "Flagged" button in the Grammar Item Selection section automatically deselects these items. Users should be aware of these issues when interpreting results that include these items.
 
 ### Lexicon Analysis Module
 

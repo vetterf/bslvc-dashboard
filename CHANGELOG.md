@@ -2,6 +2,17 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
+## [0.1.5] - 2026-02-04
+
+### Added
+- **Export Aggregated Data Button**: New button in Advanced Actions (visible only in Item Ratings mode)
+  - Exports aggregated data (average rating + CI, mode)
+
+### Changed
+- **UI**: 
+  - Some smaller fixes and tweaks in the user interface
+  - Renamed "problematic" to "flagged". See documentation on flagged items.
+
 ## [0.1.4] - 2026-01-13
 
 ### Added

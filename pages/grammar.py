@@ -1000,7 +1000,7 @@ itemSelectionAccordion = dmc.AccordionItem(
                             dmc.Button("Deselect All", id='deselect-all-grammar-items', size="xs", variant="outline"),
                             dmc.Button([
                                 DashIconify(icon="tabler:filter-x", width=14),
-                                " Problematic"
+                                " Flagged"
                             ],
                                 id="grammar_deselect_problematic",
                                 variant="outline",
@@ -2233,7 +2233,7 @@ def export_data(n_clicks, participants, items, pairs, use_imputed, include_socio
         
         # Create item metadata dataframe
         item_meta_cols = ['item_code', 'section', 'feature', 'group_finegrained', 
-                         'group_ewave', 'feature_ewave', 'item', 'variant_detail']
+                         'group_ewave', 'feature_ewave', 'feature_ewave_id', 'item', 'variant_detail']
         
         # Use extracted function for transposition
         result = gf.transpose_grammar_data_with_metadata(
@@ -2611,12 +2611,13 @@ def update_grammar_items_preset_filter(selected_presets, pairs):
             'combined_item_code': 'Item Code',
             'group_finegrained': 'Group',
             'feature_ewave': 'eWAVE',
+            'feature_ewave_id': 'eWAVE ID',
             'item': 'Item',
             'group_ewave': 'eWAVE Area',
             'feature': 'Feature',
             'section': 'Section'
         }
-        selected_columns = ['combined_item_code', 'group_finegrained', 'feature_ewave', 'item', 'group_ewave', 'feature', 'section']
+        selected_columns = ['combined_item_code', 'group_finegrained', 'feature_ewave', 'feature_ewave_id', 'item', 'group_ewave', 'feature', 'section']
         meta = meta[selected_columns].copy()
         meta = meta.rename(columns=column_mapping)
     else:
@@ -2626,12 +2627,13 @@ def update_grammar_items_preset_filter(selected_presets, pairs):
             'question_code': 'Item Code',
             'group_finegrained': 'Group',
             'feature_ewave': 'eWAVE',
+            'feature_ewave_id': 'eWAVE ID',
             'item': 'Item',
             'group_ewave': 'eWAVE Area',
             'feature': 'Feature',
-            'section': 'Section'
+
         }
-        selected_columns = ['question_code', 'group_finegrained', 'feature_ewave', 'item', 'group_ewave', 'feature', 'section']
+        selected_columns = ['question_code', 'group_finegrained', 'feature_ewave', 'feature_ewave_id', 'item', 'group_ewave', 'feature', 'section']
         available_columns = [col for col in selected_columns if col in meta.columns]
         meta = meta[available_columns].copy()
         meta = meta.rename(columns=column_mapping)
@@ -2692,12 +2694,13 @@ def filter_grammar_items_table(n_clicks, items, pairs):
             'combined_item_code': 'Item Code',
             'group_finegrained': 'Group',
             'feature_ewave': 'eWAVE',
+            'feature_ewave_id': 'eWAVE ID',
             'item': 'Item',
             'group_ewave': 'eWAVE Area',
             'feature': 'Feature',
             'section': 'Section'
         }
-        selected_columns = ['combined_item_code', 'group_finegrained', 'feature_ewave', 'item', 'group_ewave', 'feature', 'section']
+        selected_columns = ['combined_item_code', 'group_finegrained', 'feature_ewave', 'feature_ewave_id', 'item', 'group_ewave', 'feature', 'section']
         meta = meta[selected_columns].copy()
         meta = meta.rename(columns=column_mapping)
         
@@ -2711,12 +2714,13 @@ def filter_grammar_items_table(n_clicks, items, pairs):
             'question_code': 'Item Code',
             'group_finegrained': 'Group',
             'feature_ewave': 'eWAVE',
+            'feature_ewave_id': 'eWAVE ID',
             'item': 'Item',
             'group_ewave': 'eWAVE Area',
             'feature': 'Feature',
             'section': 'Section'
         }
-        selected_columns = ['question_code', 'group_finegrained', 'feature_ewave', 'item', 'group_ewave', 'feature', 'section']
+        selected_columns = ['question_code', 'group_finegrained', 'feature_ewave', 'feature_ewave_id', 'item', 'group_ewave', 'feature', 'section']
         available_columns = [col for col in selected_columns if col in meta.columns]
         meta = meta[available_columns].copy()
         meta = meta.rename(columns=column_mapping)
@@ -2749,12 +2753,13 @@ def clear_all_grammar_items_filters(n_clicks, pairs):
             'combined_item_code': 'Item Code',
             'group_finegrained': 'Group',
             'feature_ewave': 'eWAVE',
+            'feature_ewave_id': 'eWAVE ID',
             'item': 'Item',
             'group_ewave': 'eWAVE Area',
             'feature': 'Feature',
             'section': 'Section'
         }
-        selected_columns = ['combined_item_code', 'group_finegrained', 'feature_ewave', 'item', 'group_ewave', 'feature', 'section']
+        selected_columns = ['combined_item_code', 'group_finegrained', 'feature_ewave', 'feature_ewave_id', 'item', 'group_ewave', 'feature', 'section']
         meta = meta[selected_columns].copy()
         meta = meta.rename(columns=column_mapping)
     else:
@@ -2764,12 +2769,13 @@ def clear_all_grammar_items_filters(n_clicks, pairs):
             'question_code': 'Item Code',
             'group_finegrained': 'Group',
             'feature_ewave': 'eWAVE',
+            'feature_ewave_id': 'eWAVE ID',
             'item': 'Item',
             'group_ewave': 'eWAVE Area',
             'feature': 'Feature',
             'section': 'Section'
         }
-        selected_columns = ['question_code', 'group_finegrained', 'feature_ewave', 'item', 'group_ewave', 'feature', 'section']
+        selected_columns = ['question_code', 'group_finegrained', 'feature_ewave', 'feature_ewave_id', 'item', 'group_ewave', 'feature', 'section']
         available_columns = [col for col in selected_columns if col in meta.columns]
         meta = meta[available_columns].copy()
         meta = meta.rename(columns=column_mapping)
@@ -3895,24 +3901,33 @@ def updateParticipants(applyButton, genderFilter, ageFilter, ageMissing, ratioFi
 @callback(
     Output('grammarItemsTree', 'checked', allow_duplicate=True),
     [Input('grammar_toggle_written_only', 'n_clicks'),Input('grammar_toggle_currency','n_clicks'),Input('grammar_deselect_problematic','n_clicks')], #,Input('grammar_top20','n_clicks')
-    State("grammarItemsTree", "checked"),
+    [State("grammarItemsTree", "checked"), State('grammar-type-switch', 'checked')],
     prevent_initial_call=True
 )
-def updateGrammarItemsTree(wo_button,curr_button,prob_button,itemTree):
+def updateGrammarItemsTree(wo_button,curr_button,prob_button,itemTree,pairs):
     button_clicked = ctx.triggered_id # which buttonw as clicked
     # reset all groups without rerendering the plot
 
     if (button_clicked == 'grammar_toggle_written_only'):
-        items = grammarMeta.copy(deep=True)
-        wo_items = items.loc[items['also_in_question'] == '','question_code'].to_list()
-        if (len(set(itemTree).intersection(wo_items)) < len(wo_items)):
-            items = wo_items + itemTree
-            items = list(set(items))
+        if pairs:
+            items = grammarMetaPairs.copy(deep=True)
+            # In pairs mode, there are no written-only items
+            return itemTree
         else:
-            items = list(set(itemTree)-set(wo_items))
-        return items
+            items = grammarMeta.copy(deep=True)
+            wo_items = items.loc[items['also_in_question'] == '','question_code'].to_list()
+            if (len(set(itemTree).intersection(wo_items)) < len(wo_items)):
+                items = wo_items + itemTree
+                items = list(set(items))
+            else:
+                items = list(set(itemTree)-set(wo_items))
+            return items
     elif (button_clicked == 'grammar_toggle_currency'):
-        unit_items = ['C21','H4','A4','C14','J23','M19']
+        if pairs:
+            # In pairs mode, use the pair codes for currency items
+            unit_items = ['C21-H4', 'A4-M19', 'C14-J23']
+        else:
+            unit_items = ['C21','H4','A4','C14','J23','M19']
         # if one of the above is already in list, select all
         # if all are selected, deselect all
         if (len(set(itemTree).intersection(unit_items)) < len(unit_items)):
@@ -3922,9 +3937,13 @@ def updateGrammarItemsTree(wo_button,curr_button,prob_button,itemTree):
             items = list(set(itemTree)-set(unit_items))
         return items
     elif (button_clicked == 'grammar_deselect_problematic'):
-        problematic_items = ['M19', 'J23', 'C14', 'A4', 'E22', 'D12', 'E6','C21','H4']
-        # Remove problematic items from current selection
-        items = list(set(itemTree) - set(problematic_items))
+        if pairs:
+            # In pairs mode, use the pair codes for flagged items
+            flagged_items = ['A4-M19', 'C14-J23', 'C21-H4', 'D12-J25', 'E6-G2', 'E22-N22']
+        else:
+            flagged_items = ['M19', 'J23', 'C14', 'A4', 'E22', 'D12', 'E6','C21','H4']
+        # Remove flagged items from current selection
+        items = list(set(itemTree) - set(flagged_items))
         return items
     elif (button_clicked == 'grammar_top20'):
         items = ['A20', 'A23', 'A4', 'A8', 'B14', 'C13', 'D12', 'D22', 'D4', 'E19', 'E22', 'F2', 'F22', 'K5', 'L9']

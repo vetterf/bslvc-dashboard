@@ -304,9 +304,9 @@ Finally, click the green button labelled "Select rows" above the table. This sel
             """),
             create_ui_location(highlight_section="", highlight_element="grammar", highlight_tab="", highlight_nav="", highlight_right=True),
             dcc.Markdown("""
-**Deselecting problematic features**
+**Deselecting flagged features**
 
-A handful of features in the dataset could potentially skew the analysis. These features can be deselected with the button "Problematic" above the Grammar Item tree."""),
+A handful of features in the dataset could potentially skew the analysis. These features can be deselected with the button "Flagged" above the Grammar Item tree."""),
             dmc.Image(h="auto", w=300, fit="contain", src="/assets/img/gs_select_grammar_features_problematic.png"),
             dcc.Markdown("""
 
