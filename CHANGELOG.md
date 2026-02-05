@@ -12,6 +12,11 @@ All notable changes to the BSLVC Dashboard will be documented in this file.
 - **UI**: 
   - Some smaller fixes and tweaks in the user interface
   - Renamed "problematic" to "flagged". See documentation on flagged items.
+  - Modified data retrieval functions to return only normalized values for Gender, Qualifications and Languages
+  - Hover info in plots now contain also the ungrouped main varieties (i.e. those that are grouped into "Other")
+
+### Notes
+- Requires DB Version 20260204
 
 ## [0.1.4] - 2026-01-13
 

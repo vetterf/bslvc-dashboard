@@ -271,6 +271,9 @@ def getInformantData(columns = None, informants = None, varieties = None):
     data.loc[:,float_columns] = data.loc[:,float_columns].apply(pd.to_numeric, errors='coerce')
     variety_counts = data['MainVariety'].value_counts()
 
+    # Store original MainVariety before grouping
+    data['MainVariety_Original'] = data['MainVariety'].copy()
+    
     data['MainVariety'] = data['MainVariety'].apply(lambda x: x if variety_counts.get(x, 0) >= 10 else 'Other')
     # if main variety unclear, set to "Other"
     data['MainVariety'] = data['MainVariety'].apply(lambda x: x if x != 'UNCLEAR' else 'Other')
@@ -280,11 +283,11 @@ def getInformantData(columns = None, informants = None, varieties = None):
     if varieties is not None:
         data = data[data['MainVariety'].isin(varieties)]
             # drop Gender column
-    data = data.drop(columns=["Gender","PrimarySchool","SecondarySchool","Qualifications"], errors="ignore")
+    data = data.drop(columns=["Gender","PrimarySchool","SecondarySchool","Qualifications","LanguageHome","LanguageFather","LanguageMother","QualiMother","QualiFather","QualiPartner"], errors="ignore")
 
 
-    data = data.rename(columns={"gender_normalized": "Gender","primary_school_normalized": "PrimarySchool", "secondary_school_normalized": "SecondarySchool", "highest_qualification": "Qualifications"})
-
+    data = data.rename(columns={"gender_normalized": "Gender","primary_school_normalized": "PrimarySchool", "secondary_school_normalized": "SecondarySchool", "highest_qualification": "Qualifications", "LanguageHome_normalized": "LanguageHome", "LanguageFather_normalized": "LanguageFather", "LanguageMother_normalized": "LanguageMother", "QualiMother_normalized": "QualiMother", "QualiFather_normalized": "QualiFather", "QualiPartner_normalized": "QualiPartner"})
+    
     if columns is not None:
         data = data[columns]
 
@@ -366,6 +369,9 @@ def getInformantDataGrammar(columns = None, participants = None, varieties = Non
         # For imputed data, use the current data's variety counts
         variety_counts = data['MainVariety'].value_counts()
     
+    # Store original MainVariety before grouping
+    data['MainVariety_Original'] = data['MainVariety'].copy()
+    
     data['MainVariety'] = data['MainVariety'].apply(lambda x: x if variety_counts.get(x, 0) >= 10 else 'Other')
     # if main variety unclear, set to "Other"
     data['MainVariety'] = data['MainVariety'].apply(lambda x: x if x != 'UNCLEAR' else 'Other')
@@ -400,10 +406,10 @@ def getInformantDataGrammar(columns = None, participants = None, varieties = Non
     if varieties is not None:
         data = data[data['MainVariety'].isin(varieties)]
     
-    data = data.drop(columns=["Gender","PrimarySchool","SecondarySchool","Qualifications"], errors="ignore")
+    data = data.drop(columns=["Gender","PrimarySchool","SecondarySchool","Qualifications","LanguageHome","LanguageFather","LanguageMother","QualiMother","QualiFather","QualiPartner"], errors="ignore")
 
 
-    data = data.rename(columns={"gender_normalized": "Gender","primary_school_normalized": "PrimarySchool", "secondary_school_normalized": "SecondarySchool", "highest_qualification": "Qualifications"})
+    data = data.rename(columns={"gender_normalized": "Gender","primary_school_normalized": "PrimarySchool", "secondary_school_normalized": "SecondarySchool", "highest_qualification": "Qualifications", "LanguageHome_normalized": "LanguageHome", "LanguageFather_normalized": "LanguageFather", "LanguageMother_normalized": "LanguageMother", "QualiMother_normalized": "QualiMother", "QualiFather_normalized": "QualiFather", "QualiPartner_normalized": "QualiPartner"})
     
     if columns is not None:
         data = data[columns] 
@@ -656,6 +662,9 @@ def getGrammarData(imputed=False,pairs=False, regional_mapping=False, **kwargs):
         # For imputed data, use the current data's variety counts
         variety_counts = data['MainVariety'].value_counts()
     
+    # Store original MainVariety before grouping
+    data['MainVariety_Original'] = data['MainVariety'].copy()
+    
     data.loc[:,'MainVariety'] = data.loc[:,'MainVariety'].apply(lambda x: x if variety_counts.get(x, 0) >= 10 else 'Other')
     data.loc[:,'MainVariety'] = data.loc[:,'MainVariety'].apply(lambda x: x if x != 'UNCLEAR' else 'Other')
 
@@ -720,7 +729,12 @@ def getGrammarData(imputed=False,pairs=False, regional_mapping=False, **kwargs):
         # Concatenate the pair columns to the original data
         data = pd.concat([data, pair_df], axis=1)
 
-            
+    data = data.drop(columns=["Gender","PrimarySchool","SecondarySchool","Qualifications","LanguageHome","LanguageFather","LanguageMother","QualiMother","QualiFather","QualiPartner"], errors="ignore")
+
+
+    data = data.rename(columns={"gender_normalized": "Gender","primary_school_normalized": "PrimarySchool", "secondary_school_normalized": "SecondarySchool", "highest_qualification": "Qualifications", "LanguageHome_normalized": "LanguageHome", "LanguageFather_normalized": "LanguageFather", "LanguageMother_normalized": "LanguageMother", "QualiMother_normalized": "QualiMother", "QualiFather_normalized": "QualiFather", "QualiPartner_normalized": "QualiPartner"})
+    
+
     return data
 
 def getAllData(imputed=False):

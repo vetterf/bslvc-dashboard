@@ -373,6 +373,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
 
     embedding['CountryCollection'] = data['CountryCollection']
     embedding['MainVariety'] = data['MainVariety']
+    embedding['MainVariety_Original'] = data['MainVariety_Original']
     embedding['InformantID'] = data['InformantID']
     embedding['Year'] = data['Year']
     embedding['Gender'] = data['Gender']
@@ -437,17 +438,18 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                     ids=df_color['InformantID'],
                     marker=dict(color=df_color['color'], size=5, opacity=0.8, symbol=df_color['symbol']), 
                     showlegend=True, 
-                    customdata=df_color[['InformantID','MainVariety','Age','Gender','RatioMainVariety','YearsLivedInMainVariety','CountryCollection','Year','leiden_cluster']],
+                    customdata=df_color[['InformantID','MainVariety','MainVariety_Original','Age','Gender','RatioMainVariety','YearsLivedInMainVariety','CountryCollection','Year','leiden_cluster']],
                     hovertemplate='<br>'.join([
                         'InformantID: %{customdata[0]}',
                         'Main Variety: %{customdata[1]}',
-                        'Age: %{customdata[2]}',
-                        'Gender: %{customdata[3]}',
-                        'Ratio (Main Variety): %{customdata[4]}',
-                        'Years lived in (Main Variety): %{customdata[5]}',
-                        'CountryCollection: %{customdata[6]}',
-                        'Year: %{customdata[7]}',
-                        'Leiden Cluster: %{customdata[8]}',
+                        'Main Variety (other): %{customdata[2]}',
+                        'Age: %{customdata[3]}',
+                        'Gender: %{customdata[4]}',
+                        'Ratio (Main Variety): %{customdata[5]}',
+                        'Years lived in (Main Variety): %{customdata[6]}',
+                        'CountryCollection: %{customdata[7]}',
+                        'Year: %{customdata[8]}',
+                        'Leiden Cluster: %{customdata[9]}',
                     ]), hoverinfo='text'
                 ),
                 row=1, col=1
@@ -463,16 +465,17 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                     ids=df_color['InformantID'],
                     marker=dict(color=df_color['color'], size=5, opacity=0.8,symbol=0), 
                     showlegend=True, 
-                    customdata=df_color[['InformantID','MainVariety','Age','Gender','RatioMainVariety','YearsLivedInMainVariety','CountryCollection','Year']],
+                    customdata=df_color[['InformantID','MainVariety','MainVariety_Original','Age','Gender','RatioMainVariety','YearsLivedInMainVariety','CountryCollection','Year']],
                     hovertemplate='<br>'.join([
                         'InformantID: %{customdata[0]}',
                         'Main Variety: %{customdata[1]}',
-                        'Age: %{customdata[2]}',
-                        'Gender: %{customdata[3]}',
-                        'Ratio (Main Variety): %{customdata[4]}',
-                        'Years lived in (Main Variety): %{customdata[5]}',
-                        'CountryCollection: %{customdata[6]}',
-                        'Year: %{customdata[7]}',
+                        'Main Variety (other): %{customdata[2]}',
+                        'Age: %{customdata[3]}',
+                        'Gender: %{customdata[4]}',
+                        'Ratio (Main Variety): %{customdata[5]}',
+                        'Years lived in (Main Variety): %{customdata[6]}',
+                        'CountryCollection: %{customdata[7]}',
+                        'Year: %{customdata[8]}',
                     ]), hoverinfo='text'
                 )
             )
@@ -1354,7 +1357,7 @@ def getAuxiliaryTable(Informants,participants):
     if len(participants) == 0:
         return dash_table.DataTable()
 
-    columns = ['InformantID','MainVariety','AdditionalVarieties','Age','Gender','Nationality','EthnicSelfID','CountryID','LanguageHome','YearsLivedInMainVariety','RatioMainVariety','CountryCollection','Year','LanguageMother','LanguageFather','Qualifications','Occupation','OccupMother','OccupFather','OccupPartner','QualiMother','QualiFather','QualiPartner','YearsLivedOutside','YearsLivedInside','YearsLivedOtherEnglish']
+    columns = ['InformantID','MainVariety','MainVariety_Original','AdditionalVarieties','Age','Gender','Nationality','EthnicSelfID','CountryID','LanguageHome','YearsLivedInMainVariety','RatioMainVariety','CountryCollection','Year','LanguageMother','LanguageFather','Qualifications','Occupation','OccupMother','OccupFather','OccupPartner','QualiMother','QualiFather','QualiPartner','YearsLivedOutside','YearsLivedInside','YearsLivedOtherEnglish']
     data = data.loc[data['InformantID'].isin(participants),columns].reset_index()
 
 
@@ -1660,7 +1663,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
         df= df[df['group'] != "Other"]  # filter out "Other" group
         variety_color_map = None
     elif groupby == "gender":
-        df['group'] = df['Gender_normalized'] if 'Gender_normalized' in df.columns else df['Gender']
+        df['group'] = df['Gender']
         variety_color_map = None
     
     # to do: melt df, CI calculate, based on group and item
@@ -2651,8 +2654,8 @@ def getMainVarietiesPlot(informants):
             lambda x: x if variety_counts[x] >= 10 else 'Other'
         )
         
-        # Use Gender column for grouping (prefer normalized if available)
-        gender_col = 'Gender_normalized' if 'Gender_normalized' in data.columns else 'Gender'
+        # Use Gender column for grouping
+        gender_col = 'Gender'
         
         # Define consistent gender color mapping harmonizing with variety colors (blue-orange palette)
         gender_color_map = {
@@ -3088,7 +3091,7 @@ def create_diverging_stacked_bar_plot(df_orig, items, modes, groupby, variety_co
         raw_df = raw_df[raw_df['group'] != "Other"]
     elif groupby == "gender":
         # Use normalized gender column
-        raw_df['group'] = raw_df['Gender_normalized'] if 'Gender_normalized' in raw_df.columns else raw_df['Gender']
+        raw_df['group'] = raw_df['Gender']
     
     # Melt the data to get individual responses
     info_cols = ['InformantID', 'group']
@@ -4265,7 +4268,7 @@ def create_informant_mean_boxplot(df_orig, items, modes, groupby, variety_color_
         raw_df['group'] = raw_df['MainVariety'].map(variety_mapping).fillna("Other")
         raw_df = raw_df[raw_df['group'] != "Other"]
     elif groupby == "gender":
-        raw_df['group'] = raw_df['Gender_normalized'] if 'Gender_normalized' in raw_df.columns else raw_df['Gender']
+        raw_df['group'] = raw_df['Gender']
     
     # Melt the data to get individual responses
     info_cols = ['InformantID', 'group']
@@ -5108,9 +5111,12 @@ def create_participant_group_mapping(data):
     
     Returns:
     --------
-    str : CSV content with InformantID and MainVariety
+    str : CSV content with InformantID, MainVariety, and MainVariety_Original
     """
-    mapping_df = data[['InformantID', 'MainVariety']].drop_duplicates().sort_values('MainVariety')
+    columns = ['InformantID', 'MainVariety']
+    if 'MainVariety_Original' in data.columns:
+        columns.append('MainVariety_Original')
+    mapping_df = data[columns].drop_duplicates().sort_values('MainVariety')
     return mapping_df.to_csv(index=False)
 
 
@@ -5134,11 +5140,11 @@ def create_sociodemographic_summary(data):
     """
     # Define sociodemographic variables to summarize
     sociodem_vars = [
-        'Age', 'Gender',
+        'Age', 'Gender', 'MainVariety_Original',
         'AdditionalVarieties', 'YearsLivedInMainVariety', 'RatioMainVariety', 'CountryCollection',
         'Nationality', 'EthnicSelfID', 'CountryID',
-        'LanguageHome_normalized', 'LanguageFather_normalized', 'LanguageMother_normalized',
-        'Qualifications_normalized', 'QualiMother_normalized', 'QualiFather_normalized', 'QualiPartner_normalized',
+        'LanguageHome', 'LanguageFather', 'LanguageMothe',
+        'Qualifications', 'QualiMother', 'QualiFather', 'QualiPartner',
         'PrimarySchool', 'SecondarySchool'
     ]
     

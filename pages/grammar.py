@@ -357,7 +357,7 @@ CountryID = dmc.Stack([
 LanguagesHome = dmc.Stack([
 
     dmc.Text("Languages used at home"),
-    html.Div(id="LanguagesHomePlotContainer", children=[    dcc.Graph(id="LanguagesHomePlotG", figure=getCategoryHistogramPlot(Informants,"LanguageHome_normalized", True, ","))
+    html.Div(id="LanguagesHomePlotContainer", children=[    dcc.Graph(id="LanguagesHomePlotG", figure=getCategoryHistogramPlot(Informants,"LanguageHome", True, ","))
     ], style={'height': 'auto', 'max-height' : '300px', 'overflowY': 'scroll'}),
 ])
 
@@ -366,7 +366,7 @@ LanguageMother = dmc.Stack([
 
     dmc.Text("Mother's Native Language"),
     html.Div(id="LanguagesMotherPlotContainer", children=[
-    dcc.Graph(id="LanguagesMotherPlotG", figure=getCategoryHistogramPlot(Informants,"LanguageMother_normalized", True, ","))
+    dcc.Graph(id="LanguagesMotherPlotG", figure=getCategoryHistogramPlot(Informants,"LanguageMother", True, ","))
     ], style={'height': 'auto', 'max-height' : '300px', 'overflowY': 'scroll'}),
 ])
 
@@ -374,7 +374,7 @@ LanguageFather = dmc.Stack([
 
     dmc.Text("Father's Native Language"),
     html.Div(id="LanguagesFatherPlotContainer", children=[
-    dcc.Graph(id="LanguagesFatherPlotG", figure=getCategoryHistogramPlot(Informants,"LanguageFather_normalized", True, ","))
+    dcc.Graph(id="LanguagesFatherPlotG", figure=getCategoryHistogramPlot(Informants,"LanguageFather", True, ","))
     ], style={'height': 'auto', 'max-height' : '300px', 'overflowY': 'scroll'}),
 ])
 
@@ -507,19 +507,19 @@ InformantsGrid = html.Div(children = [
                                                 dmc.Grid([
                                                     dmc.GridCol(dmc.Checkbox(label=col.replace("_", " ").replace("ID", " ID").replace("Occup", "Occupation").replace("Quali", "Qualification"), 
                                                                             value=col, size="xs"), span=3)
-                                                    for col in ['Age', 'Gender', 'MainVariety', 'AdditionalVarieties',
+                                                    for col in ['Age', 'Gender', 'MainVariety', 'MainVariety_Original', 'AdditionalVarieties',
                                                                'YearsLivedInMainVariety', 'RatioMainVariety', 'CountryCollection', 'Year',
                                                                'Nationality', 'EthnicSelfID', 'CountryID', 'YearsLivedOutside', 
-                                                               'YearsLivedInside', 'YearsLivedOtherEnglish', 'LanguageHome_normalized',
-                                                               'LanguageFather_normalized', 'LanguageMother_normalized', 'Qualifications_normalized',
-                                                               'QualiMother_normalized', 'QualiFather_normalized', 'QualiPartner_normalized',
+                                                               'YearsLivedInside', 'YearsLivedOtherEnglish', 'LanguageHome',
+                                                               'LanguageFather', 'LanguageMother', 'Qualifications',
+                                                               'QualiMother', 'QualiFather', 'QualiPartner',
                                                                'PrimarySchool', 'SecondarySchool', 'Occupation', 'OccupMother', 'OccupFather',
                                                                'OccupPartner'] if col in Informants.columns
                                                 ])
                                             ],
-                                            value=['Age', 'Gender', 'MainVariety','AdditionalVarieties',
-                                                               'YearsLivedInMainVariety', 'RatioMainVariety', 'CountryCollection', 'Year','LanguageHome_normalized',
-                                                               'LanguageFather_normalized', 'LanguageMother_normalized'],
+                                            value=['Age', 'Gender', 'MainVariety','MainVariety_Original','AdditionalVarieties',
+                                                               'YearsLivedInMainVariety', 'RatioMainVariety', 'CountryCollection', 'Year','LanguageHome',
+                                                               'LanguageFather', 'LanguageMother'],
                                             persistence=persist_UI,
                                             persistence_type=persistence_type
                                         )
@@ -2206,12 +2206,12 @@ def export_data(n_clicks, participants, items, pairs, use_imputed, include_socio
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     # Identify participant metadata columns
-    metadata_cols = ['InformantID', 'Age', 'Gender', 'MainVariety', 'AdditionalVarieties',
+    metadata_cols = ['InformantID', 'Age', 'Gender', 'MainVariety', 'MainVariety_Original', 'AdditionalVarieties',
                     'YearsLivedInMainVariety', 'RatioMainVariety', 'CountryCollection', 'Year',
                     'Nationality', 'EthnicSelfID', 'CountryID', 'YearsLivedOutside', 
-                    'YearsLivedInside', 'YearsLivedOtherEnglish', 'LanguageHome_normalized',
-                    'LanguageFather_normalized', 'LanguageMother_normalized', 'Qualifications_normalized',
-                    'QualiMother_normalized', 'QualiFather_normalized', 'QualiPartner_normalized',
+                    'YearsLivedInside', 'YearsLivedOtherEnglish', 'LanguageHome',
+                    'LanguageFather', 'LanguageMother', 'Qualifications',
+                    'QualiMother', 'QualiFather', 'QualiPartner',
                     'PrimarySchool', 'SecondarySchool', 'Occupation', 'OccupMother', 'OccupFather',
                     'OccupPartner']
     participant_cols = [col for col in metadata_cols if col in data.columns]
@@ -2391,7 +2391,7 @@ def export_aggregated_item_data(n_clicks, participants, items, pairs, use_impute
         regional_mapping=regional_mapping
     )
     
-    # Apply balancing if needed (same logic as in getItemPlot)
+    # Apply balancing if needed (same logic as in getItemPlot) - legacy function for dropdown options in previous versions. Currently returns unaltered list.
     balanced_informants = gf.get_balanced_informants(participants, groupby)
     
     # Get balanced data for aggregation
@@ -2421,8 +2421,8 @@ def export_aggregated_item_data(n_clicks, participants, items, pairs, use_impute
     elif groupby == "gender":
         data['group'] = data['Gender_normalized'] if 'Gender_normalized' in data.columns else data['Gender']
     
-    # Get informant columns for melting
-    infoCols = retrieve_data.getInformantDataGrammar(imputed=True).columns.to_list()
+    # Get informant columns for melting, imputed plays no role here
+    infoCols = retrieve_data.getInformantDataGrammar(imputed=use_imputed).columns.to_list()
     infoCols.remove('InformantID')
     infoCols.append('group')
     
@@ -2437,6 +2437,7 @@ def export_aggregated_item_data(n_clicks, participants, items, pairs, use_impute
         pl.count('value').alias('count'),
         pl.mean('value').alias('mean'),
         pl.median('value').alias('median'),
+        pl.col('value').mode().first().alias('mode'),
         pl.std('value').alias('std'),
         (pl.col('value').is_null().sum()).alias('missing_count')
     )
@@ -4191,9 +4192,9 @@ def auto_update_sociodemographic_plots(active_tab, selected_participants, last_s
     NationalityPlot = getCategoryHistogramPlot(informants, "Nationality", True, "")
     EIDPlot = getCategoryHistogramPlot(informants, "EthnicSelfID", True, "")
     CIDPlot = getCategoryHistogramPlot(informants, "CountryID", True, ",")
-    LanguagesHomePlot = getCategoryHistogramPlot(informants, "LanguageHome_normalized", True, ",")
-    LanguagesMotherPlot = getCategoryHistogramPlot(informants, "LanguageMother_normalized", True, ",")
-    LanguagesFatherPlot = getCategoryHistogramPlot(informants, "LanguageFather_normalized", True, ",")
+    LanguagesHomePlot = getCategoryHistogramPlot(informants, "LanguageHome", True, ",")
+    LanguagesMotherPlot = getCategoryHistogramPlot(informants, "LanguageMother", True, ",")
+    LanguagesFatherPlot = getCategoryHistogramPlot(informants, "LanguageFather", True, ",")
     PrimarySchoolPlot = getCategoryHistogramPlot(informants, "PrimarySchool", True)
     SecondarySchoolPlot = getCategoryHistogramPlot(informants, "SecondarySchool", True)
     QualiPlot = getCategoryHistogramPlot(informants, "Qualifications", True)
@@ -4273,16 +4274,16 @@ def toggle_all_columns(select_clicks, deselect_clicks, reset_clicks, current_val
     all_columns = ['InformantID', 'Age', 'Gender', 'MainVariety', 'AdditionalVarieties',
                   'YearsLivedInMainVariety', 'RatioMainVariety', 'CountryCollection', 'Year',
                   'Nationality', 'EthnicSelfID', 'CountryID', 'YearsLivedOutside', 
-                  'YearsLivedInside', 'YearsLivedOtherEnglish', 'LanguageHome_normalized',
-                  'LanguageFather_normalized', 'LanguageMother_normalized', 'Qualifications_normalized',
-                  'QualiMother_normalized', 'QualiFather_normalized', 'QualiPartner_normalized',
+                  'YearsLivedInside', 'YearsLivedOtherEnglish', 'LanguageHome',
+                  'LanguageFather', 'LanguageMother', 'Qualifications',
+                  'QualiMother', 'QualiFather', 'QualiPartner',
                   'PrimarySchool', 'SecondarySchool', 'Occupation', 'OccupMother', 'OccupFather',
                   'OccupPartner']
     
     # Default columns selection (matches the initial value in the UI)
     default_columns = ['Age', 'Gender', 'MainVariety', 'AdditionalVarieties',
                       'YearsLivedInMainVariety', 'RatioMainVariety', 'CountryCollection', 'Year',
-                      'LanguageHome_normalized', 'LanguageFather_normalized', 'LanguageMother_normalized']
+                      'LanguageHome', 'LanguageFather', 'LanguageMother', 'Qualifications']
     
     # Filter to only columns that exist in the data
     available_columns = [col for col in all_columns if col in Informants.columns]
