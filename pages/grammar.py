@@ -2367,11 +2367,12 @@ def notify_distance_matrix_processing(n_clicks, participants, items):
      State('use-imputed-data-switch', 'checked'),
      State('export-include-sociodemographic-checkbox', 'checked'),
      State('export-include-item-metadata-checkbox', 'checked'),
+     State('items-group-by', 'value'),
      State('england-mapping-param', 'data')],
     prevent_initial_call=True
 )
 def export_aggregated_item_data(n_clicks, participants, items, pairs, use_imputed, 
-                                include_sociodem, include_item_meta, regional_mapping):
+                                include_sociodem, include_item_meta, groupby, regional_mapping):
     """Export aggregated item plot data as ZIP with multiple CSVs and log file"""
     if not n_clicks or not participants or not items:
         return no_update
@@ -2379,8 +2380,9 @@ def export_aggregated_item_data(n_clicks, participants, items, pairs, use_impute
     from datetime import datetime
     import pages.data.grammarFunctions as gf
     
-    # Always group by MainVariety for export
-    groupby = "variety"
+    # Use groupby from UI, default to "variety" if not provided
+    if not groupby:
+        groupby = "variety"
     
     # Get the raw data to extract participant information
     raw_data = retrieve_data.getGrammarData(
@@ -2419,7 +2421,8 @@ def export_aggregated_item_data(n_clicks, participants, items, pairs, use_impute
         data['group'] = data['MainVariety'].map(variety_mapping).fillna("Other")
         data = data[data['group'] != "Other"]
     elif groupby == "gender":
-        data['group'] = data['Gender_normalized'] if 'Gender_normalized' in data.columns else data['Gender']
+        # Handle missing gender values by filling with "Not specified"
+        data['group'] = data['Gender'].fillna("Not specified")
     
     # Get informant columns for melting, imputed plays no role here
     infoCols = retrieve_data.getInformantDataGrammar(imputed=use_imputed).columns.to_list()
@@ -2462,6 +2465,38 @@ def export_aggregated_item_data(n_clicks, participants, items, pairs, use_impute
             right_on="item_code", 
             how="left"
         )
+    
+    # Post-process the aggregated_df before export
+    # 1. Remove item_x column if present
+    if 'item_x' in aggregated_df.columns:
+        aggregated_df = aggregated_df.drop(columns=['item_x'])
+    
+    # 2. Rename columns
+    aggregated_df = aggregated_df.rename(columns={
+        'item_y': 'sentence'
+    })
+    
+    # 3. Reorder columns: MainVariety, item_code, section, sentence (if present), then rest
+    cols = aggregated_df.columns.tolist()
+    priority_cols = ['group']
+    
+    # Add item_code if present
+    if 'item_code' in cols:
+        priority_cols.append('item_code')
+    
+    # Add section if present
+    if 'section' in cols:
+        priority_cols.append('section')
+    
+    # Add sentence (renamed from item_y) if present
+    if 'sentence' in cols:
+        priority_cols.append('sentence')
+    
+    # Get remaining columns
+    remaining_cols = [col for col in cols if col not in priority_cols]
+    
+    # Reorder
+    aggregated_df = aggregated_df[priority_cols + remaining_cols]
     
     # Create CSVs for download
     files_dict = {}
