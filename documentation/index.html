@@ -547,10 +547,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#problematic-items" class="md-nav__link">
+  <a href="#flagged-items" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Problematic Items
+        Flagged Items
       
     </span>
   </a>
@@ -1014,10 +1014,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#problematic-items" class="md-nav__link">
+  <a href="#flagged-items" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Problematic Items
+        Flagged Items
       
     </span>
   </a>
@@ -1356,7 +1356,7 @@ Note: The group comparison plot uses the same settings that were used for the di
 <ul>
 <li><strong>Select All</strong>: Select all grammar items.</li>
 <li><strong>Deselect All</strong>: Deselect all grammar items.</li>
-<li><strong>Problematic</strong>: Deselect problematic items. See <a href="#problematic-items">problematic items</a> for more information. Currently the following items are flagged as problematic: 'M19', 'J23', 'C14' and 'A4' for use of currency; 'E22', 'D12' and 'E6' for different renderings of the item in some varieties.  </li>
+<li><strong>Flagged</strong>: Deselect flagged items. See <a href="#flagged-items">flagged items</a> for more information. Currently the following items are flagged: 'M19', 'J23', 'C14' and 'A4' for use of currency; 'E22', 'D12' and 'E6' for different renderings of the item in some varieties.  </li>
 <li><strong>Select a Preset</strong>: Multi-select dropdown for item presets (mode, feature groups, eWAVE feature groups).</li>
 <li>
 <p><strong>Advanced Options</strong>:</p>
@@ -1422,6 +1422,11 @@ Note: The group comparison plot uses the same settings that were used for the di
 </ul>
 </li>
 <li><strong>Export Distance Matrix</strong> (visible only in Participant Similarity mode): Downloads a pairwise distance matrix using the same settings as the UMAP plot (distance metric, standardization, selected participants and items). Participant IDs are used as both row and column labels.</li>
+<li><strong>Download Aggregated Item Data</strong> (visible only in Item Ratings mode): Downloads aggregated statistics for the currently displayed item plot as a ZIP archive containing:</li>
+<li><code>aggregated_data.csv</code>: Mean ratings, confidence intervals, standard deviations, medians, missing value counts, and participant counts for each item-group combination</li>
+<li><code>participant_group_mapping.csv</code>: Mapping of participant IDs to their assigned groups</li>
+<li><code>sociodemographic_summary.csv</code>: Sociodemographic summary statistics (mean age, gender distribution, etc.) for each group</li>
+<li><code>log.txt</code>: Export metadata including timestamp, selections, and settings used</li>
 </ul>
 <h5 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">¶</a></h5>
 <ul>
@@ -1450,8 +1455,8 @@ Note: The group comparison plot uses the same settings that were used for the di
 <li>Use "Clear Groups" to reset and return to variety-based grouping</li>
 <li>The "Deselect Lasso Selection" and "Select Only Lasso Selection" buttons can be used to refine your participant selection by excluding outliers visible in the UMAP plot</li>
 </ul>
-<h4 id="problematic-items">Problematic Items<a class="headerlink" href="#problematic-items" title="Permanent link">¶</a></h4>
-<p>Some grammar items have been flagged as problematic due to various issues that may affect analysis results:</p>
+<h4 id="flagged-items">Flagged Items<a class="headerlink" href="#flagged-items" title="Permanent link">¶</a></h4>
+<p>Some grammar items have been flagged due to various issues that may affect analysis results:</p>
 <p><strong>Currency/Unit Items:</strong>
 - 'M19', 'J23', 'C14', 'A4': These items involve currency or unit measurements that may vary by region. An overview which item was used in which version of the questionnaire can be found in the BSLVC resources repo (https://github.com/vetterf/bslvc-resources; coming soon).</p>
 <p><strong>Rendering Issues:</strong>
@@ -1459,7 +1464,7 @@ Note: The group comparison plot uses the same settings that were used for the di
 <p>E22: <em>This is exactly that I wanted</em>. Our Swedish speaker autocorrected this item to <em>This is exactly what I wanted</em>, effectively turning this into a control item. All other varieties are unaffected.</p>
 <p>D12: <em>I'll tell Jane when I meets her</em>. Our Scottish and Swedish speaker aspirates the <em>ts</em> in <em>meets</em> heavily, thus somewhat blurring the line between the standard use <em>when I meet her</em> and the non-standard <em>when I meets her</em>.</p>
 <p>E6: <em>I'm learning French, because is a beautiful language</em>. Again the rendering by our Scottish speaker blurs the line between non-standard <em>is</em> and <em>it's</em>.</p>
-<p>The "Problematic" button in the Grammar Item Selection section automatically deselects these items. Users should be aware of these issues when interpreting results that include these items.</p>
+<p>The "Flagged" button in the Grammar Item Selection section automatically deselects these items. Users should be aware of these issues when interpreting results that include these items.</p>
 <h3 id="lexicon-analysis-module">Lexicon Analysis Module<a class="headerlink" href="#lexicon-analysis-module" title="Permanent link">¶</a></h3>
 <p>The Lexicon Analysis Module is currently under development. This module will provide tools for exploring lexical variation across English varieties.</p>
 <h2 id="caching-system">Caching System<a class="headerlink" href="#caching-system" title="Permanent link">¶</a></h2>
@@ -1560,8 +1565,8 @@ LRU (Least Recently Used) cache automatically evicts the least recently accessed
 - Session-specific (different tabs maintain independent state)</p>
 <p><strong>Important Note:</strong> This only restores plots when switching between plot types in the same session, not when switching browser tabs or windows. The plot must be re-rendered if the page is refreshed or the application is reopened.</p>
 <hr>
-<p><strong>Last Updated</strong>: November 2025<br>
-<strong>Version</strong>: 0.1.2</p>
+<p><strong>Last Updated</strong>: February 2026<br>
+<strong>Version</strong>: 0.1.5</p>
 
 
 
@@ -1591,7 +1596,7 @@ LRU (Least Recently Used) cache automatically evicts the least recently accessed
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright © 2025 Fabian Vetter
+      Copyright © 2026 Fabian Vetter
     </div>
   
   
