@@ -145,7 +145,7 @@ All grammar items can be selected in the grammar items tree. They are first grou
 
 - **Select All**: Select all grammar items.
 - **Deselect All**: Deselect all grammar items.
-- **Flagged**: Deselect flagged items. See [flagged items](#flagged-items) for more information. Currently the following items are flagged: 'M19', 'J23', 'C14' and 'A4' for use of currency; 'E22', 'D12' and 'E6' for different renderings of the item in some varieties.  
+- **Flagged**: Deselect flagged items. See [flagged items](#flagged-items) for more information. Currently the following items are flagged: 'M19', 'J23', 'C21', 'C14' and 'A4' for use of currency; 'E22', 'D12' and 'E6' for different renderings of the item in some varieties.  
 - **Select a Preset**: Multi-select dropdown for item presets (mode, feature groups, eWAVE feature groups).
 - **Advanced Options**:
 
@@ -253,7 +253,7 @@ Custom group comparison allows you to compare groups of participants beyond the 
 Some grammar items have been flagged due to various issues that may affect analysis results:
 
 **Currency/Unit Items:**
-- 'M19', 'J23', 'C14', 'A4': These items involve currency or unit measurements that may vary by region. An overview which item was used in which version of the questionnaire can be found in the BSLVC resources repo (https://github.com/vetterf/bslvc-resources; coming soon).
+- 'M19', 'J23', 'C21', 'C14', 'A4': These items involve currency or unit measurements that may vary by region. An overview which item was used in which version of the questionnaire can be found in the BSLVC resources repo (https://github.com/vetterf/bslvc-resources; coming soon).
 
 **Rendering Issues:**
 - 'E22', 'D12', 'E6': These items have different renderings in some varieties:

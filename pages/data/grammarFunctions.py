@@ -396,8 +396,8 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
 
     variety_to_color = retrieve_data.get_color_for_variety(type="grammar")
 
-    # Apply the mapping efficiently
-    embedding['color'] = embedding['MainVariety'].map(variety_to_color)
+    # Apply the mapping efficiently, with fallback color for any unmapped varieties
+    embedding['color'] = embedding['MainVariety'].map(variety_to_color).fillna(variety_to_color.get('Other', '#c49c94'))
     
     if leiden:
         embedding['leiden_cluster'] = leiden_clusters

@@ -336,6 +336,10 @@ def getInformantDataGrammar(columns = None, participants = None, varieties = Non
     data.loc[:,float_columns] = data.loc[:,float_columns].apply(pd.to_numeric, errors='coerce')
     data = data[~data['InformantID'].str.startswith('Unnamed')]
     
+    # Strip whitespace from MainVariety to handle dirty data (e.g. 'Germany ' vs 'Germany')
+    if 'MainVariety' in data.columns:
+        data['MainVariety'] = data['MainVariety'].str.strip()
+    
     # Recode MainVariety to "Other" if count of MainVariety is less than 10
     # For consistency, always use the imputed dataset as reference for variety counts
     if not imputed:
@@ -628,6 +632,10 @@ def getGrammarData(imputed=False,pairs=False, regional_mapping=False, **kwargs):
     data.loc[:,float_columns] = data.loc[:,float_columns].apply(pd.to_numeric, errors='coerce')
 
     data = data[~data['InformantID'].str.startswith('Unnamed')]
+    
+    # Strip whitespace from MainVariety to handle dirty data (e.g. 'Germany ' vs 'Germany')
+    if 'MainVariety' in data.columns:
+        data['MainVariety'] = data['MainVariety'].str.strip()
     
     # Recode MainVariety to "Other" if count of MainVariety is less than 10
     # For consistency, always use the imputed dataset as reference for variety counts
