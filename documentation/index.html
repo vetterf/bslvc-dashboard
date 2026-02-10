@@ -1,0 +1,1659 @@
+<!DOCTYPE html><html lang="en" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Interactive dashboard for exploring the Bamberg Survey of Language Variation and Change">
+      
+      
+        <meta name="author" content="Fabian Vetter">
+      
+      
+        <link rel="canonical" href="https://vetterf.github.io/bslvc-dashboard/documentation/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Documentation - BSLVC Dashboard Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  <link href="../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: white; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#documentation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="BSLVC Dashboard Documentation" class="md-header__button md-logo" aria-label="BSLVC Dashboard Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            BSLVC Dashboard Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Documentation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/vetterf/bslvc-dashboard" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    bslvc-dashboard
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="BSLVC Dashboard Documentation" class="md-nav__button md-logo" aria-label="BSLVC Dashboard Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    BSLVC Dashboard Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/vetterf/bslvc-dashboard" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    bslvc-dashboard
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#user-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User Interface
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="User Interface">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grammar-analysis-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grammar Analysis Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Grammar Analysis Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#available-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#main-tabs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Main Tabs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interactive-plot-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interactive Plot Controls
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#analysis-type-selector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Analysis Type Selector
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#render-plot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Render Plot
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#umap-group-buttons-visible-in-participant-similarity-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UMAP Group Buttons (visible in "Participant Similarity" mode)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#participant-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Participant Selection
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Participant Selection">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#advanced-regional-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced Regional Mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grammar-item-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grammar Item Selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#umap-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UMAP Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-plot-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item Plot Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#group-comparison-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Group Comparison Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced Actions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Export
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-group-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Group Comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flagged-items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flagged Items
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lexicon-analysis-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lexicon Analysis Module
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#caching-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Caching System
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Caching System">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#server-side-disk-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server-Side Disk Cache
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Server-Side Disk Cache">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#umap-plot-caching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UMAP Plot Caching
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#random-forest-plot-caching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Random Forest Plot Caching
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#in-memory-python-cache-lru" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In-Memory Python Cache (LRU)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#browser-side-storage-dash-dccstore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Browser-Side Storage (Dash dcc.Store)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Browser-Side Storage (Dash dcc.Store)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#memory-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#session-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#local-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Local Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-caching-layers-work-together-umap-plot-rendering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Caching Layers Work Together: UMAP Plot Rendering
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How Caching Layers Work Together: UMAP Plot Rendering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-user-interaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: User Interaction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-data-retrieval-lru-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Data Retrieval (LRU Cache)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-umap-computation-diskcache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: UMAP Computation (DiskCache)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-browser-storage-dccstore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Browser Storage (dcc.Store)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#user-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User Interface
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="User Interface">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grammar-analysis-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grammar Analysis Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Grammar Analysis Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#available-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#main-tabs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Main Tabs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interactive-plot-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interactive Plot Controls
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#analysis-type-selector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Analysis Type Selector
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#render-plot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Render Plot
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#umap-group-buttons-visible-in-participant-similarity-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UMAP Group Buttons (visible in "Participant Similarity" mode)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#participant-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Participant Selection
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Participant Selection">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#advanced-regional-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced Regional Mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grammar-item-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grammar Item Selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#umap-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UMAP Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-plot-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item Plot Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#group-comparison-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Group Comparison Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced Actions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Export
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-group-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Group Comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flagged-items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flagged Items
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lexicon-analysis-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lexicon Analysis Module
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#caching-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Caching System
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Caching System">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#server-side-disk-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server-Side Disk Cache
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Server-Side Disk Cache">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#umap-plot-caching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UMAP Plot Caching
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#random-forest-plot-caching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Random Forest Plot Caching
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#in-memory-python-cache-lru" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In-Memory Python Cache (LRU)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#browser-side-storage-dash-dccstore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Browser-Side Storage (Dash dcc.Store)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Browser-Side Storage (Dash dcc.Store)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#memory-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#session-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#local-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Local Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-caching-layers-work-together-umap-plot-rendering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Caching Layers Work Together: UMAP Plot Rendering
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How Caching Layers Work Together: UMAP Plot Rendering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-user-interaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: User Interaction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-data-retrieval-lru-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Data Retrieval (LRU Cache)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-umap-computation-diskcache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: UMAP Computation (DiskCache)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-browser-storage-dccstore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Browser Storage (dcc.Store)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">¶</a></h1>
+<p>This document provides technical details about the BSLVC Dashboard and all available functions.</p>
+<h2 id="user-interface">User Interface<a class="headerlink" href="#user-interface" title="Permanent link">¶</a></h2>
+<p>The user interface of the BSLVC Dashboard is structure into two or three parts, depending on the page:
+- The navigation bar at the left side.
+- The main window in the middle.
+- The options panel in the data analysis modules.</p>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_overview.png" data-desc-position="bottom"><img alt="Overview of the interface" src="../img/UI_overview.png"></a></p>
+<p>The heart of the dashboard are the analysis modules for the grammar and the lexical data. These can be found in the section "Data &amp; Analysis" in the navigation bar. Currently, only the grammar analysis module is finished. In what follows, you will find a description of all available options in the Dashboard.</p>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_data_and_analysis.png" data-desc-position="bottom"><img alt="Data and Analysis Navigation" src="../img/UI_data_and_analysis.png"></a></p>
+<h3 id="data-overview">Data Overview<a class="headerlink" href="#data-overview" title="Permanent link">¶</a></h3>
+<p>The Data Overview page provides statistical summaries and visualizations of the BSLVC dataset, including participant demographics, geographical distribution, the grammatical items, and data completeness metrics.</p>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_data_overview.png" data-desc-position="bottom"><img alt="Data Overview" src="../img/UI_data_overview.png"></a></p>
+<h3 id="grammar-analysis-module">Grammar Analysis Module<a class="headerlink" href="#grammar-analysis-module" title="Permanent link">¶</a></h3>
+<p>The Grammar Analysis Module allows users to explore grammatical variation across different varieties of English through interactive visualizations and statistical analyses. You can access it by clicking "Grammar Sets" in the navigation.</p>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_grammar_analysis_module.png" data-desc-position="bottom"><img alt="Grammar Analysis Module" src="../img/UI_grammar_analysis_module.png"></a></p>
+<h4 id="available-functions">Available Functions<a class="headerlink" href="#available-functions" title="Permanent link">¶</a></h4>
+<p>Below is a description of all major buttons and UI elements in the Grammar Analysis module:</p>
+<h4 id="main-tabs">Main Tabs<a class="headerlink" href="#main-tabs" title="Permanent link">¶</a></h4>
+<p>The main content in the middle of the dashboard contains multiple tabs.</p>
+<ul>
+<li><strong>Plot View</strong>: Shows either the dimensionality reduction plot and the group comparison plot, or item ratings plot.
+Note: The group comparison plot uses the same settings that were used for the dimensionality reduction. Any changes that have been applied to the settings in the UI are not taken into account. This is to ensure that the group comparison is linked to the dimensionality reduction plot.</li>
+<li><strong>Sociodemographic Details</strong>: Displays participant information and summary plots. These plots update automatically upon changing settings in the UI.</li>
+<li><strong>Grammar Items</strong>: Shows a table of all grammar items and metadata. This table supports dynamic filtering, and can also be used for modifying the selected items in the grammar items tree.</li>
+</ul>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_tabs_main_view.png" data-desc-position="bottom"><img alt="Tabs in main content" src="../img/UI_tabs_main_view.png"></a></p>
+<h4 id="interactive-plot-controls">Interactive Plot Controls<a class="headerlink" href="#interactive-plot-controls" title="Permanent link">¶</a></h4>
+<p>All plots in the dashboard are created using Plotly, which provides interactive controls for exploring and manipulating visualizations. These controls appear in a toolbar when you hover over any plot.</p>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_plotly_modebar.png" data-desc-position="bottom"><img alt="Plotly mode bar" src="../img/UI_plotly_modebar.png"></a></p>
+<p><strong>Available Controls:</strong></p>
+<ul>
+<li><strong>Download plot as SVG</strong>: Save the current view of the plot as a vector image</li>
+<li><strong>Zoom</strong>: Click and drag to zoom into a specific region of the plot</li>
+<li><strong>Pan</strong>: Move the plot around after zooming (shift + click and drag, or use the pan tool)</li>
+<li><strong>Box Select</strong>: Click and drag to select multiple data points in a rectangular region</li>
+<li><strong>Lasso Select</strong>: Draw a freeform selection around data points (used for custom group comparison)</li>
+<li><strong>Zoom In/Out</strong>: Incremental zoom controls</li>
+<li><strong>Autoscale</strong>: Reset the plot to its original view and scale</li>
+<li><strong>Reset axes</strong>: Return to the default axis ranges</li>
+<li><strong>Show/Hide Legend Items</strong>: Click on legend entries to hide/show specific varieties or groups</li>
+</ul>
+<p><strong>Hover Information:</strong></p>
+<p>Hovering over data points in plots displays an overlay with additional information such as the participant ID, variety, gender, age, etc.</p>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_plotly_hoverinfo.png" data-desc-position="bottom"><img alt="Hover Info" src="../img/UI_plotly_hoverinfo.png"></a></p>
+<p><strong>Tips:</strong></p>
+<ul>
+<li>Double-click on the plot to reset zoom and pan</li>
+<li>Click legend items once to hide/show them; double-click to isolate a single item</li>
+<li>Use the box or lasso select tools in combination with the UMAP group buttons for custom analyses</li>
+<li>The download function captures the current state of the plot, including any zoom or pan adjustments</li>
+</ul>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_plotly_legend_clicked.png" data-desc-position="bottom"><img alt="Plotly legend clicked" src="../img/UI_plotly_legend_clicked.png"></a></p>
+<h4 id="analysis-type-selector">Analysis Type Selector<a class="headerlink" href="#analysis-type-selector" title="Permanent link">¶</a></h4>
+<p>This switch controls the analysis mode. Users can choose between "Participant Similarity" and "Item Ratings" plots. </p>
+<p>In the mode "Participant Similarity", the dashboard applies dimensionality reduction to the selected data using Uniform Manifold Approximation and Projection (UMAP; https://umap-learn.readthedocs.io/en/latest/). Additionally, users can compare groups in the plot. This can be done either by selectively hiding varieties, or by using the lasso tool to create custom groups. For detailed instructions, see the instructions for <a href="#custom-group-comparison">custom group comparison</a>.</p>
+<p>In the mode "Item Ratings", users can compare the ratings of specific features. This mode is best suited for the comparison of a relatively small number of features. Some plot modes have limits of how much items and varieties can be displayed. Should you hit such a limit, the dashboard issues a warning notification. </p>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_analysis_type_selector.png" data-desc-position="bottom"><img alt="Analysis type selector" src="../img/UI_analysis_type_selector.png"></a></p>
+<h4 id="render-plot">Render Plot<a class="headerlink" href="#render-plot" title="Permanent link">¶</a></h4>
+<p>This button generates the plot based on the user input.</p>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_plot_buttons.png" data-desc-position="bottom"><img alt="Plot buttons" src="../img/UI_plot_buttons.png"></a></p>
+<h4 id="umap-group-buttons-visible-in-participant-similarity-mode">UMAP Group Buttons (visible in "Participant Similarity" mode)<a class="headerlink" href="#umap-group-buttons-visible-in-participant-similarity-mode" title="Permanent link">¶</a></h4>
+<p>These buttons facilitate custom group comparisons or excluding outliers from the selection. They all require a lasso selection of data points via the lasso tool in the mode bar at the top of the participant similarity plot as input. </p>
+<p>The "Add Group" and "Clear Group" buttons override the default variety-based grouping of the "Compare Selected Groups" function. More detailed instructions can ben found in the section <a href="#custom-group-comparison">custom group comparison</a>.</p>
+<p>The "Deselect Lasso Selection" and "Select Only Lasso Selection" buttons modify the selection in the participants tree. These functions are helpful for deselecting outliers visible in the dimensionality reduction.</p>
+<ul>
+<li><strong>Add Group</strong>: Add a group of participants for comparison.</li>
+<li><strong>Clear Groups</strong>: Remove all defined groups.</li>
+<li><strong>Select Only Lasso Selection</strong>: Select only participants currently selected via lasso tool.</li>
+<li><strong>Deselect Lasso Selection</strong>: Deselect participants selected via lasso tool.</li>
+<li><strong>Compare Selected Groups</strong>: Render a Random Forest plot comparing selected groups.</li>
+</ul>
+<h4 id="participant-selection">Participant Selection<a class="headerlink" href="#participant-selection" title="Permanent link">¶</a></h4>
+<p>Participants can be selected via the participant tree, either by clicking the checkboxes in the tree, by using presets or by using the buttons. Additionally, users can use the "Advanced Filters" section to select participants based on their sociodemographic details. </p>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_participant_selection.png" data-desc-position="bottom"><img alt="Participant tree" src="../img/UI_participant_selection.png"></a></p>
+<ul>
+<li><strong>Select All</strong>: Select all participants in the tree.</li>
+<li><strong>Deselect All</strong>: Deselect all participants.</li>
+<li>
+<p><strong>Quick Selection</strong>: Batch select by variety, age, gender, completeness, or balanced groups. Available presets for common selections:</p>
+<ul>
+<li><strong>ENL</strong>: Select all L1 varieties (England, Scotland, US)</li>
+<li><strong>ESL</strong>: Select all L2 varieties (Gibraltar, India, Malta, Puerto Rico)</li>
+<li><strong>EFL</strong>: Select all EFL varieties (Germany, Slovenia, Sweden)</li>
+<li><strong>Balanced</strong>: Select a balanced sample across all varieties</li>
+<li><strong>Age Groups</strong>: Select participants from specific age groups</li>
+<li><strong>Gender</strong>:<ul>
+<li>Female: Select all female participants</li>
+<li>Male: Select all male participants</li>
+<li>Balanced: Select a gender-balanced sample across all varieties</li>
+<li>Balanced per Variety: Select a gender-balanced sample within each variety</li>
+</ul>
+</li>
+<li><strong>Missing values</strong>: Select participants with 0%, &lt;5% or &lt;10% of missing values</li>
+</ul>
+</li>
+</ul>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_participant_quick.png" data-desc-position="bottom"><img alt="Participant quick selection" src="../img/UI_participant_quick.png"></a></p>
+<ul>
+<li><strong>Advanced Filters</strong>: Filter participants by gender, age, variety ratio, and main variety.</li>
+<li><strong>Apply Filters</strong>: Apply selected participant filters. This overrides the current selection in the participant tree.</li>
+</ul>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_participant_advanced.png" data-desc-position="bottom"><img alt="Participant advanced selection" src="../img/UI_participant_advanced.png"></a></p>
+<h5 id="advanced-regional-mapping">Advanced Regional Mapping<a class="headerlink" href="#advanced-regional-mapping" title="Permanent link">¶</a></h5>
+<p>The switch "Split England into regions (North/South")" controls whether participants from England should be divided into England_North, England_South and England_UNCLEAR.</p>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_regional_mapping.png" data-desc-position="bottom"><img alt="Regional mapping activated" src="../img/UI_regional_mapping.png"></a></p>
+<h4 id="grammar-item-selection">Grammar Item Selection<a class="headerlink" href="#grammar-item-selection" title="Permanent link">¶</a></h4>
+<p>All grammar items can be selected in the grammar items tree. They are first grouped by mode, then by feature group. Items can be either selected by clicking the checkboxes, by using presets or the buttons above the tree, or via the grammar items table in the main view. The getting started section in the app describes how the grammar items table can be used for custom item selections.</p>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_grammar_selection.png" data-desc-position="bottom"><img alt="Grammar items tree" src="../img/UI_grammar_selection.png"></a></p>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_grammar_items_table.png" data-desc-position="bottom"><img alt="Grammar items table" src="../img/UI_grammar_items_table.png"></a></p>
+<ul>
+<li><strong>Select All</strong>: Select all grammar items.</li>
+<li><strong>Deselect All</strong>: Deselect all grammar items.</li>
+<li><strong>Flagged</strong>: Deselect flagged items. See <a href="#flagged-items">flagged items</a> for more information. Currently the following items are flagged: 'M19', 'J23', 'C21', 'C14' and 'A4' for use of currency; 'E22', 'D12' and 'E6' for different renderings of the item in some varieties.  </li>
+<li><strong>Select a Preset</strong>: Multi-select dropdown for item presets (mode, feature groups, eWAVE feature groups).</li>
+<li>
+<p><strong>Advanced Options</strong>:</p>
+<ul>
+<li><strong>Use item difference (spoken-written)</strong>: Toggle to use difference between item pairs. Most items feature in the spoken and the written section of the BSLVC. These features are referred to as <em>twin items</em>. If this switch is set to true, the interface calculates the difference of the ratings for twin items (spoken - written) for each participant and uses this value for all subsequent plots. Naturally, items that feature only in the written section are excluded.</li>
+<li><strong>Use imputed data</strong>: Toggle between imputed and raw data. The dimensionality reduction always uses the imputed data, as UMAP cannot handle missing values. A description of the imputation process can be found in the supplementary BSLVC resources repository (https://github.com/vetterf/BSLVC-resources; available soon!). Imputation was performed with a random forest approach.</li>
+<li><strong>Toggle Written-Only</strong>: Toggle items which feature only in the written section.</li>
+<li><strong>Currency/Unit</strong>: Toggle currency/unit items.</li>
+</ul>
+</li>
+</ul>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_grammar_tree_advanced.png" data-desc-position="bottom"><img alt="Grammar items advanced" src="../img/UI_grammar_tree_advanced.png"></a></p>
+<h4 id="umap-settings">UMAP Settings<a class="headerlink" href="#umap-settings" title="Permanent link">¶</a></h4>
+<p>The UMAP Settings allow the user to tweak the UMAP hyperparameters, as well as the distance metric used, whether to standardize the participant ratings and the coloring.</p>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_umap_settings.png" data-desc-position="bottom"><img alt="UMAP settings" src="../img/UI_umap_settings.png"></a></p>
+<ul>
+<li><strong>Color</strong>: Select coloring variable (Variety, Variety type, Gender). This setting does not trigger a rerender of the plot and can be changed after rendering the plot.</li>
+<li><strong>Distance metric</strong>: Choose metric (Cosine, Euclidean, Manhattan).</li>
+<li><strong>Standardize participant ratings</strong>: Checkbox to standardize ratings. Standardization is advised for use with Euclidean and Manhattan distances.</li>
+<li><strong>Use density-preserving embedding (DensMAP)</strong>: Checkbox for DensMAP (https://umap-learn.readthedocs.io/en/latest/densmap_demo.html). By default, UMAP does not preserve densities of clusters well. DensMAP tries to preserve the density of clusters when reducing dimensionality.</li>
+<li><strong>Number of neighbours</strong>: Slider for UMAP hyperparameter. Check the UMAP docs for more info.</li>
+<li><strong>Minimal distance</strong>: Slider for UMAP hyperparameter. Check the UMAP docs for more info.</li>
+</ul>
+<h4 id="item-plot-settings">Item Plot Settings<a class="headerlink" href="#item-plot-settings" title="Permanent link">¶</a></h4>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_item_plot_settings.png" data-desc-position="bottom"><img alt="Item  plot settings" src="../img/UI_item_plot_settings.png"></a></p>
+<ul>
+<li>
+<p><strong>Plot mode</strong>: Select plot type for visualizing grammar items:</p>
+<ul>
+<li><strong>Mean (95% CI)</strong>: Plot mean values of features with confidence intervals</li>
+<li><strong>Mean (95% CI - split varieties)</strong>: Plot mean values of features with confidence intervals. Each variety is represented separately on the y-axis. This helps to avoid overplotting, but also limits how many features and items can be displayed.</li>
+<li><strong>Diverging stacked bars</strong>: Show the distribution of ratings for each feature in a diverging stacked barchart.</li>
+<li><strong>Informant mean of selected features (boxplot)</strong>: Calculates a mean rating across all selected features for each participant and displays the distribution of these means in a boxplot.</li>
+<li><strong>Correlation matrix</strong>: Displays a correlation matrix showing the pairwise correlations between the selected features.</li>
+<li><strong>Missing values heatmap</strong>: Displays a heatmap indicating the presence of missing values across the selected features.</li>
+</ul>
+</li>
+<li>
+<p><strong>Group by</strong>: Select grouping variable (Variety, Variety type, Gender).</p>
+</li>
+<li><strong>Sort by</strong>: Sort items by mean, standard deviation, or alphabetically.</li>
+</ul>
+<h4 id="group-comparison-settings">Group Comparison Settings<a class="headerlink" href="#group-comparison-settings" title="Permanent link">¶</a></h4>
+<p>This is only available if mode is set to "Participant Similarity". These functions can be used to filter out items that fall outside a certain rating rage, or to apply standardization of the ratings before training the random forest.</p>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_UMAP_group_comparison_settings.png" data-desc-position="bottom"><img alt="Group comparison settings" src="../img/UI_UMAP_group_comparison_settings.png"></a></p>
+<ul>
+<li><strong>Filter by Average Rating</strong>: Range slider to filter items by group average.</li>
+<li><strong>Use Z-Scores</strong>: Checkbox to standardize ratings (participant-wise) before training the random forest.</li>
+</ul>
+<h4 id="advanced-actions">Advanced Actions<a class="headerlink" href="#advanced-actions" title="Permanent link">¶</a></h4>
+<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_advanced_actions.png" data-desc-position="bottom"><img alt="Advanced actions" src="../img/UI_advanced_actions.png"></a></p>
+<h5 id="data-export">Data Export<a class="headerlink" href="#data-export" title="Permanent link">¶</a></h5>
+<p>The data export section provides multiple options for exporting your selection:</p>
+<ul>
+<li><strong>Export Data</strong>: Download current data selection with flexible format options:</li>
+<li><strong>Include sociodemographic data</strong> (checked by default): When enabled, includes participant metadata columns (Age, Gender, MainVariety, etc.) in the export. When disabled, exports only InformantID and rating data.</li>
+<li><strong>Include item metadata</strong> (unchecked by default): When enabled, transposes the data so items become rows and participants become columns, with item metadata columns (section, feature, group, sentence, etc.) added at the beginning.</li>
+<li><strong>Combined options</strong>:<ul>
+<li>Neither checked: Minimal export (InformantID + ratings only)</li>
+<li>Only sociodemographic: Standard wide format (participants as rows, items as columns, with participant metadata)</li>
+<li>Only item metadata: Transposed format (items as rows, participants as columns, with item metadata)</li>
+<li>Both checked: Transposed format with participant metadata as header rows</li>
+</ul>
+</li>
+<li><strong>Export Distance Matrix</strong> (visible only in Participant Similarity mode): Downloads a pairwise distance matrix using the same settings as the UMAP plot (distance metric, standardization, selected participants and items). Participant IDs are used as both row and column labels.</li>
+<li><strong>Download Aggregated Item Data</strong> (visible only in Item Ratings mode): Downloads aggregated statistics for the currently displayed item plot as a ZIP archive containing:</li>
+<li><code>aggregated_data.csv</code>: Mean ratings, confidence intervals, standard deviations, medians, missing value counts, and participant counts for each item-group combination</li>
+<li><code>participant_group_mapping.csv</code>: Mapping of participant IDs to their assigned groups</li>
+<li><code>sociodemographic_summary.csv</code>: Sociodemographic summary statistics (mean age, gender distribution, etc.) for each group</li>
+<li><code>log.txt</code>: Export metadata including timestamp, selections, and settings used</li>
+</ul>
+<h5 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">¶</a></h5>
+<ul>
+<li><strong>Copy Settings</strong>: Copy current settings to clipboard. This function converts the current settings into a base64 code and copies it to the clipboard. This code can be used to share settings with other users or save the settings in a text file for later use.</li>
+<li><strong>Paste Settings</strong>: Paste settings from clipboard. This button takes the base64 code created with the "Copy Settings" function to restore settings.</li>
+<li><strong>Save Settings</strong>: Save current settings locally. Helpful for temporarily saving the settings.</li>
+<li><strong>Restore Settings</strong>: Restore previously saved settings with the "Save Settings" function.</li>
+</ul>
+<h4 id="custom-group-comparison">Custom Group Comparison<a class="headerlink" href="#custom-group-comparison" title="Permanent link">¶</a></h4>
+<p>Custom group comparison allows you to compare groups of participants beyond the default variety-based grouping. This is particularly useful for analyzing subgroups or excluding outliers. You should select at least two groups. Newly added groups will be indicated with symbols. Data points that are hidden by clicking on the variety names in the plot legend will not be taken into account when groups are compared.</p>
+<p><strong>How to create custom groups:</strong></p>
+<ol>
+<li>Render a UMAP plot with your desired participants and settings</li>
+<li>Use the lasso tool in the plot's mode bar to select a group of participants
+<a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_custom_groups_lasso.png" data-desc-position="bottom"><img alt="Lasso tool in Plotly" src="../img/UI_custom_groups_lasso.png"></a>
+<a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_custom_groups_lasso_selection.png" data-desc-position="bottom"><img alt="Lasso selection" src="../img/UI_custom_groups_lasso_selection.png"></a></li>
+<li>Click "Add Group" to save the selected participants as a group
+<a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/UI_custom_groups_lasso_button.png" data-desc-position="bottom"><img alt="Adding a group" src="../img/UI_custom_groups_lasso_button.png"></a></li>
+<li>Repeat steps 2-3 to add additional groups (if desired)</li>
+<li>Click "Compare Selected Groups" to generate a Random Forest comparison plot</li>
+</ol>
+<p><strong>Important notes:</strong></p>
+<ul>
+<li>Custom groups override the default variety-based grouping</li>
+<li>The Random Forest comparison uses the same settings (participants, items, imputation) as the UMAP plot</li>
+<li>Use "Clear Groups" to reset and return to variety-based grouping</li>
+<li>The "Deselect Lasso Selection" and "Select Only Lasso Selection" buttons can be used to refine your participant selection by excluding outliers visible in the UMAP plot</li>
+</ul>
+<h4 id="flagged-items">Flagged Items<a class="headerlink" href="#flagged-items" title="Permanent link">¶</a></h4>
+<p>Some grammar items have been flagged due to various issues that may affect analysis results:</p>
+<p><strong>Currency/Unit Items:</strong>
+- 'M19', 'J23', 'C21', 'C14', 'A4': These items involve currency or unit measurements that may vary by region. An overview which item was used in which version of the questionnaire can be found in the BSLVC resources repo (https://github.com/vetterf/bslvc-resources; coming soon).</p>
+<p><strong>Rendering Issues:</strong>
+- 'E22', 'D12', 'E6': These items have different renderings in some varieties:</p>
+<p>E22: <em>This is exactly that I wanted</em>. Our Swedish speaker autocorrected this item to <em>This is exactly what I wanted</em>, effectively turning this into a control item. All other varieties are unaffected.</p>
+<p>D12: <em>I'll tell Jane when I meets her</em>. Our Scottish and Swedish speaker aspirates the <em>ts</em> in <em>meets</em> heavily, thus somewhat blurring the line between the standard use <em>when I meet her</em> and the non-standard <em>when I meets her</em>.</p>
+<p>E6: <em>I'm learning French, because is a beautiful language</em>. Again the rendering by our Scottish speaker blurs the line between non-standard <em>is</em> and <em>it's</em>.</p>
+<p>The "Flagged" button in the Grammar Item Selection section automatically deselects these items. Users should be aware of these issues when interpreting results that include these items.</p>
+<h3 id="lexicon-analysis-module">Lexicon Analysis Module<a class="headerlink" href="#lexicon-analysis-module" title="Permanent link">¶</a></h3>
+<p>The Lexicon Analysis Module is currently under development. This module will provide tools for exploring lexical variation across English varieties.</p>
+<h2 id="caching-system">Caching System<a class="headerlink" href="#caching-system" title="Permanent link">¶</a></h2>
+<p>The BSLVC Dashboard implements a multi-layered caching strategy to optimize performance and reduce computation time for expensive operations. The caching system consists of three levels: server-side disk cache, in-memory Python cache, and browser-side storage.</p>
+<h3 id="server-side-disk-cache">Server-Side Disk Cache<a class="headerlink" href="#server-side-disk-cache" title="Permanent link">¶</a></h3>
+<p>The dashboard uses <strong>DiskCache</strong> (via the <code>diskcache</code> library) for persistent storage of computationally expensive plot objects.</p>
+<h4 id="umap-plot-caching">UMAP Plot Caching<a class="headerlink" href="#umap-plot-caching" title="Permanent link">¶</a></h4>
+<p>UMAP (Uniform Manifold Approximation and Projection) computations are expensive and are cached based on input parameters:</p>
+<p><strong>Cache Key Components:</strong>
+- Participant list (sorted)
+- Item list (sorted)
+- UMAP hyperparameters (n_neighbours, min_dist, distance_metric)
+- Standardization flag
+- DensMAP flag
+- Pairs mode flag
+- Regional mapping flag</p>
+<p>Cache keys are hashed using MD5 to create unique identifiers.</p>
+<h4 id="random-forest-plot-caching">Random Forest Plot Caching<a class="headerlink" href="#random-forest-plot-caching" title="Permanent link">¶</a></h4>
+<p>Random Forest comparison plots are also cached.</p>
+<p><strong>Cache Invalidation:</strong>
+- Disk cache persists between sessions
+- Cache is stored indefinitely (no expiration)
+- Manual cache clearing requires deleting the cache directory</p>
+<h3 id="in-memory-python-cache-lru">In-Memory Python Cache (LRU)<a class="headerlink" href="#in-memory-python-cache-lru" title="Permanent link">¶</a></h3>
+<p>The dashboard uses Python's <code>functools.lru_cache</code> decorator for in-memory caching of frequently accessed data.
+LRU (Least Recently Used) cache automatically evicts the least recently accessed items when the cache is full.</p>
+<h3 id="browser-side-storage-dash-dccstore">Browser-Side Storage (Dash dcc.Store)<a class="headerlink" href="#browser-side-storage-dash-dccstore" title="Permanent link">¶</a></h3>
+<p>The dashboard leverages Dash's <code>dcc.Store</code> component for client-side data persistence with three storage types:</p>
+<h4 id="memory-storage">Memory Storage<a class="headerlink" href="#memory-storage" title="Permanent link">¶</a></h4>
+<p>Temporary storage cleared when page is refreshed:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">dcc</span><span class="o">.</span><span class="n">Store</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">"UMAPgroup"</span><span class="p">,</span> <span class="n">storage_type</span><span class="o">=</span><span class="s2">"memory"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">dcc</span><span class="o">.</span><span class="n">Store</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">"UMAPparticipants"</span><span class="p">,</span> <span class="n">storage_type</span><span class="o">=</span><span class="s2">"memory"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[])</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">dcc</span><span class="o">.</span><span class="n">Store</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">"UMAPitems"</span><span class="p">,</span> <span class="n">storage_type</span><span class="o">=</span><span class="s2">"memory"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[])</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">dcc</span><span class="o">.</span><span class="n">Store</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">"UMAPGroupsForRF"</span><span class="p">,</span> <span class="n">storage_type</span><span class="o">=</span><span class="s2">"memory"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s2">"dataframe"</span><span class="p">:</span> <span class="o">...</span><span class="p">})</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">dcc</span><span class="o">.</span><span class="n">Store</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">"grammar_plots_UMAP"</span><span class="p">,</span> <span class="n">storage_type</span><span class="o">=</span><span class="s2">"memory"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">dcc</span><span class="o">.</span><span class="n">Store</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">"grammar_plots_item"</span><span class="p">,</span> <span class="n">storage_type</span><span class="o">=</span><span class="s2">"memory"</span><span class="p">,</span> <span class="n">data</span><span class="o">=...</span><span class="p">)</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">dcc</span><span class="o">.</span><span class="n">Store</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">"leiden-cluster-data"</span><span class="p">,</span> <span class="n">storage_type</span><span class="o">=</span><span class="s2">"memory"</span><span class="p">)</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">dcc</span><span class="o">.</span><span class="n">Store</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">"umap-hoverinfo-store"</span><span class="p">,</span> <span class="n">storage_type</span><span class="o">=</span><span class="s2">"memory"</span><span class="p">)</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">dcc</span><span class="o">.</span><span class="n">Store</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">"umap-render-trigger"</span><span class="p">,</span> <span class="n">storage_type</span><span class="o">=</span><span class="s2">"memory"</span><span class="p">)</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">dcc</span><span class="o">.</span><span class="n">Store</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">"umap-render-settings"</span><span class="p">,</span> <span class="n">storage_type</span><span class="o">=</span><span class="s2">"memory"</span><span class="p">)</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">dcc</span><span class="o">.</span><span class="n">Store</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">"clipboard-settings-store"</span><span class="p">,</span> <span class="n">storage_type</span><span class="o">=</span><span class="s2">"memory"</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Use Cases:</strong>
+- Current UMAP group selections
+- Active participant/item selections
+- Plot data for current session
+- Clustering results
+- Temporary UI state</p>
+<h4 id="session-storage">Session Storage<a class="headerlink" href="#session-storage" title="Permanent link">¶</a></h4>
+<p>Persists across page refreshes within the same browser tab/window:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">dcc</span><span class="o">.</span><span class="n">Store</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">"last-rendered-item-plot"</span><span class="p">,</span> <span class="n">storage_type</span><span class="o">=</span><span class="s2">"session"</span><span class="p">)</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">dcc</span><span class="o">.</span><span class="n">Store</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">"last-rendered-umap-plot"</span><span class="p">,</span> <span class="n">storage_type</span><span class="o">=</span><span class="s2">"session"</span><span class="p">)</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">dcc</span><span class="o">.</span><span class="n">Store</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">"last-sociodemographic-settings"</span><span class="p">,</span> <span class="n">storage_type</span><span class="o">=</span><span class="s2">"session"</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Use Cases:</strong>
+- Last rendered plots (survive page refresh)
+- Sociodemographic plot settings
+- Session-specific cache</p>
+<h4 id="local-storage">Local Storage<a class="headerlink" href="#local-storage" title="Permanent link">¶</a></h4>
+<p>Persists across browser sessions (stored in browser's localStorage):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">dcc</span><span class="o">.</span><span class="n">Store</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">"saved-item-settings"</span><span class="p">,</span> <span class="n">storage_type</span><span class="o">=</span><span class="s2">"local"</span><span class="p">)</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">dcc</span><span class="o">.</span><span class="n">Store</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">"saved-umap-settings"</span><span class="p">,</span> <span class="n">storage_type</span><span class="o">=</span><span class="s2">"local"</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Use Cases:</strong>
+- User-saved settings
+- Persistent user preferences
+- Long-term storage across sessions</p>
+<h3 id="how-caching-layers-work-together-umap-plot-rendering">How Caching Layers Work Together: UMAP Plot Rendering<a class="headerlink" href="#how-caching-layers-work-together-umap-plot-rendering" title="Permanent link">¶</a></h3>
+<p>When a user requests a UMAP plot, the three caching layers work in concert to minimize computation time. Here's the complete workflow:</p>
+<h4 id="step-1-user-interaction">Step 1: User Interaction<a class="headerlink" href="#step-1-user-interaction" title="Permanent link">¶</a></h4>
+<p>User selects participants, items, and UMAP settings (neighbors, distance metric, etc.), then clicks "Render Plot".</p>
+<h4 id="step-2-data-retrieval-lru-cache">Step 2: Data Retrieval (LRU Cache)<a class="headerlink" href="#step-2-data-retrieval-lru-cache" title="Permanent link">¶</a></h4>
+<p><strong>LRU Cache Role:</strong>
+- <code>get_grammar_data_cached()</code> checks if full grammar dataset is already in memory
+- If <strong>cache hit</strong>: Returns data from memory
+- If <strong>cache miss</strong>: Queries SQLite database, stores result in LRU cache
+- Subsequent requests with same <code>regional_mapping</code> parameter use cached data</p>
+<h4 id="step-3-umap-computation-diskcache">Step 3: UMAP Computation (DiskCache)<a class="headerlink" href="#step-3-umap-computation-diskcache" title="Permanent link">¶</a></h4>
+<p><strong>DiskCache Role:</strong>
+- Checks if this <strong>exact combination</strong> of parameters was computed before
+- If <strong>cache hit</strong>: Loads pre-computed plot from disk
+- If <strong>cache miss</strong>: Computes UMAP, saves to disk
+- Cache persists across application restarts</p>
+<p><strong>Why cache UMAP plots?</strong>
+- UMAP computation is extremely expensive (5-30 seconds)
+- Plot objects are large (serialized Plotly figures with all trace data)
+- Many possible parameter combinations (participants × items × settings)
+- Results are deterministic - same inputs always produce same plot
+- Persistence across sessions is valuable (users often revisit the same views)</p>
+<h4 id="step-4-browser-storage-dccstore">Step 4: Browser Storage (dcc.Store)<a class="headerlink" href="#step-4-browser-storage-dccstore" title="Permanent link">¶</a></h4>
+<p><strong>Browser Storage Role:</strong>
+- Stores the most recent UMAP plot data in browser's sessionStorage
+- When user switches between "Participant Similarity" and "Item Ratings" views, the last rendered plot is restored instantly
+- Survives page refreshes within the same browser session</p>
+<p><strong>Why Browser Storage?</strong>
+- Instant restoration when switching plot types
+- No server round-trip or re-rendering needed
+- Session-specific (different tabs maintain independent state)</p>
+<p><strong>Important Note:</strong> This only restores plots when switching between plot types in the same session, not when switching browser tabs or windows. The plot must be re-rendered if the page is refreshed or the application is reopened.</p>
+<hr>
+<p><strong>Last Updated</strong>: February 2026<br>
+<strong>Version</strong>: 0.1.5</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2026 Fabian Vetter
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/vetterf/bslvc-dashboard" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"></path></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.uni-bamberg.de/en/eng-ling/" target="_blank" rel="noopener" title="www.uni-bamberg.de" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M271.9 20.2c-9.8-5.6-21.9-5.6-31.8 0l-224 128c-12.6 7.2-18.8 22-15.1 36S17.5 208 32 208h32v208l-51.2 38.4C4.7 460.4 0 469.9 0 480c0 17.7 14.3 32 32 32h448c17.7 0 32-14.3 32-32 0-10.1-4.7-19.6-12.8-25.6L448 416V208h32c14.5 0 27.2-9.8 30.9-23.8s-2.5-28.8-15.1-36l-224-128zM400 208v208h-64V208zm-112 0v208h-64V208zm-112 0v208h-64V208zm80-112a32 32 0 1 1 0 64 32 32 0 1 1 0-64"></path></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>
