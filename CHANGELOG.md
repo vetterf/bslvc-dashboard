@@ -2,6 +2,21 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
+## [0.1.6] - 2026-02-17
+
+### Changed
+- **UI**:
+  - Changed the missingness quick selectors to 0, 1 & 2% (overall missingness is low)
+  - Added output of random forest (OOB values, confusion matrix, gini importance x item) in the group comparison tab.
+
+- **DB**:
+  - Changed imputation method to missForest with imputed values capped to integers.
+
+- **Fix**:
+  - Major varieties (e.g., England, Malta) are never conflated to "Other", even if only a few participants are selected.
+  - Correlation matrix excludes missing values ('ND' values caused errors before).
+  - Other minor fixes in the code.
+
 ## [0.1.5] - 2026-02-04
 
 ### Added

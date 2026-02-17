@@ -100,7 +100,11 @@ The "Deselect Lasso Selection" and "Select Only Lasso Selection" buttons modify 
 - **Clear Groups**: Remove all defined groups.
 - **Select Only Lasso Selection**: Select only participants currently selected via lasso tool.
 - **Deselect Lasso Selection**: Deselect participants selected via lasso tool.
-- **Compare Selected Groups**: Render a Random Forest plot comparing selected groups.
+- **Compare Selected Groups**: Render a Random Forest comparison. The group comparison view provides a toggle between **Plot** and **Table** view. The plot view shows a horizontal bar chart of feature importances with per-group mean ratings and confidence intervals. The table view shows:
+    - **Random Forest Performance**: OOB accuracy and error rate, number of trees, classes, features, and samples.
+    - **Confusion Matrix (OOB Predictions)**: An interactive table with colour-coded cells (green for diagonal/correct, red-scaled for off-diagonal/misclassifications). Downloadable as CSV.
+    - **Top Features by Gini Importance**: An interactive table listing up to 15 top-ranked features with their item code, feature description, eWAVE label, feature group, sentence, Gini importance and per-group mean ratings. Downloadable as CSV.
+    - A **data source badge** indicates whether imputed or raw data were used.
 
 #### Participant Selection
 Participants can be selected via the participant tree, either by clicking the checkboxes in the tree, by using presets or by using the buttons. Additionally, users can use the "Advanced Filters" section to select participants based on their sociodemographic details. 
@@ -150,7 +154,7 @@ All grammar items can be selected in the grammar items tree. They are first grou
 - **Advanced Options**:
 
     - **Use item difference (spoken-written)**: Toggle to use difference between item pairs. Most items feature in the spoken and the written section of the BSLVC. These features are referred to as *twin items*. If this switch is set to true, the interface calculates the difference of the ratings for twin items (spoken - written) for each participant and uses this value for all subsequent plots. Naturally, items that feature only in the written section are excluded.
-    - **Use imputed data**: Toggle between imputed and raw data. The dimensionality reduction always uses the imputed data, as UMAP cannot handle missing values. A description of the imputation process can be found in the supplementary BSLVC resources repository (https://github.com/vetterf/BSLVC-resources; available soon!). Imputation was performed with a random forest approach.
+    - **Use imputed data**: Toggle between imputed and raw data. The dimensionality reduction always uses the imputed data, as UMAP cannot handle missing values. See [Data Imputation](#data-imputation) for details on how the imputation is performed.
     - **Toggle Written-Only**: Toggle items which feature only in the written section.
     - **Currency/Unit**: Toggle currency/unit items.
 
@@ -269,6 +273,27 @@ The "Flagged" button in the Grammar Item Selection section automatically deselec
 ### Lexicon Analysis Module
 
 The Lexicon Analysis Module is currently under development. This module will provide tools for exploring lexical variation across English varieties.
+
+## Imputed vs. Raw Data Usage
+
+The dashboard provides both imputed and raw (unimputed) data. The "Use imputed data" switch in the Grammar Item Selection controls which version is used. The switch defaults to **off** (raw data). Below is a summary of how each component handles missing data:
+
+| Component | Data used | Reason |
+|---|---|---|
+| **UMAP (Participant Similarity)** | Always **imputed** | UMAP cannot handle missing values. The switch is automatically forced on and disabled when in this mode. |
+| **Group Comparison (Random Forest model)** | Always **imputed** | scikit-learn's `RandomForestClassifier` cannot handle NaN values. If input contains missing values, rows are dropped before training. |
+| **Group Comparison (table means)** | Respects user switch | The per-group mean ratings and counts shown in the top features table use whichever data source the switch is set to. |
+| **Item Ratings plots** | Respects user switch | Works with both raw and imputed data. Raw data is the default. |
+| **Data Export** | Respects user switch | Exports whichever version the switch is set to. |
+| **Distance Matrix Export** | Always **imputed** | Uses the same data as the UMAP plot. |
+
+When the user's switch is set to "off" (raw data) but a function requires imputed data, the dashboard displays a note informing the user that imputed data is being used.
+
+## Data Imputation
+
+The BSLVC data contain missing values. Imputation is performed in the data-pipeline repository using the **missForest** algorithm, an iterative random forest-based imputation method. The algorithm iteratively imputes missing values by training a random forest on observed values and predicting the missing ones. For each sample with missing data, the **MainVariety** (participant's primary language variety) is included as a predictor alongside other grammar items, allowing the algorithm to learn variety-specific patterns and improve imputation accuracy. The imputed data are stored in the SQLite database alongside the raw data. Users can toggle between them via the "Use imputed data" switch (see [Imputed vs. Raw Data Usage](#imputed-vs-raw-data-usage)).
+
+Before imputation, participants with more than **50 missing grammar items** or **25 missing lexical items** are dropped.
 
 ## Caching System
 

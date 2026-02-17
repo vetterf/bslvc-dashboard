@@ -15,7 +15,7 @@ import umap
 import pickle
 from dash.exceptions import PreventUpdate
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score, ConfusionMatrixDisplay
+from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score, ConfusionMatrixDisplay, f1_score
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from scipy.stats import randint
 import polars as pl
@@ -301,15 +301,86 @@ UmapPlotContainer = dmc.Container([
                 html.Div(
                     id="rf-plot-container",
                     children=[
-                        dcc.Graph(id="RFPlotFig", figure=emptyFig, style={'height': '70vh'}, config={
-                            'toImageButtonOptions': {
-                                'format': 'svg',
-                                'filename': 'rf_plot',
-                                'scale': 1
-                            }
-                        })
+                        # Table/Plot view switch for group comparison
+                        dmc.Group([
+                            dmc.SegmentedControl(
+                                id="rf-table-plot-toggle",
+                                data=[
+                                    {"value": "plot-view", "label": "Plot"},
+                                    {"value": "table-view", "label": "Table"},
+                                ],
+                                value="plot-view",
+                                color="blue",
+                                size="sm",
+                                mb="sm"
+                            ),
+                        ], justify="center"),
+                        # Plot sub-view
+                        html.Div(
+                            id="rf-plot-subview",
+                            children=[
+                                dcc.Graph(id="RFPlotFig", figure=emptyFig, style={'height': '70vh'}, config={
+                                    'toImageButtonOptions': {
+                                        'format': 'svg',
+                                        'filename': 'rf_plot',
+                                        'scale': 1
+                                    }
+                                })
+                            ],
+                            style={"display": "block"}
+                        ),
+                        # Table sub-view
+                        html.Div(
+                            id="rf-table-subview",
+                            children=[
+                                # Tabs within a Card
+                                dmc.Card(
+                                    children=[
+                                        dmc.Tabs(
+                                            value="performance",
+                                            children=[
+                                                dmc.TabsList([
+                                                    dmc.TabsTab("Performance", value="performance", leftSection=DashIconify(icon="tabler:chart-bar", width=16)),
+                                                    dmc.TabsTab("Confusion Matrix", value="confusion", leftSection=DashIconify(icon="tabler:table", width=16)),
+                                                    dmc.TabsTab("Top Items", value="top-items", leftSection=DashIconify(icon="tabler:list-numbers", width=16)),
+                                                ]),
+                                                dmc.TabsPanel(
+                                                    value="performance",
+                                                    children=dmc.Stack([
+                                                        html.Div(id="rf-oob-error-display", children=[
+                                                            dmc.Text("OOB Error: N/A", size="sm", c="dimmed")
+                                                        ]),
+                                                        dmc.Divider(label="F1 Scores by Variety", labelPosition="center", my="md"),
+                                                        html.Div(id="rf-f1-scores-display", children=[
+                                                            dmc.Text("F1 scores: N/A", size="sm", c="dimmed")
+                                                        ]),
+                                                    ], gap="md")
+                                                ),
+                                                dmc.TabsPanel(
+                                                    value="confusion",
+                                                    children=html.Div(id="rf-confusion-matrix-display", children=[
+                                                        dmc.Text("No data available yet.", size="sm", c="dimmed")
+                                                    ])
+                                                ),
+                                                dmc.TabsPanel(
+                                                    value="top-items",
+                                                    children=html.Div(id="rf-top-features-display", children=[
+                                                        dmc.Text("No data available yet.", size="sm", c="dimmed")
+                                                    ])
+                                                ),
+                                            ],
+                                        ),
+                                    ],
+                                    withBorder=True,
+                                    shadow="sm",
+                                    radius="md",
+                                    p="md",
+                                ),
+                            ],
+                            style={"display": "none", "overflowY": "auto", "maxHeight": "75vh"}
+                        ),
                     ],
-                    style={"display": "none"}
+                    style={"display": "none", "height": "calc(100vh - 280px)", "overflow-y": "auto"}
                 ),
             ],span=12),
         ])        
@@ -463,8 +534,8 @@ InformantsGrid = html.Div(children = [
         dmc.SegmentedControl(
             id="informants-view-toggle",
             data=[
-                {"value": "table", "label": "Table View"},
-                {"value": "plots", "label": "Plot View"},
+                {"value": "plots", "label": "Plot"},
+                {"value": "table", "label": "Table"},
             ],
             value="table",
             color="blue",
@@ -864,8 +935,8 @@ informantSelectionAccordion = dmc.AccordionItem(
                                         dmc.Text("Missing data:", size="xs", fw=600, c="dimmed"),
                                         dmc.Group(children=[
                                             dmc.Button("0%", id='batch-select-missing-0', size="xs", variant="light"),
-                                            dmc.Button("<5%", id='batch-select-missing-5', size="xs", variant="light"),
-                                            dmc.Button("<10%", id='batch-select-missing-10', size="xs", variant="light"),
+                                            dmc.Button("<1%", id='batch-select-missing-1', size="xs", variant="light"),
+                                            dmc.Button("<2%", id='batch-select-missing-2', size="xs", variant="light"),
                                         ], gap="xs", mb="xs"),
   
                                     ])
@@ -2084,8 +2155,8 @@ def update_quick_stats(selected_participants, selected_items, use_pairs):
      Input('batch-select-female', 'n_clicks'),
      Input('batch-select-male', 'n_clicks'),
      Input('batch-select-missing-0', 'n_clicks'),
-     Input('batch-select-missing-5', 'n_clicks'),
-     Input('batch-select-missing-10', 'n_clicks'),
+     Input('batch-select-missing-1', 'n_clicks'),
+     Input('batch-select-missing-2', 'n_clicks'),
      Input('batch-select-balanced', 'n_clicks'),
      Input('batch-select-balanced-per-variety', 'n_clicks'),
      Input('batch-select-equal-per-variety', 'n_clicks')],
@@ -2131,12 +2202,12 @@ def batch_select_participants(*args):
     elif button_id == 'batch-select-missing-0':
         # Get participants with 0% missing data
         selected = retrieve_data.getParticipantsByMissingData(max_missing_percent=0)
-    elif button_id == 'batch-select-missing-5':
+    elif button_id == 'batch-select-missing-1':
         # Get participants with <5% missing data
-        selected = retrieve_data.getParticipantsByMissingData(max_missing_percent=5)
-    elif button_id == 'batch-select-missing-10':
+        selected = retrieve_data.getParticipantsByMissingData(max_missing_percent=1)
+    elif button_id == 'batch-select-missing-2':
         # Get participants with <10% missing data
-        selected = retrieve_data.getParticipantsByMissingData(max_missing_percent=10)
+        selected = retrieve_data.getParticipantsByMissingData(max_missing_percent=2)
     elif button_id == 'batch-select-balanced':
         # Select equal numbers of male and female
         females = data[data['Gender'].isin(['f', 'female', 'Female'])]
@@ -3619,11 +3690,12 @@ def compute_umap_background(trigger_data, selected_informants, items, n_neighbou
     groupsCache = getColorGroupingsFromFigure(figure)
     
     # Store the settings used for this UMAP render
-    # Note: We store the user's interface choice for use_imputed, even though UMAP itself always uses imputed data.
-    # This way, the RF plot (group comparison) can respect what the user actually selected in the interface.
+    # UMAP always uses imputed data, so we hardcode use_imputed=True here.
+    # This ensures the RF group comparison (which inherits these settings) correctly
+    # reports "Imputed data" as the data source.
     render_settings = {
         "pairs": pairs,
-        "use_imputed": use_imputed  # Store user's interface choice for RF plot
+        "use_imputed": True  # UMAP always uses imputed data
     }
     
     return figure, data, selected_informants, items, groupsCache, render_settings
@@ -3663,7 +3735,22 @@ def toggle_umap_rf_view(selected_view):
     if selected_view == 'umap-plot':
         return {"display": "block"}, {"display": "none"}
     else:  # rf-plot
-        return {"display": "none"}, {"display": "block"}
+        return {"display": "none"}, {"display": "block", "height": "calc(100vh - 260px)", "overflow-y": "auto"}
+
+
+# Callback to toggle between Plot and Table sub-views within the Group Comparison view
+@callback(
+    [Output('rf-plot-subview', 'style'),
+     Output('rf-table-subview', 'style')],
+    Input('rf-table-plot-toggle', 'value'),
+    prevent_initial_call=True
+)
+def toggle_rf_table_plot_view(selected_view):
+    """Show/hide plot or table sub-view within the Group Comparison view"""
+    if selected_view == 'plot-view':
+        return {"display": "block"}, {"display": "none"}
+    else:  # table-view
+        return {"display": "none"}, {"display": "block", "height": "calc(100vh - 320px)", "overflow-y": "auto"}
 
 
 @callback(
@@ -3711,7 +3798,12 @@ def clear_rf_plot_loading(figure, notification):
      Output('render-rf-plot', 'disabled',allow_duplicate=True),
      Output("notify-container", "children",allow_duplicate=True), 
      Output('umap-view-toggle', 'value', allow_duplicate=True),
-     Output('grammar-analysis-tabs', 'value', allow_duplicate=True)],  # Activate Plot View tab
+     Output('grammar-analysis-tabs', 'value', allow_duplicate=True),  # Activate Plot View tab
+     Output('rf-oob-error-display', 'children'),
+     Output('rf-confusion-matrix-display', 'children'),
+     Output('rf-top-features-display', 'children'),
+     Output('rf-f1-scores-display', 'children'),
+     Output('rf-table-plot-toggle', 'value')],
     Input('render-rf-plot','n_clicks'),
     [State('UMAPGroupsForRF','data'),
     State('UMAPitems','data'),
@@ -3720,10 +3812,11 @@ def clear_rf_plot_loading(figure, notification):
     State('UMAPfig','figure'),
     State('UMAPparticipants','data'),
     State('umap-render-settings', 'data'),  # Use stored settings instead of UI state
-    State('rf-use-zscores','checked')],
+    State('rf-use-zscores','checked'),
+    State('use-imputed-data-switch', 'checked')],
     prevent_initial_call=True
 )
-def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants,render_settings,use_zscores):
+def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants,render_settings,use_zscores,user_imputed_switch):
     # Set default value for split_by_variety since checkbox was removed
     split_by_variety = False
     
@@ -3772,7 +3865,7 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
                     autoClose=5000,
                     position="top-right"
             )
-            return no_update, False, False, False, notification, no_update, no_update
+            return no_update, False, False, False, notification, no_update, no_update, no_update, no_update, no_update, no_update
         df = pd.DataFrame(groups['dataframe'])
         if("id" in df.columns):
             # rename column id to ids
@@ -3796,7 +3889,7 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
                 autoClose=5000,
                 position="top-right"
             )
-            return no_update, False, False, False, notification, no_update, no_update
+            return no_update, False, False, False, notification, no_update, no_update, no_update, no_update, no_update, no_update
 
         #data = retrieve_data
         # retrieve grammar data, add items from session cache
@@ -3810,44 +3903,213 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
             groupcol['group'] = groupcol['symbol'] # group by color
 
         # Show notification with imputed data info
-        if use_imputed:
-            notification = dmc.Notification(
-                id="my-notification",
-                title="Info",
-                message="Rendering comparison plot with imputed data. Note: Imputed data might skew the distribution for some items.",
-                color="blue",
-                loading=True,
-                action="show",
-                autoClose=4000,
-                position="top-right"
-            )
-        else:
-            notification = dmc.Notification(
-                id="my-notification",
-                title="Info",
-                message="Rendering comparison plot, please wait.",
-                color="blue",
-                loading=True,
-                action="show",
-                autoClose=2000,
-                position="top-right"
-            )
+        notification = dmc.Notification(
+            id="my-notification",
+            title="Info",
+            message="Rendering comparison plot, please wait.",
+            color="blue",
+            loading=True,
+            action="show",
+            autoClose=2000,
+            position="top-right"
+        )
         
         # Use lazy data loading for better performance
         data = retrieve_data.getGrammarData(imputed=use_imputed,participants=df['ids'],columns=items, pairs=pairs)
         rf, importanceRatings = trainRF(items,data,datacols=items,groupcol=groupcol,pairs=pairs,use_zscores=use_zscores)
 
+        # --- Extract RF metrics for table view ---
+        # OOB error
+        oob_score = rf.oob_score_ if hasattr(rf, 'oob_score_') else None
+        oob_error = 1.0 - oob_score if oob_score is not None else None
+
+        # OOB confusion matrix - need to reconstruct y_true from groupcol merged with data
+        oob_decision = rf.oob_decision_function_ if hasattr(rf, 'oob_decision_function_') else None
+        classes = rf.classes_
+        # Reconstruct y_true by merging data with groupcol the same way trainRF does
+        data_with_groups = pd.merge(data, groupcol, left_on='InformantID', right_on='ids')
+        y_true = data_with_groups['group']
+        if oob_decision is not None:
+            y_pred_oob = classes[np.argmax(oob_decision, axis=1)]
+            cm = confusion_matrix(y_true, y_pred_oob, labels=classes)
+            cm_df = pd.DataFrame(cm, index=[f"True: {c}" for c in classes], columns=[f"Pred: {c}" for c in classes])
+        else:
+            cm_df = pd.DataFrame()
+            y_pred_oob = None
+
+        # Calculate F1 scores per class
+        f1_scores_dict = {}
+        if y_pred_oob is not None:
+            f1_per_class = f1_score(y_true, y_pred_oob, labels=classes, average=None, zero_division=0)
+            for i, cls in enumerate(classes):
+                f1_scores_dict[cls] = f1_per_class[i]
+        f1_df = pd.DataFrame(list(f1_scores_dict.items()), columns=['Variety', 'F1 Score'])
+        f1_df['F1 Score'] = f1_df['F1 Score'].round(4)
+        f1_df = f1_df.sort_values('F1 Score', ascending=False).reset_index(drop=True)
+
+        # Build imputed-data note when user switch is off but RF uses imputed data
+        imputed_note = dmc.Alert(
+            "UMAP and the Random Forest model always use imputed data (they cannot handle missing values). "
+            "All other charts and tables use unimputed data unless you select otherwise in the advanced options.",
+            title="Data source",
+            color="blue",
+            icon=DashIconify(icon="tabler:info-circle", width=18),
+            mb="sm",
+        )
+
+        # Build OOB error display
+        if oob_score is not None:
+            oob_items = [imputed_note]
+            oob_items.extend([
+                dmc.Group([
+                    dmc.Text("OOB Accuracy:", size="sm", fw=600),
+                    dmc.Badge(f"{oob_score:.4f} ({oob_score*100:.1f}%)", color="green" if oob_score > 0.5 else "orange", variant="light", size="lg"),
+                ], gap="sm"),
+                dmc.Group([
+                    dmc.Text("OOB Error Rate:", size="sm", fw=600),
+                    dmc.Badge(f"{oob_error:.4f} ({oob_error*100:.1f}%)", color="red" if oob_error > 0.5 else "blue", variant="light", size="lg"),
+                ], gap="sm"),
+                dmc.Group([
+                    dmc.Text("Number of trees:", size="sm"),
+                    dmc.Text(f"{rf.n_estimators}", size="sm", fw=600),
+                ], gap="sm"),
+                dmc.Group([
+                    dmc.Text("Number of classes:", size="sm"),
+                    dmc.Text(f"{len(classes)}", size="sm", fw=600),
+                ], gap="sm"),
+                dmc.Group([
+                    dmc.Text("Number of features:", size="sm"),
+                    dmc.Text(f"{len(importanceRatings)}", size="sm", fw=600),
+                ], gap="sm"),
+                dmc.Group([
+                    dmc.Text("Total samples:", size="sm"),
+                    dmc.Text(f"{len(y_true)}", size="sm", fw=600),
+                ], gap="sm"),
+            ])
+            oob_children = dmc.Stack(gap="xs", children=oob_items)
+        else:
+            oob_children = dmc.Text("OOB score not available.", size="sm", c="dimmed")
+
+        # Build confusion matrix display
+        if not cm_df.empty:
+            # Pre-compute background colors for off-diagonal cells
+            cm_values_arr = cm.copy().astype(float)
+            np.fill_diagonal(cm_values_arr, 0)
+            max_off_diag = cm_values_arr.max() if cm_values_arr.max() > 0 else 1
+
+            # Pre-compute color map: bg_colors[ri][ci] = color string or None
+            n_classes = len(cm_df)
+            bg_colors = {}
+            for ri in range(n_classes):
+                for ci in range(n_classes):
+                    if ri != ci:
+                        val = cm_values_arr[ri, ci]
+                        if val > 0:
+                            intensity = min(val / max_off_diag, 1.0)
+                            r = 255
+                            g = int(255 * (1 - intensity * 0.6))
+                            b = int(255 * (1 - intensity * 0.6))
+                            bg_colors[(ri, ci)] = f"rgb({r},{g},{b})"
+
+            cm_row_data = []
+            for ri, (idx, row) in enumerate(cm_df.iterrows()):
+                row_dict = {"Actual \\ Predicted": str(idx), "_row_index": ri}
+                for ci, (col, val) in enumerate(row.items()):
+                    row_dict[col] = int(val)
+                cm_row_data.append(row_dict)
+
+            # Build column defs with pre-computed style conditions per cell
+            cm_col_defs = [{"field": "Actual \\ Predicted", "headerName": "Actual \\ Predicted", "pinned": "left", "width": 160,
+                            "cellStyle": {"fontWeight": "bold", "backgroundColor": "#f8f9fa"}}]
+            for ci, col in enumerate(cm_df.columns):
+                style_conditions = [
+                    # Diagonal: bold, subtle green background for correct predictions
+                    {"condition": f"params.data._row_index === {ci}",
+                     "style": {"textAlign": "center", "fontWeight": "bold", "backgroundColor": "#e8f5e9"}},
+                ]
+                # Off-diagonal: color by misclassification intensity (red scale)
+                for ri in range(n_classes):
+                    if ri != ci and (ri, ci) in bg_colors:
+                        style_conditions.append({
+                            "condition": f"params.data._row_index === {ri}",
+                            "style": {"textAlign": "center", "backgroundColor": bg_colors[(ri, ci)]}
+                        })
+
+                cm_col_defs.append({
+                    "field": col, "headerName": col, "width": 120,
+                    "cellStyle": {
+                        "styleConditions": style_conditions,
+                        "defaultStyle": {"textAlign": "center"}
+                    },
+                })
+
+            cm_children = dmc.Stack(gap="xs", children=[
+                dmc.Group([
+                    dmc.Button(
+                        "Download CSV",
+                        id="download-rf-cm-button",
+                        size="xs",
+                        variant="light",
+                        leftSection=DashIconify(icon="tabler:download", width=14)
+                    ),
+                ], justify="flex-end", mb="xs"),
+                dag.AgGrid(
+                    id="rf-confusion-matrix-grid",
+                    rowData=cm_row_data,
+                    columnDefs=cm_col_defs,
+                    defaultColDef={"sortable": False, "resizable": True},
+                    className="ag-theme-quartz compact",
+                    style={"height": "calc(100vh - 460px)", "width": "100%"},
+                    dashGridOptions={"domLayout": "autoHeight", "suppressMenuHide": True},
+                ),
+            ])
+        else:
+            cm_children = dmc.Text("Confusion matrix not available.", size="sm", c="dimmed")
+
+        # Build F1 scores display
+        if not f1_df.empty:
+            f1_col_defs = [
+                {"field": "Variety", "headerName": "Variety", "width": 180, "pinned": "left", "sortable": True},
+                {"field": "F1 Score", "headerName": "F1 Score", "width": 120, "sortable": True,
+                 "cellStyle": {"textAlign": "center"}},
+            ]
+            f1_children = dmc.Stack(gap="xs", children=[
+                dmc.Group([
+                    dmc.Text(f"F1 scores for {len(f1_df)} classes.", size="xs", c="dimmed"),
+                    dmc.Button(
+                        "Download CSV",
+                        id="download-rf-f1-button",
+                        size="xs",
+                        variant="light",
+                        leftSection=DashIconify(icon="tabler:download", width=14)
+                    ),
+                ], justify="space-between"),
+                dag.AgGrid(
+                    id="rf-f1-scores-grid",
+                    rowData=f1_df.to_dict('records'),
+                    columnDefs=f1_col_defs,
+                    defaultColDef={"sortable": True, "resizable": True},
+                    className="ag-theme-quartz compact",
+                    style={"height": f"{min(60 + len(f1_df) * 42, 400)}px", "width": "100%"},
+                    dashGridOptions={"suppressMenuHide": True},
+                ),
+            ])
+        else:
+            f1_children = dmc.Text("F1 scores not available.", size="sm", c="dimmed")
+
+        # Build data source badge - removed, info is in the RF performance note
+
+        # Fetch data for table per-group means based on user switch (may differ from RF training data)
+        table_data = retrieve_data.getGrammarData(imputed=user_imputed_switch, participants=groupcol['ids'], columns=items, pairs=pairs)
 
         columns = importanceRatings['item'].to_list()
-        data[columns] = data[columns].apply(pd.to_numeric, errors='coerce')
-        #data.loc[:,columns] = data.loc[:,columns].astype(int)
-        data = data.merge(groupcol, left_on='InformantID', right_on="ids", how="left")
+        table_data[columns] = table_data[columns].apply(pd.to_numeric, errors='coerce')
+        table_data = table_data.merge(groupcol, left_on='InformantID', right_on="ids", how="left")
         plotList = []
-        df = data.copy(deep=True)
+        df = table_data.copy(deep=True)
         df = df.melt(id_vars=['group'],value_vars=columns,var_name='item')
-        # using polars here for CI calculation ,pandas groupby is insanely slow?
         # Replace polars groupby with pandas groupby:
-        df = data.copy()
+        df = table_data.copy()
         df = df.melt(id_vars=['group'], value_vars=columns, var_name='item')
         plotDF = (
             df.groupby(['group', 'item'], observed=True)
@@ -3860,10 +4122,108 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
         plotDF['upper_ci'] = plotDF['ci']
         plotDF = plotDF.merge(importanceRatings, on='item', how='left')
 
+        # --- Build top features table (top 15 or fewer) ---
+        n_top = min(15, len(importanceRatings))
+        top_features = importanceRatings.head(n_top)['item'].to_list()
+        top_plotDF = plotDF[plotDF['item'].isin(top_features)].copy()
+        # Get metadata for feature descriptions
+        if not pairs:
+            feat_meta = retrieve_data.getGrammarMeta()
+            # Meta columns: question_code, item (sentence text), feature, variant_detail, group_finegrained, feature_ewave
+            meta_cols = [c for c in ['item', 'feature', 'variant_detail', 'group_finegrained', 'feature_ewave'] if c in feat_meta.columns]
+            feat_meta_map = feat_meta.set_index('question_code')[meta_cols].to_dict('index') if 'question_code' in feat_meta.columns else {}
+        else:
+            feat_meta = retrieve_data.getGrammarMeta(type='item_pairs')
+            meta_cols = [c for c in ['item', 'feature', 'variant_detail', 'group_finegrained', 'feature_ewave'] if c in feat_meta.columns]
+            feat_meta_map = feat_meta.set_index('item_pair')[meta_cols].to_dict('index') if 'item_pair' in feat_meta.columns else {}
+
+        # Pivot: one row per feature, columns for each group's mean, with importance
+        top_pivot = top_plotDF.pivot_table(index='item', columns='group', values='mean', aggfunc='first').reset_index()
+        # Ensure all column names are strings (lasso groups can produce integer column names)
+        top_pivot.columns = [str(c) for c in top_pivot.columns]
+        top_importance = importanceRatings[importanceRatings['item'].isin(top_features)][['item', 'importance']].copy()
+        top_pivot = top_pivot.merge(top_importance, on='item', how='left')
+        # Add count per group
+        count_pivot = top_plotDF.pivot_table(index='item', columns='group', values='count', aggfunc='first').reset_index()
+        count_pivot.columns = ['item'] + [f"{c} (n)" for c in count_pivot.columns if c != 'item']
+        top_pivot = top_pivot.merge(count_pivot, on='item', how='left')
+        # Add metadata columns
+        top_pivot['Feature'] = top_pivot['item'].map(lambda x: feat_meta_map.get(x, {}).get('feature', ''))
+        top_pivot['eWAVE'] = top_pivot['item'].map(lambda x: feat_meta_map.get(x, {}).get('feature_ewave', ''))
+        top_pivot['Feature Group'] = top_pivot['item'].map(lambda x: feat_meta_map.get(x, {}).get('group_finegrained', ''))
+        top_pivot['Sentence'] = top_pivot['item'].map(lambda x: feat_meta_map.get(x, {}).get('item', ''))
+        top_pivot = top_pivot.sort_values('importance', ascending=False).reset_index(drop=True)
+        top_pivot.insert(0, 'Rank', range(1, len(top_pivot) + 1))
+        # Round numeric columns: importance to 4 decimals, group averages to 2 decimals
+        for col in top_pivot.columns:
+            if top_pivot[col].dtype in ['float64', 'float32']:
+                if col == 'importance':
+                    top_pivot[col] = top_pivot[col].round(4)
+                else:
+                    top_pivot[col] = top_pivot[col].round(2)
+        # Rename 'item' to 'Item Code' and 'importance' to 'Gini Importance'
+        top_pivot = top_pivot.rename(columns={'item': 'Item Code', 'importance': 'Gini Importance'})
+        # Reorder columns: Rank, Item Code, Feature, eWAVE, Feature Group, Sentence, Gini Importance, then group means, then counts
+        priority_cols = ['Rank', 'Item Code', 'Feature', 'eWAVE', 'Feature Group', 'Sentence', 'Gini Importance']
+        other_cols = [c for c in top_pivot.columns if c not in priority_cols]
+        top_pivot = top_pivot[priority_cols + other_cols]
+
+        top_col_defs = []
+        for col in top_pivot.columns:
+            col_str = str(col)
+            col_def = {"field": col, "headerName": col_str, "sortable": True, "resizable": True, "filter": True}
+            if col_str == 'Rank':
+                col_def['width'] = 70
+                col_def['pinned'] = 'left'
+            elif col_str == 'Item Code':
+                col_def['width'] = 120
+            elif col_str == 'Feature':
+                col_def['minWidth'] = 160
+                col_def['flex'] = 1
+            elif col_str == 'eWAVE':
+                col_def['minWidth'] = 160
+                col_def['flex'] = 1
+            elif col_str == 'Feature Group':
+                col_def['minWidth'] = 140
+                col_def['flex'] = 1
+            elif col_str == 'Sentence':
+                col_def['minWidth'] = 200
+                col_def['flex'] = 2
+            elif col_str == 'Gini Importance':
+                col_def['width'] = 140
+            elif '(n)' in col_str:
+                col_def['width'] = 90
+            else:
+                col_def['width'] = 110
+            top_col_defs.append(col_def)
+
+        top_features_children = dmc.Stack(gap="xs", children=[
+            dmc.Group([
+                dmc.Text(f"Showing top {n_top} of {len(importanceRatings)} features, sorted by Gini importance.", size="xs", c="dimmed"),
+                dmc.Button(
+                    "Download CSV",
+                    id="download-rf-features-button",
+                    size="xs",
+                    variant="light",
+                    leftSection=DashIconify(icon="tabler:download", width=14)
+                ),
+            ], justify="space-between"),
+            dag.AgGrid(
+                id="rf-top-features-grid",
+                rowData=top_pivot.to_dict('records'),
+                columnDefs=top_col_defs,
+                defaultColDef={"sortable": True, "resizable": True, "filter": True},
+                className="ag-theme-quartz compact",
+                style={"height": "calc(100vh - 460px)", "width": "100%"},
+                dashGridOptions={"suppressMenuHide": True, "animateRows": True, "pagination": False,
+                                 "enableBrowserTooltips": True, "tooltipShowDelay": 500},
+            )
+        ])
+
         # to do: merge meta info here for hoverinfo in plot
         RFPlot = get_cached_rf_plot(plotDF, importanceRatings, value_range, pairs=pairs, split_by_variety=split_by_variety)
-        return RFPlot, False, False, False, notification, 'rf-plot', "plot-view"
-    return no_update, no_update, no_update, no_update, no_update, no_update, no_update
+        return RFPlot, False, False, False, notification, 'rf-plot', "plot-view", oob_children, cm_children, top_features_children, f1_children, "plot-view"
+    return no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update
 
 # apply filter to participant selection tree
 @callback(
@@ -4355,6 +4715,86 @@ clientside_callback(
     """,
     Output("download-informants-table-button", "n_clicks"),
     Input("download-informants-table-button", "n_clicks"),
+    prevent_initial_call=True
+)
+
+# Clientside callback to download confusion matrix CSV
+clientside_callback(
+    """
+    function(n_clicks) {
+        if (!n_clicks) {
+            return window.dash_clientside.no_update;
+        }
+        const api = window.dash_ag_grid && window.dash_ag_grid.getApi('rf-confusion-matrix-grid');
+        if (!api) {
+            return window.dash_clientside.no_update;
+        }
+        const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+        // Exclude internal columns (_row_index, _bg_*)
+        const exportCols = api.getColumns()
+            .map(function(c) { return c.getColId(); })
+            .filter(function(id) { return id.indexOf('_') !== 0; });
+        api.exportDataAsCsv({
+            fileName: 'rf_confusion_matrix_' + timestamp + '.csv',
+            onlySelected: false,
+            allColumns: false,
+            columnKeys: exportCols,
+        });
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output("download-rf-cm-button", "n_clicks"),
+    Input("download-rf-cm-button", "n_clicks"),
+    prevent_initial_call=True
+)
+
+# Clientside callback to download top features CSV
+clientside_callback(
+    """
+    function(n_clicks) {
+        if (!n_clicks) {
+            return window.dash_clientside.no_update;
+        }
+        const api = window.dash_ag_grid && window.dash_ag_grid.getApi('rf-top-features-grid');
+        if (!api) {
+            return window.dash_clientside.no_update;
+        }
+        const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+        api.exportDataAsCsv({
+            fileName: 'rf_top_features_' + timestamp + '.csv',
+            onlySelected: false,
+            allColumns: true,
+        });
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output("download-rf-features-button", "n_clicks"),
+    Input("download-rf-features-button", "n_clicks"),
+    prevent_initial_call=True
+)
+
+# Clientside callback to download F1 scores CSV
+clientside_callback(
+    """
+    function(n_clicks) {
+        if (!n_clicks) {
+            return window.dash_clientside.no_update;
+        }
+        const api = window.dash_ag_grid && window.dash_ag_grid.getApi('rf-f1-scores-grid');
+        if (!api) {
+            return window.dash_clientside.no_update;
+        }
+        const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+        api.exportDataAsCsv({
+            fileName: 'rf_f1_scores_' + timestamp + '.csv',
+            onlySelected: false,
+            allColumns: true,
+        });
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output("download-rf-f1-button", "n_clicks"),
+    Input("download-rf-f1-button", "n_clicks"),
     prevent_initial_call=True
 )
 

@@ -629,14 +629,17 @@ def trainRF(GrammarItemsCols,data,datacols,groupcol="MainVariety",pairs=False,us
     y = data[groupcol]
     X = data[datacols]
 
-    # Split the data into training and test sets
-    #X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4)
-    #rf = RandomForestClassifier()
-    #rf.fit(X_train, y_train)
-    #y_pred = rf.predict(X_test)
-    #accuracy = accuracy_score(y_test, y_pred)
-    #print("Accuracy:", accuracy)
-    rf = RandomForestClassifier(n_estimators=100, class_weight='balanced_subsample') # use balanced class weights to account for class imbalance (e.g. more informants from one country than another)
+    # Guard against NaN: scikit-learn's RandomForestClassifier cannot handle missing values.
+    # Drop any rows that still contain NaN in the feature columns.
+    valid_mask = X.notna().all(axis=1)
+    if not valid_mask.all():
+        n_dropped = (~valid_mask).sum()
+        print(f"[trainRF] Dropped {n_dropped} row(s) with missing values before fitting.")
+        X = X.loc[valid_mask]
+        y = y.loc[valid_mask]
+        data = data.loc[valid_mask]
+
+    rf = RandomForestClassifier(n_estimators=500, class_weight='balanced_subsample', oob_score=True) # use balanced class weights to account for class imbalance (e.g. more informants from one country than another)
     rf.fit(X, y)
     feature_importances = pd.DataFrame({'importance':rf.feature_importances_, 'item':X.columns}).sort_values(by='importance',ascending=False)
     if not pairs:
@@ -4519,8 +4522,20 @@ def create_correlation_matrix_plot(df, items, informants, pairs=False, use_imput
     # Sort items by variant_detail
     sorted_items = sorted(item_columns, key=lambda x: (item_info[x]['variant_detail'], x))
     
-    # Calculate correlation matrix with sorted items
-    correlation_data = df_wide[sorted_items].corr()
+    # Convert item columns to numeric, handling "ND" and missing values
+    # This is essential when use_imputed=False, as data may contain "ND" strings
+    df_numeric = df_wide[sorted_items].copy()
+    for col in sorted_items:
+        df_numeric[col] = pd.to_numeric(df_numeric[col], errors='coerce')
+    
+    # Check if we have enough valid data for correlation
+    valid_counts = df_numeric.notna().sum()
+    if (valid_counts < 2).any():
+        insufficient_items = valid_counts[valid_counts < 2].index.tolist()
+        return getEmptyPlot(f"Insufficient valid data for correlation. Items with < 2 valid values: {', '.join(insufficient_items)}")
+    
+    # Calculate correlation matrix with sorted items (uses pairwise complete observations)
+    correlation_data = df_numeric.corr()
     
     # Create hover text with item information
     hover_text = []

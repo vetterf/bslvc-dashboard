@@ -114,6 +114,38 @@ if Conf.source == 'sql_server':
 def inner_join_list(list1, list2):
     return [item for item in list1 if item in list2]
 
+def getMajorVarieties():
+    """
+    Returns a list of major varieties that have at least 10 participants in the entire dataset.
+    These varieties should be preserved in the data even if a filtered subset has fewer than 10.
+    """
+    SQLstatement = """
+        SELECT I.MainVariety, COUNT(*) as count 
+        FROM Informants I 
+        JOIN BSLVC_Grammar_Imputed G ON I.InformantID = G.InformantID
+        WHERE I.MainVariety IS NOT NULL 
+        AND I.MainVariety != 'UNCLEAR'
+        AND I.MainVariety != 'Other'
+        AND NOT (I.InformantID LIKE 'Unnamed%')
+    """
+    
+    if EXCLUDED_PARTICIPANTS:
+        exclusion_clause = " AND I.InformantID NOT IN (" + ', '.join(f"'{p}'" for p in EXCLUDED_PARTICIPANTS) + ")"
+        SQLstatement += exclusion_clause
+    
+    SQLstatement += " GROUP BY I.MainVariety HAVING COUNT(*) >= 10"
+    
+    if Conf.source == 'sqlite':
+        db_connection = sqlite3.connect(Conf.sqliteFile)
+    
+    data = pd.read_sql(SQLstatement, con=db_connection)
+    
+    if Conf.source == 'sqlite':
+        db_connection.close()
+    
+    # Return list of major varieties
+    return data['MainVariety'].tolist()
+
 def getInformantCols():
     # returns a list with the column names of the Informants table
     # Dynamically loads column names from the database
@@ -376,7 +408,15 @@ def getInformantDataGrammar(columns = None, participants = None, varieties = Non
     # Store original MainVariety before grouping
     data['MainVariety_Original'] = data['MainVariety'].copy()
     
-    data['MainVariety'] = data['MainVariety'].apply(lambda x: x if variety_counts.get(x, 0) >= 10 else 'Other')
+    # Get major varieties that should be preserved regardless of count
+    major_varieties = getMajorVarieties()
+    
+    # Recode MainVariety to "Other" only if:
+    # 1. Count is less than 10 AND
+    # 2. It's not a major variety (one that appears in the grammar data)
+    data['MainVariety'] = data['MainVariety'].apply(
+        lambda x: x if (variety_counts.get(x, 0) >= 10 or x in major_varieties) else 'Other'
+    )
     # if main variety unclear, set to "Other"
     data['MainVariety'] = data['MainVariety'].apply(lambda x: x if x != 'UNCLEAR' else 'Other')
 
@@ -673,7 +713,15 @@ def getGrammarData(imputed=False,pairs=False, regional_mapping=False, **kwargs):
     # Store original MainVariety before grouping
     data['MainVariety_Original'] = data['MainVariety'].copy()
     
-    data.loc[:,'MainVariety'] = data.loc[:,'MainVariety'].apply(lambda x: x if variety_counts.get(x, 0) >= 10 else 'Other')
+    # Get major varieties that should be preserved regardless of count
+    major_varieties = getMajorVarieties()
+    
+    # Recode MainVariety to "Other" only if:
+    # 1. Count is less than 10 AND
+    # 2. It's not a major variety (one that appears in the grammar data)
+    data.loc[:,'MainVariety'] = data.loc[:,'MainVariety'].apply(
+        lambda x: x if (variety_counts.get(x, 0) >= 10 or x in major_varieties) else 'Other'
+    )
     data.loc[:,'MainVariety'] = data.loc[:,'MainVariety'].apply(lambda x: x if x != 'UNCLEAR' else 'Other')
 
     # Apply England North/South mapping if requested
