@@ -186,12 +186,13 @@ The UMAP Settings allow the user to tweak the UMAP hyperparameters, as well as t
     - **Informant mean of selected features (boxplot)**: Calculates a mean rating across all selected features for each participant and displays the distribution of these means in a boxplot.
     - **Correlation matrix**: Displays a correlation matrix showing the pairwise correlations between the selected features.
     - **Missing values heatmap**: Displays a heatmap indicating the presence of missing values across the selected features.
+    - **Twin correlation**: Displays the spearman rank correlation for twin items per group. Only available if "Use item difference (spoken-written)" is enabled.
 
 - **Group by**: Select grouping variable (Variety, Variety type, Gender).
 - **Sort by**: Sort items by mean, standard deviation, or alphabetically.
 
 #### Group Comparison Settings
-This is only available if mode is set to "Participant Similarity". These functions can be used to filter out items that fall outside a certain rating rage, or to apply standardization of the ratings before training the random forest.
+This is only available if mode is set to "Participant Similarity". These functions can be used to filter out items that fall outside a certain rating range, or to apply standardization of the ratings before training the random forest.
 
 ![Group comparison settings](img/UI_UMAP_group_comparison_settings.png)
 

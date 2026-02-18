@@ -2077,6 +2077,10 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
         
         return fig
     
+    # Handle twin correlation mode (requires pairs=True upstream, but we use raw data internally)
+    if plot_mode == "twin_correlation":
+        return create_twin_correlation_plot(balanced_informants, items, groupby=groupby, sortby=sortby, use_imputed=use_imputed, regional_mapping=regional_mapping)
+
     # Handle diverging stacked bar chart mode
     if plot_mode == "diverging":
            return create_diverging_stacked_bar_plot(df, items, modes, groupby, variety_color_map, pairs, meta, balanced_informants, sortby, use_imputed, regional_mapping)
@@ -4535,7 +4539,8 @@ def create_correlation_matrix_plot(df, items, informants, pairs=False, use_imput
         return getEmptyPlot(f"Insufficient valid data for correlation. Items with < 2 valid values: {', '.join(insufficient_items)}")
     
     # Calculate correlation matrix with sorted items (uses pairwise complete observations)
-    correlation_data = df_numeric.corr()
+    # Spearman rank correlation is appropriate for ordinal Likert-scale data (0-5)
+    correlation_data = df_numeric.corr(method='spearman')
     
     # Create hover text with item information
     hover_text = []
@@ -4587,6 +4592,297 @@ def create_correlation_matrix_plot(df, items, informants, pairs=False, use_imput
     fig.update_xaxes(tickangle=45)
     
     return fig
+
+
+def create_twin_correlation_plot(informants, items, groupby="variety", sortby="mean", use_imputed=False, regional_mapping=False):
+    """Create a twin correlation plot showing, for every item pair, the Spearman
+    rank correlation between spoken and written ratings (computed across
+    participants within each group).  Spearman is used because the items are
+    rated on an ordinal Likert scale (0-5).
+
+    The Y-axis lists item pairs, the X-axis shows Spearman ρ, and the grouping
+    variable (variety / variety-type / gender) is indicated by colour.  Dots of
+    the same group are connected with a thin line.
+
+    Parameters
+    ----------
+    informants : list
+        List of participant IDs.
+    items : list
+        List of item-pair codes (e.g. ``'A1-G21'``).
+    groupby : str
+        Grouping variable: ``'variety'``, ``'vtype'``, or ``'gender'``.
+    sortby : str
+        Sort criterion for the Y-axis: ``'mean'`` (mean *r* across groups),
+        ``'sd'`` (SD of *r* across groups), or ``'alpha'`` (alphabetical).
+    use_imputed : bool
+        Whether to use imputed data.
+    regional_mapping : bool
+        Whether regional mapping (England split) is enabled.
+
+    Returns
+    -------
+    go.Figure
+    """
+    import plotly.graph_objects as go
+    import numpy as np
+    from scipy import stats
+
+    balanced_informants = get_balanced_informants(informants, groupby)
+
+    # Determine raw item columns from the selected item pairs.
+    spoken_items = []
+    written_items = []
+    pair_labels = []
+    for pair in items:
+        parts = pair.split('-')
+        if len(parts) == 2:
+            spoken_items.append(parts[0])
+            written_items.append(parts[1])
+            pair_labels.append(pair)
+
+    all_raw_items = list(set(spoken_items + written_items))
+
+    data = retrieve_data.getGrammarData(
+        imputed=use_imputed,
+        participants=balanced_informants,
+        items=all_raw_items,
+        pairs=False,
+        regional_mapping=regional_mapping
+    )
+
+    if data.empty:
+        return getEmptyPlot("No data available for the selected participants and items.")
+
+    # Fetch item-pair metadata for hover info
+    meta = retrieve_data.getGrammarMeta(type='item_pairs')
+
+    # Assign grouping column
+    if groupby == "variety":
+        data['group'] = data['MainVariety']
+        variety_color_map = retrieve_data.get_color_for_variety(type="grammar")
+    elif groupby in ("vtype", "vtype_balanced"):
+        variety_mapping = get_variety_mapping()
+        data['group'] = data['MainVariety'].map(variety_mapping).fillna("Other")
+        data = data[data['group'] != "Other"]
+        variety_color_map = None
+    elif groupby == "gender":
+        data['group'] = data['Gender']
+        variety_color_map = None
+    else:
+        data['group'] = data['MainVariety']
+        variety_color_map = None
+
+    # For every (item-pair, group) compute Spearman ρ across participants.
+    rows = []
+    for sp, wr, pair_label in zip(spoken_items, written_items, pair_labels):
+        if sp not in data.columns or wr not in data.columns:
+            continue
+
+        # Look up metadata for this pair
+        meta_row = meta[meta['item_pair'] == pair_label]
+        if not meta_row.empty:
+            sentence = str(meta_row['item'].iloc[0]) if 'item' in meta_row.columns else 'N/A'
+            variant_detail = str(meta_row['variant_detail'].iloc[0]) if 'variant_detail' in meta_row.columns else 'N/A'
+            group_finegrained = str(meta_row['group_finegrained'].iloc[0]) if 'group_finegrained' in meta_row.columns else 'N/A'
+            feature_ewave = str(meta_row['feature_ewave'].iloc[0]) if 'feature_ewave' in meta_row.columns else 'N/A'
+        else:
+            sentence = 'N/A'
+            variant_detail = 'N/A'
+            group_finegrained = 'N/A'
+            feature_ewave = 'N/A'
+
+        for group_name, group_df in data.groupby('group'):
+            sp_vals = pd.to_numeric(group_df[sp], errors='coerce')
+            wr_vals = pd.to_numeric(group_df[wr], errors='coerce')
+            valid = sp_vals.notna() & wr_vals.notna()
+            n = valid.sum()
+            if n >= 3:
+                r, p = stats.spearmanr(sp_vals[valid], wr_vals[valid])
+            else:
+                r, p = np.nan, np.nan
+            rows.append({
+                'item_pair': pair_label,
+                'group': group_name,
+                'correlation': r,
+                'p_value': p,
+                'n_participants': int(n),
+                'sentence': sentence,
+                'variant_detail': variant_detail,
+                'group_finegrained': group_finegrained,
+                'feature_ewave': feature_ewave,
+            })
+
+    result_df = pd.DataFrame(rows).dropna(subset=['correlation'])
+
+    if result_df.empty:
+        return getEmptyPlot("Not enough data to compute twin correlations.")
+
+    # Determine Y-axis order by aggregating across groups per item pair.
+    pair_stats = result_df.groupby('item_pair')['correlation'].agg(['mean', 'std']).reset_index()
+    if sortby == "alpha":
+        import re
+        def _natural_key(s):
+            return [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', str(s))]
+        pair_stats['_sort'] = pair_stats['item_pair'].apply(_natural_key)
+        pair_stats = pair_stats.sort_values('_sort', ascending=False).drop(columns='_sort')
+    elif sortby == "sd":
+        pair_stats = pair_stats.sort_values('std', ascending=False)
+    else:  # "mean"
+        pair_stats = pair_stats.sort_values('mean', ascending=True)
+
+    ordered_pairs = pair_stats['item_pair'].tolist()
+
+    # Sort result_df rows so that each group's trace follows the ordered_pairs
+    result_df['item_pair'] = pd.Categorical(result_df['item_pair'], categories=ordered_pairs, ordered=True)
+    result_df = result_df.sort_values('item_pair')
+
+    # Build figure – one trace per group for a shared legend.
+    fig = go.Figure()
+    legend_groups = sort_groups_for_plot(list(result_df['group'].unique()), groupby)
+
+    for group_name in legend_groups:
+        grp_df = result_df[result_df['group'] == group_name]
+        if grp_df.empty:
+            continue
+        color = None
+        if variety_color_map and group_name in variety_color_map:
+            color = variety_color_map[group_name]
+
+        legend_rank = legend_groups.index(group_name) if group_name in legend_groups else 999
+
+        fig.add_trace(go.Scatter(
+            x=grp_df['correlation'],
+            y=grp_df['item_pair'],
+            mode='markers+lines',
+            name=str(group_name),
+            marker=dict(color=color) if color else None,
+            line=dict(width=0.7, color=color) if color else dict(width=0.7),
+            legendrank=legend_rank,
+            customdata=grp_df[['item_pair', 'group', 'correlation', 'n_participants',
+                               'sentence', 'variant_detail', 'group_finegrained',
+                               'feature_ewave']].values,
+            hovertemplate='<br>'.join([
+                'Item pair: %{customdata[0]}',
+                'Group: %{customdata[1]}',
+                'Spearman ρ: %{customdata[2]:.4f}',
+                'Participants: %{customdata[3]}',
+                'Sentence: %{customdata[4]}',
+                'Item name: %{customdata[5]}',
+                'Item group: %{customdata[6]}',
+                'Ewave feature: %{customdata[7]}'
+            ]),
+            hoverinfo='text'
+        ))
+
+    fig.update_layout(
+        xaxis_title='Spearman ρ (spoken vs. written ratings across participants)',
+        yaxis_title='Twin item pair',
+        template='simple_white',
+        height=max(400, len(ordered_pairs) * 28),
+        xaxis=dict(range=[-1.05, 1.05]),
+        yaxis=dict(
+            categoryorder='array',
+            categoryarray=ordered_pairs
+        ),
+        showlegend=True
+    )
+
+    fig.add_vline(x=0, line_width=1, line_dash="dash", line_color="gray", opacity=0.5)
+
+    return fig
+
+
+def create_twin_correlation_dataframe(informants, items, groupby="variety", sortby="mean", use_imputed=False, regional_mapping=False):
+    """Return the DataFrame used to build the twin correlation plot.
+
+    This mirrors the logic in ``create_twin_correlation_plot`` but returns the
+    result table instead of a figure, for use in data downloads.
+
+    Returns
+    -------
+    pd.DataFrame with columns: item_pair, group, correlation, p_value, n_participants
+    """
+    import numpy as np
+    from scipy import stats
+
+    balanced_informants = get_balanced_informants(informants, groupby)
+
+    spoken_items = []
+    written_items = []
+    pair_labels = []
+    for pair in items:
+        parts = pair.split('-')
+        if len(parts) == 2:
+            spoken_items.append(parts[0])
+            written_items.append(parts[1])
+            pair_labels.append(pair)
+
+    all_raw_items = list(set(spoken_items + written_items))
+
+    data = retrieve_data.getGrammarData(
+        imputed=use_imputed,
+        participants=balanced_informants,
+        items=all_raw_items,
+        pairs=False,
+        regional_mapping=regional_mapping
+    )
+
+    if data.empty:
+        return pd.DataFrame(columns=['item_pair', 'group', 'correlation', 'p_value', 'n_participants'])
+
+    if groupby == "variety":
+        data['group'] = data['MainVariety']
+    elif groupby in ("vtype", "vtype_balanced"):
+        variety_mapping = get_variety_mapping()
+        data['group'] = data['MainVariety'].map(variety_mapping).fillna("Other")
+        data = data[data['group'] != "Other"]
+    elif groupby == "gender":
+        data['group'] = data['Gender']
+    else:
+        data['group'] = data['MainVariety']
+
+    rows = []
+    for sp, wr, pair_label in zip(spoken_items, written_items, pair_labels):
+        if sp not in data.columns or wr not in data.columns:
+            continue
+        for group_name, group_df in data.groupby('group'):
+            sp_vals = pd.to_numeric(group_df[sp], errors='coerce')
+            wr_vals = pd.to_numeric(group_df[wr], errors='coerce')
+            valid = sp_vals.notna() & wr_vals.notna()
+            n = valid.sum()
+            if n >= 3:
+                r, p = stats.spearmanr(sp_vals[valid], wr_vals[valid])
+            else:
+                r, p = np.nan, np.nan
+            rows.append({
+                'item_pair': pair_label,
+                'group': group_name,
+                'correlation': r,
+                'p_value': p,
+                'n_participants': int(n)
+            })
+
+    result_df = pd.DataFrame(rows).dropna(subset=['correlation'])
+
+    # Sort by item pair using the same logic as the plot
+    if not result_df.empty:
+        pair_stats = result_df.groupby('item_pair')['correlation'].agg(['mean', 'std']).reset_index()
+        if sortby == "alpha":
+            import re
+            def _natural_key(s):
+                return [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', str(s))]
+            pair_stats['_sort'] = pair_stats['item_pair'].apply(_natural_key)
+            pair_stats = pair_stats.sort_values('_sort').drop(columns='_sort')
+        elif sortby == "sd":
+            pair_stats = pair_stats.sort_values('std', ascending=False)
+        else:
+            pair_stats = pair_stats.sort_values('mean', ascending=True)
+        ordered_pairs = pair_stats['item_pair'].tolist()
+        result_df['item_pair'] = pd.Categorical(result_df['item_pair'], categories=ordered_pairs, ordered=True)
+        result_df = result_df.sort_values(['item_pair', 'group'])
+
+    return result_df.reset_index(drop=True)
 
 
 def create_missing_values_heatmap(items, informants, pairs=False, sortby="mean", use_imputed=False, regional_mapping=False):

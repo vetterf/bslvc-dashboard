@@ -4,10 +4,16 @@ All notable changes to the BSLVC Dashboard will be documented in this file.
 
 ## [0.1.6] - 2026-02-17
 
+### Added
+- **Twin-item correlation plot**: Use spearman rank correlation on all twin-items
+- **Download plot data**: Added a button for all item plots to download the data that was used for plotting
+- **Random forest metrics in group comparison**: Added a tab with the random forest metrics when running a group comparison
+
 ### Changed
+
+- **Correlation now with spearman rank correlation**: Switched correlations to spearman rank correlation.
 - **UI**:
   - Changed the missingness quick selectors to 0, 1 & 2% (overall missingness is low)
-  - Added output of random forest (OOB values, confusion matrix, gini importance x item) in the group comparison tab.
 
 - **DB**:
   - Changed imputation method to missForest with imputed values capped to integers.

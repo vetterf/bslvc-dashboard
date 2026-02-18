@@ -717,7 +717,17 @@ InformantsGrid = html.Div(children = [
 
 ItemPlotContainer = dmc.Container([dmc.Grid(children=[
             dmc.GridCol(children=[
-                dcc.Graph(id="ItemFig", figure=itemPlot_Grammar_initialPlot, style={'height': 'calc(100vh - 210px)'}, config={
+                dmc.Group([
+                    dmc.Button(
+                        "Download plot data",
+                        id="download-item-plot-data-button",
+                        size="xs",
+                        variant="light",
+                        leftSection=DashIconify(icon="tabler:download", width=14),
+                        disabled=True,
+                    ),
+                ], justify="flex-end", mb="xs"),
+                dcc.Graph(id="ItemFig", figure=itemPlot_Grammar_initialPlot, style={'height': 'calc(100vh - 250px)'}, config={
                     'responsive': True,
                     'toImageButtonOptions': {
                         'format': 'svg',
@@ -1265,6 +1275,7 @@ itemPlotSettingsAccordion = dmc.AccordionItem([
                     {"value":"informant_boxplot","label":"Informant mean of selected items (boxplot)"},
                     {"value":"correlation_matrix","label":"Correlation matrix"},
                     {"value":"missing_values_heatmap","label":"Missing values heatmap"},
+                    {"value":"twin_correlation","label":"Twin correlation","disabled":True},
                 ],
                 size="xs",
                 allowDeselect=False,
@@ -1597,6 +1608,7 @@ SettingsGrammarAnalysis = dmc.Card([
     dcc.Download(id="download-data"),
     dcc.Download(id="download-distance-matrix"),
     dcc.Download(id="download-aggregated-item-data"),
+    dcc.Download(id="download-item-plot-data"),
     
     # Clipboard store for settings (client-side only)
     dcc.Store(id='clipboard-settings-store', storage_type='memory'),
@@ -1755,6 +1767,7 @@ layout = html.Div([
     dcc.Store(id="saved-umap-settings", storage_type="local"),
     dcc.Store(id="last-rendered-item-plot", storage_type="session"),  # Plot persistence
     dcc.Store(id="last-rendered-umap-plot", storage_type="session"),
+    dcc.Store(id="item-plot-settings-store", storage_type="memory", data=None),  # Store settings used to generate last item plot
     dcc.Store(id="last-sociodemographic-settings", storage_type="session"),  # Cache for sociodemographic plot settings
     # Directly show Grammar Analysis content (no outer tabs)
     grammarAnalysisC,
@@ -1937,7 +1950,39 @@ def disable_controls_for_correlation_matrix(plot_mode):
         return True, True  # Disable both dropdowns for correlation matrix
     elif plot_mode == "missing_values_heatmap":
         return True, False  # Disable group-by, enable sort-by for missing values heatmap
+    elif plot_mode == "twin_correlation":
+        return False, False  # Both enabled for twin correlation
     return False, False  # Enable both dropdowns
+
+# Callback to enable/disable Twin correlation option based on item-difference switch
+@callback(
+    Output('items-plot-mode', 'data'),
+    Input('grammar-type-switch', 'checked'),
+    State('items-plot-mode', 'data'),
+    prevent_initial_call=True
+)
+def toggle_twin_correlation_option(pairs_enabled, current_data):
+    """Enable or disable the Twin correlation option depending on item-difference switch"""
+    updated_data = []
+    for item in current_data:
+        if isinstance(item, dict) and item.get('value') == 'twin_correlation':
+            updated_data.append({**item, 'disabled': not pairs_enabled})
+        else:
+            updated_data.append(item)
+    return updated_data
+
+# Reset plot mode if twin_correlation is selected but pairs gets disabled
+@callback(
+    Output('items-plot-mode', 'value', allow_duplicate=True),
+    Input('grammar-type-switch', 'checked'),
+    State('items-plot-mode', 'value'),
+    prevent_initial_call=True
+)
+def reset_plot_mode_on_pairs_change(pairs_enabled, current_mode):
+    """If twin_correlation is currently selected but pairs is turned off, reset to normal"""
+    if not pairs_enabled and current_mode == 'twin_correlation':
+        return 'normal'
+    return no_update
 
 # Deleted: 8 individual loading state callbacks replaced by consolidated manage_render_button_loading_states callback above
 
@@ -4357,7 +4402,9 @@ def updateGrammarItemsTree(wo_button,curr_button,prob_button,itemTree,pairs):
      Output('render-loading-overlay', 'visible', allow_duplicate=True),
      Output('render-grammar-plot', 'disabled', allow_duplicate=True),
      Output("notify-container", "children",allow_duplicate=True),
-     Output('grammar-analysis-tabs', 'value', allow_duplicate=True)],
+     Output('grammar-analysis-tabs', 'value', allow_duplicate=True),
+     Output('item-plot-settings-store', 'data'),
+     Output('download-item-plot-data-button', 'disabled')],
     Input('render-item-plot','n_clicks'),
     [State('participantsTree','checked'),State('grammarItemsTree','checked'),State('items-group-by','value'),State('items-sort-by','value'),State('items-plot-mode','value'),State('grammar-type-switch','checked'),State('use-imputed-data-switch', 'checked'),State('england-mapping-param', 'data')],
     prevent_initial_call=True
@@ -4377,7 +4424,7 @@ def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imput
                 autoClose=5000,
                 position="top-right"
             )
-            return no_update, False, False, notification, no_update
+            return no_update, False, False, notification, no_update, no_update, no_update
         
         if not items or len(items) < 1:
             notification = dmc.Notification(
@@ -4390,7 +4437,7 @@ def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imput
                 autoClose=5000,
                 position="top-right"
             )
-            return no_update, False, False, notification, no_update
+            return no_update, False, False, notification, no_update, no_update, no_update
         
         # Validation: Check correlation matrix feature limit
         if plot_mode == "correlation_matrix" and items and len(items) > 30:
@@ -4404,7 +4451,21 @@ def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imput
                 autoClose=5000,
                 position="top-right"
             )
-            return no_update, False, False, notification, no_update
+            return no_update, False, False, notification, no_update, no_update, no_update
+        
+        # Validation: Twin correlation requires item difference (pairs) mode
+        if plot_mode == "twin_correlation" and not pairs:
+            notification = dmc.Notification(
+                id="my-notification",
+                title="Pairs Mode Required",
+                message="Twin correlation requires 'Use item difference (spoken-written)' to be enabled.",
+                color="orange",
+                loading=False,
+                action="show",
+                autoClose=5000,
+                position="top-right"
+            )
+            return no_update, False, False, notification, no_update, no_update, no_update
         
         # Validation passed - show rendering notification with imputed data info if applicable
         if use_imputed:
@@ -4446,8 +4507,20 @@ def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imput
         # Check if split_by_variety mode is selected
         split_by_variety = (plot_mode == "split_by_variety")
         itemPlot = getItemPlot(informants, items,groupby=groupby,sortby=sortby,pairs=pairs,use_imputed=use_imputed,plot_mode=plot_mode,split_by_variety=split_by_variety,regional_mapping=regional_mapping)
-        return itemPlot, no_update, no_update, notification, "plot-view"
-    return no_update, no_update, no_update, no_update, no_update
+        
+        # Store settings used to generate this plot for download
+        plot_settings = {
+            "participants": informants,
+            "items": items,
+            "groupby": groupby,
+            "sortby": sortby,
+            "plot_mode": plot_mode,
+            "pairs": pairs,
+            "use_imputed": use_imputed,
+            "regional_mapping": regional_mapping,
+        }
+        return itemPlot, no_update, no_update, notification, "plot-view", plot_settings, False
+    return no_update, no_update, no_update, no_update, no_update, no_update, no_update
 
 # Save rendered plots to session storage for persistence
 @callback(
@@ -4467,6 +4540,168 @@ def save_item_plot(fig):
 def save_umap_plot(fig):
     """Save UMAP plot to session storage"""
     return fig
+
+# Download item plot data as ZIP with log file
+@callback(
+    Output("download-item-plot-data", "data"),
+    Input("download-item-plot-data-button", "n_clicks"),
+    State("item-plot-settings-store", "data"),
+    prevent_initial_call=True
+)
+def download_item_plot_data(n_clicks, settings):
+    """Regenerate the data frame that was used for the last rendered item plot and
+    package it together with a log file into a ZIP download."""
+    if not n_clicks or not settings:
+        return no_update
+
+    from datetime import datetime
+    import pages.data.grammarFunctions as gf
+    from version import __version__
+
+    informants = settings['participants']
+    items = settings['items']
+    groupby = settings['groupby']
+    sortby = settings['sortby']
+    plot_mode = settings['plot_mode']
+    pairs = settings['pairs']
+    use_imputed = settings['use_imputed']
+    regional_mapping = settings.get('regional_mapping', False)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # --- Regenerate the appropriate data frame based on the plot mode ---
+    if plot_mode == "twin_correlation":
+        result_df = gf.create_twin_correlation_dataframe(
+            informants, items, groupby=groupby, sortby=sortby,
+            use_imputed=use_imputed, regional_mapping=regional_mapping
+        )
+    elif plot_mode == "correlation_matrix":
+        # For correlation matrix, export the correlation matrix itself
+        data = retrieve_data.getGrammarData(
+            imputed=use_imputed, participants=informants, items=items,
+            pairs=pairs, regional_mapping=regional_mapping
+        )
+        item_cols = [c for c in items if c in data.columns]
+        for c in item_cols:
+            data[c] = pd.to_numeric(data[c], errors='coerce')
+        result_df = data[item_cols].corr()
+        result_df.index.name = 'item'
+        result_df = result_df.reset_index()
+    elif plot_mode == "missing_values_heatmap":
+        # Export missing value percentages per group/item
+        data = retrieve_data.getGrammarData(
+            imputed=use_imputed, participants=informants, items=items,
+            pairs=pairs, regional_mapping=regional_mapping
+        )
+        if groupby == "variety":
+            data['group'] = data['MainVariety']
+        elif groupby in ("vtype", "vtype_balanced"):
+            variety_mapping = gf.get_variety_mapping()
+            data['group'] = data['MainVariety'].map(variety_mapping).fillna("Other")
+            data = data[data['group'] != "Other"]
+        elif groupby == "gender":
+            data['group'] = data['Gender']
+        item_cols = [c for c in items if c in data.columns]
+        records = []
+        for grp, grp_df in data.groupby('group'):
+            for ic in item_cols:
+                total = len(grp_df)
+                missing = grp_df[ic].isna().sum() + (grp_df[ic] == '').sum()
+                records.append({'group': grp, 'item': ic, 'total': total,
+                                'missing': int(missing),
+                                'missing_pct': round(missing / total * 100, 2) if total else 0})
+        result_df = pd.DataFrame(records)
+    else:
+        # For all other modes (normal, split_by_variety, diverging, informant_boxplot)
+        # export the aggregated statistics per group and item
+        balanced_informants = gf.get_balanced_informants(informants, groupby)
+        data = retrieve_data.getGrammarData(
+            imputed=use_imputed, participants=balanced_informants, items=items,
+            pairs=pairs, regional_mapping=regional_mapping
+        )
+        if data.empty:
+            return no_update
+
+        if groupby == "variety":
+            data['group'] = data['MainVariety']
+        elif groupby in ("vtype", "vtype_balanced"):
+            variety_mapping = gf.get_variety_mapping()
+            data['group'] = data['MainVariety'].map(variety_mapping).fillna("Other")
+            data = data[data['group'] != "Other"]
+        elif groupby == "gender":
+            data['group'] = data['Gender']
+
+        infoCols = retrieve_data.getInformantDataGrammar(imputed=True).columns.to_list()
+        infoCols.remove('InformantID')
+        infoCols.append('group')
+        melted = data.melt(id_vars=infoCols, value_vars=items, var_name='item')
+        melted['value'] = pd.to_numeric(melted['value'], errors='coerce')
+
+        import polars as pl
+        plf = pl.from_pandas(melted)
+        plf = plf.group_by(['group', 'item']).agg(
+            pl.count('value').alias('count'),
+            pl.mean('value').alias('mean'),
+            pl.median('value').alias('median'),
+            pl.std('value').alias('std'),
+        )
+        plf = plf.with_columns((pl.lit(1.96) * (plf['std'] / pl.col('count').sqrt())).alias('ci_margin'))
+        if pairs:
+            plf = plf.with_columns((plf['mean'] - plf['ci_margin']).clip(-5, None).alias('lower_ci'))
+            plf = plf.with_columns((plf['mean'] + plf['ci_margin']).clip(None, 5).alias('upper_ci'))
+        else:
+            plf = plf.with_columns((plf['mean'] - plf['ci_margin']).clip(0, None).alias('lower_ci'))
+            plf = plf.with_columns((plf['mean'] + plf['ci_margin']).clip(None, 5).alias('upper_ci'))
+        plf = plf.drop('ci_margin')
+        result_df = plf.to_pandas()
+
+        # Add item metadata
+        if not pairs:
+            meta = retrieve_data.getGrammarMeta()
+            result_df = result_df.merge(meta, left_on='item', right_on='question_code', how='left')
+        else:
+            meta = retrieve_data.getGrammarMeta(type='item_pairs')
+            result_df = result_df.merge(meta, left_on='item', right_on='item_pair', how='left')
+
+    # --- Build log file ---
+    db_version = retrieve_data.get_database_version()
+    log_content = f"""BSLVC Item Plot Data Export Log
+=====================================
+
+Export Information:
+-------------------
+Export Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Application Version: {__version__}
+Database Version: {db_version}
+
+Plot Settings:
+--------------
+Plot Mode: {plot_mode}
+Group By: {groupby}
+Sort By: {sortby}
+Item Pairs Mode: {"Yes (spoken-written difference)" if pairs else "No (raw ratings)"}
+Imputed Data: {"Yes" if use_imputed else "No"}
+Regional Mapping: {"Enabled (England split into North/South)" if regional_mapping else "Disabled"}
+
+Data Selection:
+---------------
+Number of Participants: {len(informants)}
+Number of Items: {len(items)}
+
+Participant IDs ({len(informants)} total):
+{", ".join(sorted(informants))}
+
+Item Codes ({len(items)} total):
+{", ".join(sorted(items))}
+
+Data Dimensions:
+----------------
+Rows: {result_df.shape[0]}
+Columns: {result_df.shape[1]}
+"""
+
+    base_filename = f"item_plot_data_{plot_mode}_{timestamp}"
+    return gf.create_zip_download(base_filename, result_df.to_csv(index=False), log_content)
 
 # Restore plots when switching plot types
 @callback(
