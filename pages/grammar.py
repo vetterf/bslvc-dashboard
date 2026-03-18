@@ -77,7 +77,7 @@ except (OSError, PermissionError) as e:
 
 plot_cache = dc.Cache(cache_dir)
 
-def create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, regional_mapping=False):
+def create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, regional_mapping=False, include_ai=False):
     """Create a unique cache key for plot parameters"""
     key_data = {
         'participants': sorted(participants) if participants else 'all',
@@ -88,14 +88,15 @@ def create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_
         'standardize': standardize,
         'densemap': densemap,
         'pairs': pairs,
-        'regional_mapping': regional_mapping
+        'regional_mapping': regional_mapping,
+        'include_ai': include_ai
     }
     key_string = str(key_data)
     return hashlib.md5(key_string.encode()).hexdigest()
 
-def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, informants=None, regional_mapping=False):
+def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, informants=None, regional_mapping=False, include_ai=False):
     """Get UMAP plot from cache or compute if not exists"""
-    cache_key = f"umap_{create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, regional_mapping)}"
+    cache_key = f"umap_{create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, regional_mapping, include_ai)}"
     
     cached_plot = plot_cache.get(cache_key)
     if cached_plot is not None:
@@ -114,10 +115,10 @@ def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_m
     # Not in cache, compute it
     # Get data filtered by participants to ensure cache consistency
     if not pairs:
-        grammarData = retrieve_data.getGrammarData(imputed=True, participants=participants, columns=items, regional_mapping=regional_mapping)
+        grammarData = retrieve_data.getGrammarData(imputed=True, participants=participants, columns=items, regional_mapping=regional_mapping, include_ai=include_ai)
         grammarCols = GrammarItemsCols
     else:
-        grammarData = retrieve_data.getGrammarData(imputed=True, participants=participants, columns=items, pairs=True, regional_mapping=regional_mapping)
+        grammarData = retrieve_data.getGrammarData(imputed=True, participants=participants, columns=items, pairs=True, regional_mapping=regional_mapping, include_ai=include_ai)
         grammarCols = GrammarItemsColsPairs
         
     plot = getUMAPplot(
@@ -140,25 +141,25 @@ def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_m
     plot_cache.set(cache_key, plot)
     return plot
 
-@lru_cache(maxsize=2)  # Increased to cache both mapped and unmapped versions
-def get_grammar_data_cached(regional_mapping=False):
-    return retrieve_data.getGrammarData(imputed=True, regional_mapping=regional_mapping)
+@lru_cache(maxsize=4)
+def get_grammar_data_cached(regional_mapping=False, include_ai=False):
+    return retrieve_data.getGrammarData(imputed=True, regional_mapping=regional_mapping, include_ai=include_ai)
 
-@lru_cache(maxsize=2)
-def get_grammar_data_pairs_cached(regional_mapping=False):
-    return retrieve_data.getGrammarData(imputed=True, items=retrieve_data.getGrammarItemsCols("item_pairs"), pairs=True, regional_mapping=regional_mapping)
+@lru_cache(maxsize=4)
+def get_grammar_data_pairs_cached(regional_mapping=False, include_ai=False):
+    return retrieve_data.getGrammarData(imputed=True, items=retrieve_data.getGrammarItemsCols("item_pairs"), pairs=True, regional_mapping=regional_mapping, include_ai=include_ai)
 
-@lru_cache(maxsize=2)
-def get_informants_cached(regional_mapping=False):
-    return retrieve_data.getInformantDataGrammar(imputed=True, regional_mapping=regional_mapping)
+@lru_cache(maxsize=4)
+def get_informants_cached(regional_mapping=False, include_ai=False):
+    return retrieve_data.getInformantDataGrammar(imputed=True, regional_mapping=regional_mapping, include_ai=include_ai)
 
-@lru_cache(maxsize=2)
-def get_grammar_data_raw_cached(regional_mapping=False):
-    return retrieve_data.getGrammarData(imputed=False, regional_mapping=regional_mapping)
+@lru_cache(maxsize=4)
+def get_grammar_data_raw_cached(regional_mapping=False, include_ai=False):
+    return retrieve_data.getGrammarData(imputed=False, regional_mapping=regional_mapping, include_ai=include_ai)
 
-@lru_cache(maxsize=2)
-def get_grammar_data_pairs_raw_cached(regional_mapping=False):
-    return retrieve_data.getGrammarData(imputed=False, items=retrieve_data.getGrammarItemsCols("item_pairs"), pairs=True, regional_mapping=regional_mapping)
+@lru_cache(maxsize=4)
+def get_grammar_data_pairs_raw_cached(regional_mapping=False, include_ai=False):
+    return retrieve_data.getGrammarData(imputed=False, items=retrieve_data.getGrammarItemsCols("item_pairs"), pairs=True, regional_mapping=regional_mapping, include_ai=include_ai)
 
 @lru_cache(maxsize=1)
 def get_grammar_meta_cached():
@@ -906,6 +907,16 @@ informantSelectionAccordion = dmc.AccordionItem(
                     dmc.Switch(
                         id='regional-mapping-switch',
                         label="Split England into regions (North/South)",
+                        size="sm",
+                        checked=False,
+                    )
+                ], mb="sm"),
+                
+                # AI participants switch
+                dmc.Group([
+                    dmc.Switch(
+                        id='include-ai-switch',
+                        label="Include AI-generated participants",
                         size="sm",
                         checked=False,
                     )
@@ -1751,6 +1762,7 @@ layout = html.Div([
     customSetWarningModal,
     dcc.Location(id='url', refresh=False),  # URL location component for parsing URL parameters
     dcc.Store(id="england-mapping-param", storage_type="memory", data=False),  # Store for EnglandMapping URL parameter
+    dcc.Store(id="include-ai-param", storage_type="memory", data=False),  # Store for AI participants toggle
     dcc.Store(id="UMAPgroup", storage_type="memory",data=0),
     dcc.Store(id="UMAPparticipants",storage_type="memory",data=[]), # Start empty - no auto-selection
     dcc.Store(id="UMAPitems",storage_type="memory",data=[]), # Start empty - no auto-selection
@@ -1990,12 +2002,14 @@ def reset_plot_mode_on_pairs_change(pairs_enabled, current_mode):
     Output('participantsTree', 'checked', allow_duplicate=True),
     [Input('select-all-participants', 'n_clicks'),
      Input('deselect-all-participants', 'n_clicks')],
+    State('informants-store', 'data'),
     prevent_initial_call=True
 )
-def update_participants_selection(select_all_clicks, deselect_all_clicks):
+def update_participants_selection(select_all_clicks, deselect_all_clicks, informants_data):
     button_clicked = ctx.triggered_id
     if button_clicked == 'select-all-participants':
-        return Informants['InformantID'].values.tolist()
+        current_informants = pd.DataFrame(informants_data) if informants_data else Informants
+        return current_informants['InformantID'].values.tolist()
     elif button_clicked == 'deselect-all-participants':
         return []
     return no_update
@@ -2132,13 +2146,15 @@ def manage_loading_state(n_clicks, item_fig, umap_fig, plot_type):
     [Input('participantsTree', 'checked'),
      Input('grammarItemsTree', 'checked'),
      Input('grammar-type-switch', 'checked')],
+    State('informants-store', 'data'),
     prevent_initial_call=False
 )
-def update_quick_stats(selected_participants, selected_items, use_pairs):
+def update_quick_stats(selected_participants, selected_items, use_pairs, informants_data):
     """Update the quick stats panel with current selection info and badge counts"""
+    current_informants = pd.DataFrame(informants_data) if informants_data else Informants
     n_participants = len(selected_participants) if selected_participants else 0
     n_items = len(selected_items) if selected_items else 0
-    total_participants = len(Informants)
+    total_participants = len(current_informants)
     # Update total_items based on the grammar-type-switch state
     total_items = len(GrammarItemsColsPairs) if use_pairs else len(GrammarItemsCols)
     
@@ -2155,7 +2171,7 @@ def update_quick_stats(selected_participants, selected_items, use_pairs):
         )
     
     # Get participant stats
-    participant_data = Informants[Informants['InformantID'].isin(selected_participants)]
+    participant_data = current_informants[current_informants['InformantID'].isin(selected_participants)]
     
     # Variety breakdown - show all varieties
     variety_counts = participant_data['MainVariety'].value_counts()
@@ -2218,6 +2234,8 @@ def batch_select_participants(*args):
     
     # Variety type mapping
     def get_variety_type(variety):
+        if variety and variety.startswith("AI-GPT-"):
+            return get_variety_type(variety[7:])
         if variety in ["US", "England", "Scotland"]:
             return "ENL"
         elif variety in ["Gibraltar", "Malta", "India", "Puerto Rico"]:
@@ -2296,10 +2314,11 @@ def batch_select_participants(*args):
      State('use-imputed-data-switch', 'checked'),
      State('export-include-sociodemographic-checkbox', 'checked'),
      State('export-include-item-metadata-checkbox', 'checked'),
-     State('england-mapping-param', 'data')],
+     State('england-mapping-param', 'data'),
+     State('include-ai-param', 'data')],
     prevent_initial_call=True
 )
-def export_data(n_clicks, participants, items, pairs, use_imputed, include_sociodem, include_item_meta, regional_mapping):
+def export_data(n_clicks, participants, items, pairs, use_imputed, include_sociodem, include_item_meta, regional_mapping, include_ai):
     """Export current selection as CSV with optional metadata"""
     if not n_clicks or not participants or not items:
         return no_update
@@ -2313,7 +2332,8 @@ def export_data(n_clicks, participants, items, pairs, use_imputed, include_socio
         participants=participants,
         items=items,
         pairs=pairs,
-        regional_mapping=regional_mapping
+        regional_mapping=regional_mapping,
+        include_ai=include_ai
     )
     
     # Remove sensitive columns (privacy protection)
@@ -2395,11 +2415,12 @@ def export_data(n_clicks, participants, items, pairs, use_imputed, include_socio
      State('grammar-type-switch', 'checked'),
      State('use-imputed-data-switch', 'checked'),
      State('informants-store', 'data'),
-     State('england-mapping-param', 'data')],
+     State('england-mapping-param', 'data'),
+     State('include-ai-param', 'data')],
     prevent_initial_call=True
 )
 def export_distance_matrix(n_clicks, participants, items, n_neighbours, min_dist, 
-                          distance_metric, standardize, pairs, use_imputed, informants, regional_mapping):
+                          distance_metric, standardize, pairs, use_imputed, informants, regional_mapping, include_ai):
     """Export distance matrix using UMAP settings as ZIP with log file"""
     if not n_clicks or not participants or not items:
         return no_update
@@ -2415,7 +2436,8 @@ def export_distance_matrix(n_clicks, participants, items, n_neighbours, min_dist
         participants=participants,
         items=items,
         pairs=pairs,
-        regional_mapping=regional_mapping
+        regional_mapping=regional_mapping,
+        include_ai=include_ai
     )
     
     # Get grammar items columns
@@ -2484,11 +2506,12 @@ def notify_distance_matrix_processing(n_clicks, participants, items):
      State('export-include-sociodemographic-checkbox', 'checked'),
      State('export-include-item-metadata-checkbox', 'checked'),
      State('items-group-by', 'value'),
-     State('england-mapping-param', 'data')],
+     State('england-mapping-param', 'data'),
+     State('include-ai-param', 'data')],
     prevent_initial_call=True
 )
 def export_aggregated_item_data(n_clicks, participants, items, pairs, use_imputed, 
-                                include_sociodem, include_item_meta, groupby, regional_mapping):
+                                include_sociodem, include_item_meta, groupby, regional_mapping, include_ai):
     """Export aggregated item plot data as ZIP with multiple CSVs and log file"""
     if not n_clicks or not participants or not items:
         return no_update
@@ -2506,7 +2529,8 @@ def export_aggregated_item_data(n_clicks, participants, items, pairs, use_impute
         participants=participants,
         items=items,
         pairs=pairs,
-        regional_mapping=regional_mapping
+        regional_mapping=regional_mapping,
+        include_ai=include_ai
     )
     
     # Apply balancing if needed (same logic as in getItemPlot) - legacy function for dropdown options in previous versions. Currently returns unaltered list.
@@ -2518,7 +2542,8 @@ def export_aggregated_item_data(n_clicks, participants, items, pairs, use_impute
         participants=balanced_informants,
         items=items,
         pairs=pairs,
-        regional_mapping=regional_mapping
+        regional_mapping=regional_mapping,
+        include_ai=include_ai
     )
     
     # Get item metadata
@@ -3688,14 +3713,15 @@ def initiate_umap_rendering(BTNrenderPlot, modal_ok, modal_cancel, figure, runni
     State('grammar-type-switch', 'checked'), 
     State('use-imputed-data-switch', 'checked'),
     State('informants-store', 'data'),  # Add informants store
-    State('england-mapping-param', 'data')],  # Add england mapping parameter
+    State('england-mapping-param', 'data'),  # Add england mapping parameter
+    State('include-ai-param', 'data')],  # Add AI participants parameter
     prevent_initial_call=True,
     background=True,
     running=[(Output("grammar_running","data"),True,False)]
 )
 def compute_umap_background(trigger_data, selected_informants, items, n_neighbours, 
                            min_dist, selected_presets, distance_metric, 
-                           standardize_participant_ratings, densemap, pairs, use_imputed, informants_data, regional_mapping):
+                           standardize_participant_ratings, densemap, pairs, use_imputed, informants_data, regional_mapping, include_ai):
     """Compute UMAP in background - this is the slow operation"""
     if trigger_data is None:
         raise PreventUpdate
@@ -3730,7 +3756,8 @@ def compute_umap_background(trigger_data, selected_informants, items, n_neighbou
         densemap=densemap,
         pairs=pairs,
         informants=informants_data,
-        regional_mapping=regional_mapping
+        regional_mapping=regional_mapping,
+        include_ai=include_ai
     )
     groupsCache = getColorGroupingsFromFigure(figure)
     
@@ -3858,10 +3885,11 @@ def clear_rf_plot_loading(figure, notification):
     State('UMAPparticipants','data'),
     State('umap-render-settings', 'data'),  # Use stored settings instead of UI state
     State('rf-use-zscores','checked'),
-    State('use-imputed-data-switch', 'checked')],
+    State('use-imputed-data-switch', 'checked'),
+    State('include-ai-param', 'data')],
     prevent_initial_call=True
 )
-def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants,render_settings,use_zscores,user_imputed_switch):
+def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants,render_settings,use_zscores,user_imputed_switch,include_ai):
     # Set default value for split_by_variety since checkbox was removed
     split_by_variety = False
     
@@ -3960,7 +3988,7 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
         )
         
         # Use lazy data loading for better performance
-        data = retrieve_data.getGrammarData(imputed=use_imputed,participants=df['ids'],columns=items, pairs=pairs)
+        data = retrieve_data.getGrammarData(imputed=use_imputed,participants=df['ids'],columns=items, pairs=pairs, include_ai=include_ai)
         rf, importanceRatings = trainRF(items,data,datacols=items,groupcol=groupcol,pairs=pairs,use_zscores=use_zscores)
 
         # --- Extract RF metrics for table view ---
@@ -4145,7 +4173,7 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
         # Build data source badge - removed, info is in the RF performance note
 
         # Fetch data for table per-group means based on user switch (may differ from RF training data)
-        table_data = retrieve_data.getGrammarData(imputed=user_imputed_switch, participants=groupcol['ids'], columns=items, pairs=pairs)
+        table_data = retrieve_data.getGrammarData(imputed=user_imputed_switch, participants=groupcol['ids'], columns=items, pairs=pairs, include_ai=include_ai)
 
         columns = importanceRatings['item'].to_list()
         table_data[columns] = table_data[columns].apply(pd.to_numeric, errors='coerce')
@@ -4406,10 +4434,10 @@ def updateGrammarItemsTree(wo_button,curr_button,prob_button,itemTree,pairs):
      Output('item-plot-settings-store', 'data'),
      Output('download-item-plot-data-button', 'disabled')],
     Input('render-item-plot','n_clicks'),
-    [State('participantsTree','checked'),State('grammarItemsTree','checked'),State('items-group-by','value'),State('items-sort-by','value'),State('items-plot-mode','value'),State('grammar-type-switch','checked'),State('use-imputed-data-switch', 'checked'),State('england-mapping-param', 'data')],
+    [State('participantsTree','checked'),State('grammarItemsTree','checked'),State('items-group-by','value'),State('items-sort-by','value'),State('items-plot-mode','value'),State('grammar-type-switch','checked'),State('use-imputed-data-switch', 'checked'),State('england-mapping-param', 'data'),State('include-ai-param', 'data')],
     prevent_initial_call=True
 )
-def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imputed,regional_mapping):
+def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imputed,regional_mapping,include_ai):
     button_clicked = ctx.triggered_id
     if button_clicked == 'render-item-plot' and BTN is not None:
         # Validation: Check minimum selections (handle None case)
@@ -4494,19 +4522,19 @@ def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imput
         # Use lazy data loading - only get data when needed
         if use_imputed:
             if pairs:
-                data_source = get_grammar_data_pairs_cached(regional_mapping=regional_mapping)
+                data_source = get_grammar_data_pairs_cached(regional_mapping=regional_mapping, include_ai=include_ai)
             else:
-                data_source = get_grammar_data_cached(regional_mapping=regional_mapping)
+                data_source = get_grammar_data_cached(regional_mapping=regional_mapping, include_ai=include_ai)
         else:
             if pairs:
-                data_source = get_grammar_data_pairs_raw_cached(regional_mapping=regional_mapping)
+                data_source = get_grammar_data_pairs_raw_cached(regional_mapping=regional_mapping, include_ai=include_ai)
             else:
-                data_source = get_grammar_data_raw_cached(regional_mapping=regional_mapping)
+                data_source = get_grammar_data_raw_cached(regional_mapping=regional_mapping, include_ai=include_ai)
         
         # to do: merge meta info here for hoverinfo in plot
         # Check if split_by_variety mode is selected
         split_by_variety = (plot_mode == "split_by_variety")
-        itemPlot = getItemPlot(informants, items,groupby=groupby,sortby=sortby,pairs=pairs,use_imputed=use_imputed,plot_mode=plot_mode,split_by_variety=split_by_variety,regional_mapping=regional_mapping)
+        itemPlot = getItemPlot(informants, items,groupby=groupby,sortby=sortby,pairs=pairs,use_imputed=use_imputed,plot_mode=plot_mode,split_by_variety=split_by_variety,regional_mapping=regional_mapping,include_ai=include_ai)
         
         # Store settings used to generate this plot for download
         plot_settings = {
@@ -4518,6 +4546,7 @@ def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imput
             "pairs": pairs,
             "use_imputed": use_imputed,
             "regional_mapping": regional_mapping,
+            "include_ai": include_ai,
         }
         return itemPlot, no_update, no_update, notification, "plot-view", plot_settings, False
     return no_update, no_update, no_update, no_update, no_update, no_update, no_update
@@ -4566,6 +4595,7 @@ def download_item_plot_data(n_clicks, settings):
     pairs = settings['pairs']
     use_imputed = settings['use_imputed']
     regional_mapping = settings.get('regional_mapping', False)
+    include_ai = settings.get('include_ai', False)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -4573,13 +4603,14 @@ def download_item_plot_data(n_clicks, settings):
     if plot_mode == "twin_correlation":
         result_df = gf.create_twin_correlation_dataframe(
             informants, items, groupby=groupby, sortby=sortby,
-            use_imputed=use_imputed, regional_mapping=regional_mapping
+            use_imputed=use_imputed, regional_mapping=regional_mapping,
+            include_ai=include_ai
         )
     elif plot_mode == "correlation_matrix":
         # For correlation matrix, export the correlation matrix itself
         data = retrieve_data.getGrammarData(
             imputed=use_imputed, participants=informants, items=items,
-            pairs=pairs, regional_mapping=regional_mapping
+            pairs=pairs, regional_mapping=regional_mapping, include_ai=include_ai
         )
         item_cols = [c for c in items if c in data.columns]
         for c in item_cols:
@@ -4591,7 +4622,7 @@ def download_item_plot_data(n_clicks, settings):
         # Export missing value percentages per group/item
         data = retrieve_data.getGrammarData(
             imputed=use_imputed, participants=informants, items=items,
-            pairs=pairs, regional_mapping=regional_mapping
+            pairs=pairs, regional_mapping=regional_mapping, include_ai=include_ai
         )
         if groupby == "variety":
             data['group'] = data['MainVariety']
@@ -4617,7 +4648,7 @@ def download_item_plot_data(n_clicks, settings):
         balanced_informants = gf.get_balanced_informants(informants, groupby)
         data = retrieve_data.getGrammarData(
             imputed=use_imputed, participants=balanced_informants, items=items,
-            pairs=pairs, regional_mapping=regional_mapping
+            pairs=pairs, regional_mapping=regional_mapping, include_ai=include_ai
         )
         if data.empty:
             return no_update
@@ -5049,6 +5080,9 @@ clientside_callback(
     });
 
     function getVarietyType(mainVariety) {
+        if (mainVariety && mainVariety.startsWith("AI-GPT-")) {
+            return getVarietyType(mainVariety.substring(7));
+        }
         if (["US","England","Scotland"].includes(mainVariety)) return "ENL";
         if (["Gibraltar","Malta","India","Puerto Rico"].includes(mainVariety)) return "ESL";
         if (["Slovenia","Germany","Sweden","Spain (Balearic Islands)"].includes(mainVariety)) return "EFL";
@@ -5066,7 +5100,18 @@ clientside_callback(
         "Slovenia": "#7f7f7f",
         "Germany": "#bcbd22",
         "Sweden": "#17becf",
-        "Other": "#c49c94"
+        "Other": "#c49c94",
+        "AI-GPT-England": "#8fbbd9",
+        "AI-GPT-Scotland": "#ffbf87",
+        "AI-GPT-US": "#96d096",
+        "AI-GPT-Gibraltar": "#eb9394",
+        "AI-GPT-Malta": "#cab3de",
+        "AI-GPT-India": "#c6aba5",
+        "AI-GPT-Puerto Rico": "#f1bbe1",
+        "AI-GPT-Slovenia": "#bfbfbf",
+        "AI-GPT-Germany": "#dede91",
+        "AI-GPT-Sweden": "#8bdef7",
+        "AI-GPT-Other": "#e2ceca"
     };
 
     // Only copy traces that need updating
@@ -5191,11 +5236,12 @@ def close_modal_on_ok(n_clicks):
      State('leiden-color-dropdown', 'value'),
      State('leiden-pca-switch', 'checked'),
      State('leiden-pca-components', 'value'),
-     State('informants-store', 'data')],  # Add informants store
+     State('informants-store', 'data'),
+     State('include-ai-param', 'data')],
     prevent_initial_call=True
 )
 def run_leiden_clustering(n_clicks, selected_informants, selected_items, resolution, similarity_threshold, 
-                         color_by, apply_pca, n_components, informants_data):
+                         color_by, apply_pca, n_components, informants_data, include_ai):
     if n_clicks is None:
         return no_update, no_update, no_update, False, no_update
     
@@ -5209,7 +5255,7 @@ def run_leiden_clustering(n_clicks, selected_informants, selected_items, resolut
         if selected_items == ['grammaritems']:
             selected_items = GrammarItemsCols        
         # Get filtered data
-        data = retrieve_data.getGrammarData(imputed=True, participants=selected_informants, columns=selected_items)
+        data = retrieve_data.getGrammarData(imputed=True, participants=selected_informants, columns=selected_items, include_ai=include_ai)
         informant_data = informants_df[informants_df['InformantID'].isin(selected_informants)].copy()
         
         # Prepare feature matrix
@@ -5525,35 +5571,45 @@ def update_grammar_items_tree(type_switch_checked):
     tree_data = drawGrammarItemsTree(meta, pairs=pairs)
     return tree_data, checked_items
 
-# Callback to parse URL parameters and set England mapping flag
+# Callback to parse URL parameters and set England mapping flag and AI participants toggle
 @callback(
     [Output('england-mapping-param', 'data'),
+     Output('include-ai-param', 'data'),
      Output('informants-store', 'data'),
      Output('participantsTree', 'data'),
      Output('participantsTree', 'checked', allow_duplicate=True),
-     Output('regional-mapping-switch', 'checked')],
+     Output('regional-mapping-switch', 'checked'),
+     Output('include-ai-switch', 'checked')],
     [Input('url', 'search'),
-     Input('regional-mapping-switch', 'checked')],
+     Input('regional-mapping-switch', 'checked'),
+     Input('include-ai-switch', 'checked')],
     prevent_initial_call='initial_duplicate'
 )
-def update_regional_mapping(search, switch_checked):
+def update_regional_mapping(search, switch_checked, ai_switch_checked):
     """
-    Update regional mapping based on URL parameters or switch toggle.
+    Update regional mapping and AI inclusion based on URL parameters or switch toggles.
     Also reload informants data and rebuild participant tree.
     Accepts both 'RegionalMapping' and 'regional_variation' URL parameters.
     """
     from dash import ctx
     
     regional_mapping = False
+    include_ai = False
     
     # Determine which input triggered the callback
     triggered_id = ctx.triggered_id if ctx.triggered else None
     
     if triggered_id == 'regional-mapping-switch':
-        # Switch was toggled - use its state
+        # Regional switch was toggled - use its state
+        regional_mapping = switch_checked if switch_checked is not None else False
+        include_ai = ai_switch_checked if ai_switch_checked is not None else False
+    elif triggered_id == 'include-ai-switch':
+        # AI switch was toggled - use its state
+        include_ai = ai_switch_checked if ai_switch_checked is not None else False
         regional_mapping = switch_checked if switch_checked is not None else False
     else:
         # URL parameter or initial load
+        include_ai = ai_switch_checked if ai_switch_checked is not None else False
         if search:
             # Parse the URL parameters
             from urllib.parse import parse_qs
@@ -5567,11 +5623,11 @@ def update_regional_mapping(search, switch_checked):
                 value = params['regional_variation'][0].lower()
                 regional_mapping = value in ['true', '1', 'yes']
     
-    # Reload informants data with the regional mapping flag
-    informants = retrieve_data.getInformantDataGrammar(imputed=True, regional_mapping=regional_mapping)
+    # Reload informants data with the regional mapping and AI inclusion flags
+    informants = retrieve_data.getInformantDataGrammar(imputed=True, regional_mapping=regional_mapping, include_ai=include_ai)
     
     # Rebuild the participants tree with the updated informants data
     tree_data = drawParticipantsTree(informants)
     
-    # Clear checked items when regional mapping changes to force user to reselect
-    return regional_mapping, informants.to_dict("records"), tree_data, [], regional_mapping
+    # Clear checked items when settings change to force user to reselect
+    return regional_mapping, include_ai, informants.to_dict("records"), tree_data, [], regional_mapping, include_ai

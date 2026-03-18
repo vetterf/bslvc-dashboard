@@ -9,3 +9,4 @@ BSLVC_sqlite.db
 # MkDocs build output
 site/
 .cache/
+assets/data/BSLVC_sqlite_.db

@@ -48,12 +48,13 @@ def get_variety_classification():
     }
 
 def get_variety_mapping():
-    """Get variety to type mapping (e.g., 'England' -> 'ENL')"""
+    """Get variety to type mapping (e.g., 'England' -> 'ENL', 'AI-GPT-England' -> 'ENL')"""
     classification = get_variety_classification()
     mapping = {}
     for vtype, varieties in classification.items():
         for variety in varieties:
             mapping[variety] = vtype
+            mapping[f"AI-GPT-{variety}"] = vtype
     return mapping
 
 def get_ordered_varieties():
@@ -1629,7 +1630,7 @@ def get_balanced_informants(informants, groupby):
     
     return balanced_informants
 
-def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="variety",pairs=False,use_imputed=False,plot_mode="normal",split_by_variety=False,regional_mapping=False):
+def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="variety",pairs=False,use_imputed=False,plot_mode="normal",split_by_variety=False,regional_mapping=False,include_ai=False):
     # groupby: group by column in the data, possible Values: "variety","vtype","vtype_balanced","gender"
     # sortby: column to sort by, . "mean", "sd","alpha"
     #if True:
@@ -1640,7 +1641,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
     balanced_informants = get_balanced_informants(informants, groupby)
     
     Rating_map={'0':'No-one','1':'Few','2':'Some','3':'Many','4':'Most','5':'Everyone'}
-    df = retrieve_data.getGrammarData(imputed=use_imputed, items=items, participants=balanced_informants,pairs=pairs,regional_mapping=regional_mapping)
+    df = retrieve_data.getGrammarData(imputed=use_imputed, items=items, participants=balanced_informants,pairs=pairs,regional_mapping=regional_mapping,include_ai=include_ai)
     #df = df.groupby('item').filter(lambda x: x['mean'].between(value_range[0], value_range[1]).all()).reset_index()
     
     if df.empty:
@@ -2079,19 +2080,19 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
     
     # Handle twin correlation mode (requires pairs=True upstream, but we use raw data internally)
     if plot_mode == "twin_correlation":
-        return create_twin_correlation_plot(balanced_informants, items, groupby=groupby, sortby=sortby, use_imputed=use_imputed, regional_mapping=regional_mapping)
+        return create_twin_correlation_plot(balanced_informants, items, groupby=groupby, sortby=sortby, use_imputed=use_imputed, regional_mapping=regional_mapping, include_ai=include_ai)
 
     # Handle diverging stacked bar chart mode
     if plot_mode == "diverging":
-           return create_diverging_stacked_bar_plot(df, items, modes, groupby, variety_color_map, pairs, meta, balanced_informants, sortby, use_imputed, regional_mapping)
+           return create_diverging_stacked_bar_plot(df, items, modes, groupby, variety_color_map, pairs, meta, balanced_informants, sortby, use_imputed, regional_mapping, include_ai=include_ai)
 
     # Handle correlation matrix mode
     if plot_mode == "correlation_matrix":
-        return create_correlation_matrix_plot(df, items, balanced_informants, pairs, use_imputed)
+        return create_correlation_matrix_plot(df, items, balanced_informants, pairs, use_imputed, include_ai=include_ai)
     
     # Handle missing values heatmap mode
     if plot_mode == "missing_values_heatmap":
-           return create_missing_values_heatmap(items, balanced_informants, pairs, sortby, use_imputed, regional_mapping)
+           return create_missing_values_heatmap(items, balanced_informants, pairs, sortby, use_imputed, regional_mapping, include_ai=include_ai)
     
     # Handle split by variety mode
     if plot_mode == "split_by_variety":
@@ -2104,7 +2105,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
     
     # Handle informant mean boxplot mode
     if plot_mode == "informant_boxplot":
-           return create_informant_mean_boxplot(df, items, modes, groupby, variety_color_map, pairs, meandf, sortby, use_imputed, balanced_informants, regional_mapping)
+           return create_informant_mean_boxplot(df, items, modes, groupby, variety_color_map, pairs, meandf, sortby, use_imputed, balanced_informants, regional_mapping, include_ai=include_ai)
     
     # Legacy code for backward compatibility (will be removed)
     if len(modes) == 1 and not pairs:
@@ -3082,11 +3083,11 @@ def _participants_hash(participants):
     # Convert to tuple for consistent hashing
     return hashlib.md5(str(tuple(sorted(participants))).encode()).hexdigest()
 
-def create_diverging_stacked_bar_plot(df_orig, items, modes, groupby, variety_color_map, pairs, meta, informants, sortby="mean", use_imputed=True, regional_mapping=False):
+def create_diverging_stacked_bar_plot(df_orig, items, modes, groupby, variety_color_map, pairs, meta, informants, sortby="mean", use_imputed=True, regional_mapping=False, include_ai=False):
     """Create a diverging stacked bar chart for rating distributions"""
     
     # Get raw data with individual ratings (not aggregated)
-    raw_df = retrieve_data.getGrammarData(imputed=use_imputed, items=items, pairs=pairs, participants=informants, regional_mapping=regional_mapping)
+    raw_df = retrieve_data.getGrammarData(imputed=use_imputed, items=items, pairs=pairs, participants=informants, regional_mapping=regional_mapping, include_ai=include_ai)
 
     # Apply same grouping logic as main function
     if groupby == "variety":
@@ -4254,11 +4255,11 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
     return fig
 
 
-def create_informant_mean_boxplot(df_orig, items, modes, groupby, variety_color_map, pairs, meandf, sortby="mean", use_imputed=True, informants=None, regional_mapping=False):
+def create_informant_mean_boxplot(df_orig, items, modes, groupby, variety_color_map, pairs, meandf, sortby="mean", use_imputed=True, informants=None, regional_mapping=False, include_ai=False):
     """Create boxplots showing distribution of individual participant means across all items for each mode"""
     
     # Get raw data with individual ratings (not aggregated)
-    raw_df = retrieve_data.getGrammarData(imputed=use_imputed, items=items, pairs=pairs, participants=informants, regional_mapping=regional_mapping)
+    raw_df = retrieve_data.getGrammarData(imputed=use_imputed, items=items, pairs=pairs, participants=informants, regional_mapping=regional_mapping, include_ai=include_ai)
     
     # Get metadata and merge it to get section information
     if not pairs:
@@ -4485,14 +4486,14 @@ def create_informant_mean_boxplot(df_orig, items, modes, groupby, variety_color_
     
     return fig
 
-def create_correlation_matrix_plot(df, items, informants, pairs=False, use_imputed=False):
+def create_correlation_matrix_plot(df, items, informants, pairs=False, use_imputed=False, include_ai=False):
     """Create a correlation matrix heatmap for grammar items"""
     import plotly.express as px
     import plotly.graph_objects as go
     import numpy as np
     
     # Get the data in wide format (participants as rows, items as columns)
-    df_wide = retrieve_data.getGrammarData(imputed=use_imputed, items=items, participants=informants, pairs=pairs)
+    df_wide = retrieve_data.getGrammarData(imputed=use_imputed, items=items, participants=informants, pairs=pairs, include_ai=include_ai)
     
     if df_wide.empty:
         return getEmptyPlot("No data available for correlation matrix")
@@ -4594,7 +4595,7 @@ def create_correlation_matrix_plot(df, items, informants, pairs=False, use_imput
     return fig
 
 
-def create_twin_correlation_plot(informants, items, groupby="variety", sortby="mean", use_imputed=False, regional_mapping=False):
+def create_twin_correlation_plot(informants, items, groupby="variety", sortby="mean", use_imputed=False, regional_mapping=False, include_ai=False):
     """Create a twin correlation plot showing, for every item pair, the Spearman
     rank correlation between spoken and written ratings (computed across
     participants within each group).  Spearman is used because the items are
@@ -4648,7 +4649,8 @@ def create_twin_correlation_plot(informants, items, groupby="variety", sortby="m
         participants=balanced_informants,
         items=all_raw_items,
         pairs=False,
-        regional_mapping=regional_mapping
+        regional_mapping=regional_mapping,
+        include_ai=include_ai
     )
 
     if data.empty:
@@ -4793,7 +4795,7 @@ def create_twin_correlation_plot(informants, items, groupby="variety", sortby="m
     return fig
 
 
-def create_twin_correlation_dataframe(informants, items, groupby="variety", sortby="mean", use_imputed=False, regional_mapping=False):
+def create_twin_correlation_dataframe(informants, items, groupby="variety", sortby="mean", use_imputed=False, regional_mapping=False, include_ai=False):
     """Return the DataFrame used to build the twin correlation plot.
 
     This mirrors the logic in ``create_twin_correlation_plot`` but returns the
@@ -4825,7 +4827,8 @@ def create_twin_correlation_dataframe(informants, items, groupby="variety", sort
         participants=balanced_informants,
         items=all_raw_items,
         pairs=False,
-        regional_mapping=regional_mapping
+        regional_mapping=regional_mapping,
+        include_ai=include_ai
     )
 
     if data.empty:
@@ -4885,7 +4888,7 @@ def create_twin_correlation_dataframe(informants, items, groupby="variety", sort
     return result_df.reset_index(drop=True)
 
 
-def create_missing_values_heatmap(items, informants, pairs=False, sortby="mean", use_imputed=False, regional_mapping=False):
+def create_missing_values_heatmap(items, informants, pairs=False, sortby="mean", use_imputed=False, regional_mapping=False, include_ai=False):
     """Create a heatmap showing percentage of missing values per variety and item
     
     Args:
@@ -4900,7 +4903,7 @@ def create_missing_values_heatmap(items, informants, pairs=False, sortby="mean",
     import numpy as np
     
     # Get data based on use_imputed parameter
-    df_wide = retrieve_data.getGrammarData(imputed=use_imputed, items=items, participants=informants, pairs=pairs, regional_mapping=regional_mapping)
+    df_wide = retrieve_data.getGrammarData(imputed=use_imputed, items=items, participants=informants, pairs=pairs, regional_mapping=regional_mapping, include_ai=include_ai)
     
     if df_wide.empty:
         return getEmptyPlot("No data available for missing values heatmap")

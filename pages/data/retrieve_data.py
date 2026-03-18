@@ -82,7 +82,23 @@ def get_color_for_variety(type="lexical"):
         "Germany": "#bcbd22",
         "Sweden": "#17becf",
         "Spain (Balearic Islands)": "#393b79",
-        "Other": "#c49c94"
+        "Other": "#c49c94",
+        # AI-GPT varieties: toned-down (pastel) variants of the original variety colors
+        "AI-GPT-England": "#8fbbd9",
+        "AI-GPT-England_North": "#a5c8e2",
+        "AI-GPT-England_South": "#86adc7",
+        "AI-GPT-England_UNCLEAR": "#b8d5e8",
+        "AI-GPT-Scotland": "#ffbf87",
+        "AI-GPT-US": "#96d096",
+        "AI-GPT-Gibraltar": "#eb9394",
+        "AI-GPT-Malta": "#cab3de",
+        "AI-GPT-India": "#c6aba5",
+        "AI-GPT-Puerto Rico": "#f1bbe1",
+        "AI-GPT-Slovenia": "#bfbfbf",
+        "AI-GPT-Germany": "#dede91",
+        "AI-GPT-Sweden": "#8bdef7",
+        "AI-GPT-Spain (Balearic Islands)": "#9c9dbc",
+        "AI-GPT-Other": "#e2ceca"
     }
     
     return fixed_color_map
@@ -279,7 +295,7 @@ def getGrammarItemsCols(type="all"):
 
 
 
-def getInformantData(columns = None, informants = None, varieties = None):
+def getInformantData(columns = None, informants = None, varieties = None, include_ai = False):
     # to do: rewrite so that filtering is done in SQL not via pandas
     SQLstatement = 'SELECT * FROM Informants'
     if Conf.source == 'sqlite':
@@ -290,6 +306,10 @@ def getInformantData(columns = None, informants = None, varieties = None):
     
     # Exclude specified participants
     data = data[~data['InformantID'].isin(EXCLUDED_PARTICIPANTS)]
+    
+    # Filter out AI-generated participants unless explicitly requested
+    if not include_ai:
+        data = data[~data['MainVariety'].str.startswith('AI-GPT-', na=False)]
     
     # Remove NameSchool, signature, and CommentsTimeline columns if they exist (privacy protection)
     if 'NameSchool' in data.columns:
@@ -325,7 +345,7 @@ def getInformantData(columns = None, informants = None, varieties = None):
 
     return data
 
-def getInformantDataGrammar(columns = None, participants = None, varieties = None, imputed = False, regional_mapping = False):
+def getInformantDataGrammar(columns = None, participants = None, varieties = None, imputed = False, regional_mapping = False, include_ai = False):
     # Load all columns from Informants table, filtered by InformantIDs that exist in grammar tables
     
     if imputed:
@@ -367,6 +387,10 @@ def getInformantDataGrammar(columns = None, participants = None, varieties = Non
     float_columns = ['Age', 'YearsLivedOutside', 'YearsLivedInside', 'YearsLivedOtherEnglish', 'Ratio', 'YearsLivedInMainVariety', 'RatioMainVariety']
     data.loc[:,float_columns] = data.loc[:,float_columns].apply(pd.to_numeric, errors='coerce')
     data = data[~data['InformantID'].str.startswith('Unnamed')]
+    
+    # Filter out AI-generated participants unless explicitly requested
+    if not include_ai:
+        data = data[~data['MainVariety'].str.startswith('AI-GPT-', na=False)]
     
     # Strip whitespace from MainVariety to handle dirty data (e.g. 'Germany ' vs 'Germany')
     if 'MainVariety' in data.columns:
@@ -414,8 +438,9 @@ def getInformantDataGrammar(columns = None, participants = None, varieties = Non
     # Recode MainVariety to "Other" only if:
     # 1. Count is less than 10 AND
     # 2. It's not a major variety (one that appears in the grammar data)
+    # 3. It's not an AI-GPT variety (those are always preserved)
     data['MainVariety'] = data['MainVariety'].apply(
-        lambda x: x if (variety_counts.get(x, 0) >= 10 or x in major_varieties) else 'Other'
+        lambda x: x if (variety_counts.get(x, 0) >= 10 or x in major_varieties or x.startswith('AI-GPT-')) else 'Other'
     )
     # if main variety unclear, set to "Other"
     data['MainVariety'] = data['MainVariety'].apply(lambda x: x if x != 'UNCLEAR' else 'Other')
@@ -584,7 +609,7 @@ def getLexicalData(imputed=False):
 
 
 # implement filter here
-def getGrammarData(imputed=False,pairs=False, regional_mapping=False, **kwargs):
+def getGrammarData(imputed=False,pairs=False, regional_mapping=False, include_ai=False, **kwargs):
 
     InformantCols = getInformantCols()
     GrammarCols = getGrammarItemsCols(type="all")
@@ -673,6 +698,10 @@ def getGrammarData(imputed=False,pairs=False, regional_mapping=False, **kwargs):
 
     data = data[~data['InformantID'].str.startswith('Unnamed')]
     
+    # Filter out AI-generated participants unless explicitly requested
+    if not include_ai:
+        data = data[~data['MainVariety'].str.startswith('AI-GPT-', na=False)]
+    
     # Strip whitespace from MainVariety to handle dirty data (e.g. 'Germany ' vs 'Germany')
     if 'MainVariety' in data.columns:
         data['MainVariety'] = data['MainVariety'].str.strip()
@@ -719,8 +748,9 @@ def getGrammarData(imputed=False,pairs=False, regional_mapping=False, **kwargs):
     # Recode MainVariety to "Other" only if:
     # 1. Count is less than 10 AND
     # 2. It's not a major variety (one that appears in the grammar data)
+    # 3. It's not an AI-GPT variety (those are always preserved)
     data.loc[:,'MainVariety'] = data.loc[:,'MainVariety'].apply(
-        lambda x: x if (variety_counts.get(x, 0) >= 10 or x in major_varieties) else 'Other'
+        lambda x: x if (variety_counts.get(x, 0) >= 10 or x in major_varieties or x.startswith('AI-GPT-')) else 'Other'
     )
     data.loc[:,'MainVariety'] = data.loc[:,'MainVariety'].apply(lambda x: x if x != 'UNCLEAR' else 'Other')
 
