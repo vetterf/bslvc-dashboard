@@ -140,6 +140,10 @@ The switch "Split England into regions (North/South")" controls whether particip
 
 ![Regional mapping activated](img/UI_regional_mapping.png)
 
+##### AI-Generated Participants
+
+The switch "Include AI-generated participants" adds LLM-generated participants to the dataset. These participants were created by Deckert, Katharina and Fabian Vetter (in preparation), who prompted large language models to act as speakers of different varieties of English and fill in the BSLVC questionnaire. The goal of this extension is to investigate how varieties of English are encoded in modern LLMs. AI-generated participants are displayed using toned-down pastel colors and are prefixed with "AI-GPT-" in the legend and hover information.
+
 #### Grammar Item Selection
 All grammar items can be selected in the grammar items tree. They are first grouped by mode, then by feature group. Items can be either selected by clicking the checkboxes, by using presets or the buttons above the tree, or via the grammar items table in the main view. The getting started section in the app describes how the grammar items table can be used for custom item selections.
 
@@ -171,6 +175,7 @@ The UMAP Settings allow the user to tweak the UMAP hyperparameters, as well as t
 - **Distance metric**: Choose metric (Cosine, Euclidean, Manhattan).
 - **Standardize participant ratings**: Checkbox to standardize ratings. Standardization is advised for use with Euclidean and Manhattan distances.
 - **Use density-preserving embedding (DensMAP)**: Checkbox for DensMAP (https://umap-learn.readthedocs.io/en/latest/densmap_demo.html). By default, UMAP does not preserve densities of clusters well. DensMAP tries to preserve the density of clusters when reducing dimensionality.
+- **Show KDE density contours**: Checkbox to overlay 2D kernel density estimation (KDE) contours on the UMAP plot. When enabled, filled contour regions are drawn behind the scatter points for each variety, visualizing the density distribution of participants in the embedding space. Contour visibility is linked to the legend: hiding a variety via the legend also hides its contours. This option can be toggled at any time without re-rendering the plot.
 - **Number of neighbours**: Slider for UMAP hyperparameter. Check the UMAP docs for more info.
 - **Minimal distance**: Slider for UMAP hyperparameter. Check the UMAP docs for more info.
 

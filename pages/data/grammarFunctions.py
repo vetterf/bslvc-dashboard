@@ -423,7 +423,35 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
     # else:
     embedding['opacity'] = 0.8
 
-
+    # Add KDE density contour traces per variety (rendered behind scatter points)
+    for c in sorted(embedding['MainVariety'].unique()):
+        df_contour = embedding[embedding['MainVariety'] == c]
+        if len(df_contour) < 3:
+            continue
+        variety_color = variety_to_color.get(c, '#c49c94')
+        hex_c = variety_color.lstrip('#')
+        r, g, b = int(hex_c[0:2], 16), int(hex_c[2:4], 16), int(hex_c[4:6], 16)
+        color_transparent = f'rgba({r},{g},{b},0)'
+        color_fill = f'rgba({r},{g},{b},0.35)'
+        contour_trace = go.Histogram2dContour(
+            x=df_contour['x'].tolist(),
+            y=df_contour['y'].tolist(),
+            name=c + ' (density)',
+            legendgroup=c,
+            colorscale=[[0, color_transparent], [1, color_fill]],
+            showscale=False,
+            contours=dict(coloring='fill'),
+            line=dict(color=variety_color, width=1.5),
+            ncontours=6,
+            showlegend=False,
+            hoverinfo='skip',
+            visible=False,
+            meta={'kde_contour': True},
+        )
+        if leiden:
+            fig.add_trace(contour_trace, row=1, col=1)
+        else:
+            fig.add_trace(contour_trace)
 
     # Add UMAP traces - sort varieties alphabetically for consistent legend order
     for c in sorted(embedding['MainVariety'].unique()):
@@ -434,6 +462,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                     x=df_color['x'], 
                     y=df_color['y'],
                     name=c,
+                    legendgroup=c,
                     mode='markers',
                     text=df_color['InformantID'],
                     ids=df_color['InformantID'],
@@ -461,6 +490,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                     x=df_color['x'], 
                     y=df_color['y'],
                     name=c,
+                    legendgroup=c,
                     mode='markers',
                     text=df_color['InformantID'],
                     ids=df_color['InformantID'],

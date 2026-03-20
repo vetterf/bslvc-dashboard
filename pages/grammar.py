@@ -1238,6 +1238,13 @@ umapSettingsAccordion = dmc.AccordionItem(
                             checked=False,
                             persistence=persist_UI, persistence_type=persistence_type
                         ),
+                        dmc.Checkbox(
+                            id="umap-kde-contours-checkbox",
+                            label="Show KDE density contours",
+                            size="sm",
+                            checked=False,
+                            persistence=persist_UI, persistence_type=persistence_type
+                        ),
                         dmc.Text("UMAP Hyperparameters:", size="xs", fw=600, c="dimmed", mt="xs"),
                         dmc.Stack(gap="xs", children=[
                             dmc.Text("Number of neighbours:", size="xs"),
@@ -3559,7 +3566,8 @@ def manage_umap_groups(BTNaddgroup, BTNcleargroup, selectedData, figure, data, d
             return no_update, no_update, no_update, no_update
         newFig = displayedFigure
         for x in range(len(newFig['data'])):
-            newFig['data'][x]['marker']['symbol'] = 0
+            if newFig['data'][x].get('type') == 'scatter' and 'marker' in newFig['data'][x]:
+                newFig['data'][x]['marker']['symbol'] = 0
         groupsCache = getColorGroupingsFromFigure(displayedFigure)
         return newFig, 0, groupsCache, no_update
     
@@ -3828,11 +3836,16 @@ def toggle_rf_table_plot_view(selected_view):
 @callback(
     Output('UMAPfig', 'figure',allow_duplicate=True),
     Input('grammar_plots_UMAP', 'data'),
+    State('umap-kde-contours-checkbox', 'checked'),
     prevent_initial_call=True
 )
-def set_umapfig_from_store(fig_data):
+def set_umapfig_from_store(fig_data, kde_checked):
     if fig_data is not None:
         fig = go.Figure(fig_data)
+        if kde_checked:
+            for trace in fig.data:
+                if hasattr(trace, 'meta') and isinstance(trace.meta, dict) and trace.meta.get('kde_contour'):
+                    trace.visible = True
         return fig
     # Return initial empty plot (not a real UMAP plot yet)
     return UMAP_Grammar_initialPlot
@@ -5157,6 +5170,28 @@ clientside_callback(
     Output('UMAPfig', 'figure', allow_duplicate=True),
     [Input('umap-color-dropdown', 'value')],
     [State('UMAPfig', 'figure'),State('informants-store', 'data')],
+    prevent_initial_call=True
+)
+
+# Toggle KDE density contour visibility (client-side for instant response)
+clientside_callback(
+    """
+    function(checked, fig) {
+        if (!fig || !fig.data) {
+            return window.dash_clientside.no_update;
+        }
+        var newFig = {...fig, data: fig.data.map(function(trace) {
+            if (trace.meta && trace.meta.kde_contour) {
+                return {...trace, visible: checked};
+            }
+            return trace;
+        })};
+        return newFig;
+    }
+    """,
+    Output('UMAPfig', 'figure', allow_duplicate=True),
+    [Input('umap-kde-contours-checkbox', 'checked')],
+    [State('UMAPfig', 'figure')],
     prevent_initial_call=True
 )
 
