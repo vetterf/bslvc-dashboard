@@ -48,13 +48,13 @@ def get_variety_classification():
     }
 
 def get_variety_mapping():
-    """Get variety to type mapping (e.g., 'England' -> 'ENL', 'AI-GPT-England' -> 'ENL')"""
+    """Get variety to type mapping (e.g., 'England' -> 'ENL', 'AI-GPT-England' -> 'AI-ENL')"""
     classification = get_variety_classification()
     mapping = {}
     for vtype, varieties in classification.items():
         for variety in varieties:
             mapping[variety] = vtype
-            mapping[f"AI-GPT-{variety}"] = vtype
+            mapping[f"AI-GPT-{variety}"] = f"AI-{vtype}"
     return mapping
 
 def get_ordered_varieties():
@@ -82,8 +82,8 @@ def sort_groups_for_plot(groups, groupby="variety"):
         # These are actual variety names - use standard ordering
         return sort_varieties_by_standard_order(groups)
     elif groupby in ["vtype", "vtype_balanced"]:
-        # These are variety types (ENL, ESL, EFL) - use standard type order
-        type_order = ["ENL", "ESL", "EFL"]
+        # These are variety types (ENL, ESL, EFL, AI-ENL, AI-ESL, AI-EFL) - use standard type order
+        type_order = ["ENL", "ESL", "EFL", "AI-ENL", "AI-ESL", "AI-EFL"]
         return sorted(groups, key=lambda x: type_order.index(x) if x in type_order else 999)
     else:
         # For gender or other categories, use alphabetical
@@ -1632,12 +1632,13 @@ def get_balanced_informants(informants, groupby):
     # Filter out unknown varieties
     informant_data = informant_data[informant_data['MainVariety'].isin(variety_mapping.keys())]
     
-    # Apply balanced sampling within each variety type
+    # Apply balanced sampling within each variety type (including AI types)
     balanced_informants = []
     
     for vtype in ["ENL", "ESL", "EFL"]:
         # Get varieties within this type using centralized classification
-        varieties_in_type = variety_classification[vtype]
+        # Include both human and AI-GPT- varieties
+        varieties_in_type = variety_classification[vtype] + [f"AI-GPT-{v}" for v in variety_classification[vtype]]
         varieties_present = [v for v in varieties_in_type if v in informant_data['MainVariety'].unique()]
         
         if len(varieties_present) > 0:

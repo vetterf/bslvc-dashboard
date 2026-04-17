@@ -5119,10 +5119,10 @@ clientside_callback(
         "AI-GPT-US": "#96d096",
         "AI-GPT-Gibraltar": "#eb9394",
         "AI-GPT-Malta": "#cab3de",
-        "AI-GPT-India": "#c6aba5",
+        "AI-GPT-IND": "#c6aba5",
         "AI-GPT-Puerto Rico": "#f1bbe1",
         "AI-GPT-Slovenia": "#bfbfbf",
-        "AI-GPT-Germany": "#dede91",
+        "AI-GPT-DE": "#dede91",
         "AI-GPT-Sweden": "#8bdef7",
         "AI-GPT-Other": "#e2ceca"
     };

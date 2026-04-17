@@ -10,3 +10,6 @@ BSLVC_sqlite.db
 site/
 .cache/
 assets/data/BSLVC_sqlite_.db
+assets/data/BSLVC_sqlite__260318.db
+assets/data/BSLVC_sqlite**.db
+pages/data/umap_presets/**
