@@ -2,6 +2,15 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
+## [0.1.7] - 2026-04-17
+
+### Added
+- **Support for AI data**
+- **KDE contours in UMAP plot**
+
+### Changed
+- **Flagged items**: Added item M23 (item rendering was corrupted between collection years 2022-2026)
+
 ## [0.1.6] - 2026-02-17
 
 ### Added
