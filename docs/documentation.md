@@ -266,13 +266,15 @@ Some grammar items have been flagged due to various issues that may affect analy
 - 'M19', 'J23', 'C21', 'C14', 'A4': These items involve currency or unit measurements that may vary by region. An overview which item was used in which version of the questionnaire can be found in the BSLVC resources repo (https://github.com/vetterf/bslvc-resources; coming soon).
 
 **Rendering Issues:**
-- 'E22', 'D12', 'E6': These items have different renderings in some varieties:
+- 'E22', 'D12', 'E6', 'M23': These items have different renderings in some varieties:
 
 E22: *This is exactly that I wanted*. Our Swedish speaker autocorrected this item to *This is exactly what I wanted*, effectively turning this into a control item. All other varieties are unaffected.
 
 D12: *I'll tell Jane when I meets her*. Our Scottish and Swedish speaker aspirates the *ts* in *meets* heavily, thus somewhat blurring the line between the standard use *when I meet her* and the non-standard *when I meets her*.
 
 E6: *I'm learning French, because is a beautiful language*. Again the rendering by our Scottish speaker blurs the line between non-standard *is* and *it's*.
+
+M23: *They are desperately looking for people able to translate the Maltese text in English*. In some questionnaires the end of the sentence was cut off or a superfluous *their* was introduced before _English_.
 
 The "Flagged" button in the Grammar Item Selection section automatically deselects these items. Users should be aware of these issues when interpreting results that include these items.
 
