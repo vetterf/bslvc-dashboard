@@ -276,6 +276,8 @@ E6: *I'm learning French, because is a beautiful language*. Again the rendering 
 
 M23: *They are desperately looking for people able to translate the Maltese text in English*. In some questionnaires the end of the sentence was cut off or a superfluous *their* was introduced before _English_.
 
+L16: *The country must better integrate into the EU*. In most older questionnaires (pre 2019), this item reads *That country [...]*. It appears that the newer *the*-rendering results in slightly higher ratings. All newer (post 2019) questionnaires use *The [...]*.
+
 The "Flagged" button in the Grammar Item Selection section automatically deselects these items. Users should be aware of these issues when interpreting results that include these items.
 
 ### Lexicon Analysis Module

@@ -4423,7 +4423,7 @@ def updateGrammarItemsTree(wo_button,curr_button,prob_button,itemTree,pairs):
             # In pairs mode, use the pair codes for flagged items
             flagged_items = ['A4-M19', 'C14-J23', 'C21-H4', 'D12-J25', 'E6-G2', 'E22-N22']
         else:
-            flagged_items = ['M19', 'J23', 'C14', 'A4', 'E22', 'D12', 'E6','C21','H4', 'M23']
+            flagged_items = ['M19', 'J23', 'C14', 'A4', 'E22', 'D12', 'E6','C21','H4', 'M23', 'L16']
         # Remove flagged items from current selection
         items = list(set(itemTree) - set(flagged_items))
         return items
