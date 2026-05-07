@@ -5180,9 +5180,24 @@ clientside_callback(
         if (!fig || !fig.data) {
             return window.dash_clientside.no_update;
         }
+        // Build a set of legendgroups whose scatter traces are currently visible
+        var visibleGroups = {};
+        fig.data.forEach(function(trace) {
+            if (!(trace.meta && trace.meta.kde_contour)) {
+                // This is a scatter (non-KDE) trace
+                var grp = trace.legendgroup;
+                if (grp !== undefined && grp !== null) {
+                    // visible is true or undefined = shown; 'legendonly' = hidden by legend
+                    if (trace.visible !== 'legendonly') {
+                        visibleGroups[grp] = true;
+                    }
+                }
+            }
+        });
         var newFig = {...fig, data: fig.data.map(function(trace) {
             if (trace.meta && trace.meta.kde_contour) {
-                return {...trace, visible: checked};
+                var groupVisible = visibleGroups[trace.legendgroup] === true;
+                return {...trace, visible: checked && groupVisible};
             }
             return trace;
         })};

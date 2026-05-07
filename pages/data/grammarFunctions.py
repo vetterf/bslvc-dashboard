@@ -398,7 +398,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
     variety_to_color = retrieve_data.get_color_for_variety(type="grammar")
 
     # Apply the mapping efficiently, with fallback color for any unmapped varieties
-    embedding['color'] = embedding['MainVariety'].map(variety_to_color).fillna(variety_to_color.get('Other', '#c49c94'))
+    embedding['color'] = embedding['MainVariety'].map(lambda x: variety_to_color.get(x, variety_to_color.get('Other', '#c49c94')))
     
     if leiden:
         embedding['leiden_cluster'] = leiden_clusters
@@ -803,8 +803,8 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                 for plot_group in plot_groups:
                     tempDF = df[df['group'] == plot_group]
                     color = None
-                    if not use_symbol_only and variety_color_map and plot_group in variety_color_map:
-                        color = variety_color_map[plot_group]
+                    if not use_symbol_only and variety_color_map:
+                        color = variety_color_map.get(plot_group, None)
                     
                     # Calculate x positions for this group
                     x_vals = []
@@ -862,8 +862,8 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                 for plot_group in plot_groups:
                     tempDF = df[df['group'] == plot_group]
                     color = None
-                    if not use_symbol_only and variety_color_map and plot_group in variety_color_map:
-                        color = variety_color_map[plot_group]
+                    if not use_symbol_only and variety_color_map:
+                        color = variety_color_map.get(plot_group, None)
                     # --- NEW: use symbol only if use_symbol_only is True ---
                     if use_symbol_only:
                         fig.add_trace(
@@ -977,8 +977,8 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
             for plot_group in plot_groups:
                 tempDF = df[df['group'] == plot_group]
                 color = None
-                if not use_symbol_only and variety_color_map and plot_group in variety_color_map:
-                    color = variety_color_map[plot_group]
+                if not use_symbol_only and variety_color_map:
+                    color = variety_color_map.get(plot_group, None)
                 # --- NEW: use symbol only if use_symbol_only is True ---
                 if use_symbol_only:
                     fig.add_trace(
@@ -1165,8 +1165,8 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                     
                     # Determine color for this group
                     color = None
-                    if variety_color_map and plot_group in variety_color_map:
-                        color = variety_color_map[plot_group]
+                    if variety_color_map:
+                        color = variety_color_map.get(plot_group, None)
                     
                     # Calculate x positions for this group in multi-mode
                     x_vals = []
@@ -1242,8 +1242,8 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                     
                     # Determine color for this group
                     color = None
-                    if variety_color_map and plot_group in variety_color_map:
-                        color = variety_color_map[plot_group]
+                    if variety_color_map:
+                        color = variety_color_map.get(plot_group, None)
                     if use_symbol_only:
                         fig.add_trace(
                         go.Scatter(
@@ -1936,8 +1936,8 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
         for plot_group in unique_groups:
             tempDF = df[df['group'] == plot_group]
             color = None
-            if variety_color_map and plot_group in variety_color_map:
-                color = variety_color_map[plot_group]
+            if variety_color_map:
+                color = variety_color_map.get(plot_group, None)
             
             # Calculate legend rank to maintain alphabetical order in legend
             legend_rank = legend_groups.index(plot_group) if plot_group in legend_groups else 999
@@ -2149,8 +2149,8 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
             
             # Get color for this group if we're grouping by variety
             color = None
-            if variety_color_map and plot_group in variety_color_map:
-                color = variety_color_map[plot_group]
+            if variety_color_map:
+                color = variety_color_map.get(plot_group, None)
             
             # Calculate legend rank to maintain alphabetical order in legend
             legend_rank = legend_groups.index(plot_group) if plot_group in legend_groups else 999
@@ -2237,8 +2237,8 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
             
             # Get color for this group if we're grouping by variety
             color = None
-            if variety_color_map and plot_group in variety_color_map:
-                color = variety_color_map[plot_group]
+            if variety_color_map:
+                color = variety_color_map.get(plot_group, None)
             
             # Calculate legend rank to maintain alphabetical order in legend
             legend_rank = legend_groups.index(plot_group) if plot_group in legend_groups else 999
@@ -2328,8 +2328,8 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                 
                 # Get color for this group if we're grouping by variety
                 color = None
-                if variety_color_map and plot_group in variety_color_map:
-                    color = variety_color_map[plot_group]
+                if variety_color_map:
+                    color = variety_color_map.get(plot_group, None)
                 
                 # Calculate legend rank to maintain alphabetical order in legend
                 legend_rank = legend_groups.index(plot_group) if plot_group in legend_groups else 999
@@ -3948,8 +3948,8 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
             
             # Get color for this group if we're grouping by variety
             color = None
-            if variety_color_map and plot_group in variety_color_map:
-                color = variety_color_map[plot_group]
+            if variety_color_map:
+                color = variety_color_map.get(plot_group, None)
             
             # Create rotated scatter plot (Y = items, X = mean)
             fig.add_trace(
@@ -4054,8 +4054,8 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
             
             # Get color for this group if we're grouping by variety
             color = None
-            if variety_color_map and plot_group in variety_color_map:
-                color = variety_color_map[plot_group]
+            if variety_color_map:
+                color = variety_color_map.get(plot_group, None)
             
             # Create rotated scatter plot (Y = items, X = mean)
             fig.add_trace(
@@ -4216,9 +4216,9 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
                 
                 # Get color for this group if we're grouping by variety
                 base_color = None
-                if variety_color_map and plot_group in variety_color_map:
-                    base_color = variety_color_map[plot_group]
-                else:
+                if variety_color_map:
+                    base_color = variety_color_map.get(plot_group, None)
+                if base_color is None:
                     base_color = mode_colors.get(mode.lower(), '#1f77b4')
                 
                 # Map items to their y-positions
@@ -4381,8 +4381,8 @@ def create_informant_mean_boxplot(df_orig, items, modes, groupby, variety_color_
             
             # Get color for this group
             color = None
-            if variety_color_map and plot_group in variety_color_map:
-                color = variety_color_map[plot_group]
+            if variety_color_map:
+                color = variety_color_map.get(plot_group, None)
             
             if not group_data.empty:
                 fig.add_trace(
@@ -4462,9 +4462,9 @@ def create_informant_mean_boxplot(df_orig, items, modes, groupby, variety_color_
                 
                 # Get color - prefer variety color, fallback to mode color
                 color = None
-                if variety_color_map and group in variety_color_map:
-                    color = variety_color_map[group]
-                else:
+                if variety_color_map:
+                    color = variety_color_map.get(group, None)
+                if color is None:
                     color = mode_colors.get(mode, '#1f77b4')
                 
                 if not mode_data.empty:
@@ -4779,8 +4779,8 @@ def create_twin_correlation_plot(informants, items, groupby="variety", sortby="m
         if grp_df.empty:
             continue
         color = None
-        if variety_color_map and group_name in variety_color_map:
-            color = variety_color_map[group_name]
+        if variety_color_map:
+            color = variety_color_map.get(group_name, None)
 
         legend_rank = legend_groups.index(group_name) if group_name in legend_groups else 999
 

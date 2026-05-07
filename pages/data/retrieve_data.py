@@ -63,45 +63,159 @@ class Conf:
 # Participants to exclude from all queries, appear to be outliers
 EXCLUDED_PARTICIPANTS = ["GIB10-041m17","GIB10-042m17", "IND24-0105", "PR15-039m23", "SC16-405f16"]
 
+def _hex_to_rgb(hex_color):
+    """Convert hex color to RGB tuple."""
+    hex_color = hex_color.lstrip('#')
+    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+
+
+def _rgb_to_hex(r, g, b):
+    """Convert RGB tuple to hex color."""
+    return '#{:02x}{:02x}{:02x}'.format(int(r), int(g), int(b))
+
+
+def _tone_down_color(hex_color, factor=0.6):
+    """
+    Create a pastel/toned-down version of a color by blending with white.
+    factor: 0 = white, 1 = original color. Default 0.6 = 60% original, 40% white.
+    """
+    r, g, b = _hex_to_rgb(hex_color)
+    # Blend with white (255, 255, 255)
+    r = int(r * factor + 255 * (1 - factor))
+    g = int(g * factor + 255 * (1 - factor))
+    b = int(b * factor + 255 * (1 - factor))
+    return _rgb_to_hex(r, g, b)
+
+
+class VarietyColorMap:
+    """
+    Dict-like object that maps variety names to colors.
+    - Preserves all manually-mapped colors in fixed_color_map
+    - For unmapped varieties, generates deterministic colors from a reserved palette
+    - For AI-GPT varieties, returns a toned-down version of the base variety color
+    """
+    
+    # Reserved palette for auto-generated colors (pastel/distinct colors)
+    RESERVED_PALETTE = [
+        "#e74c3c",  # red
+        "#3498db",  # blue
+        "#2ecc71",  # green
+        "#f39c12",  # orange
+        "#9b59b6",  # purple
+        "#1abc9c",  # turquoise
+        "#34495e",  # dark gray
+        "#e67e22",  # carrot
+        "#95a5a6",  # light gray
+        "#c0392b",  # dark red
+    ]
+    
+    def __init__(self):
+        self.fixed_map = {
+            "England": "#1f77b4",
+            "England_North": "#4a90c4",
+            "England_South": "#0d5a8f",
+            "England_UNCLEAR": "#7bb3d9",
+            "Scotland": "#ff7f0e",
+            "US": "#2ca02c",
+            "Gibraltar": "#d62728",
+            "Malta": "#9467bd",
+            "India": "#8c564b",
+            "Puerto Rico": "#e377c2",
+            "Slovenia": "#7f7f7f",
+            "Germany": "#bcbd22",
+            "Sweden": "#17becf",
+            "Spain (Balearic Islands)": "#393b79",
+            "Other": "#c49c94",
+            # AI-GPT varieties (manually toned-down)
+            "AI-GPT-England": "#8fbbd9",
+            "AI-GPT-England_North": "#a5c8e2",
+            "AI-GPT-England_South": "#86adc7",
+            "AI-GPT-England_UNCLEAR": "#b8d5e8",
+            "AI-GPT-Scotland": "#ffbf87",
+            "AI-GPT-US": "#96d096",
+            "AI-GPT-Gibraltar": "#eb9394",
+            "AI-GPT-Malta": "#cab3de",
+            "AI-GPT-India": "#c6aba5",
+            "AI-GPT-Puerto Rico": "#f1bbe1",
+            "AI-GPT-Slovenia": "#bfbfbf",
+            "AI-GPT-Germany": "#dede91",
+            "AI-GPT-Sweden": "#8bdef7",
+            "AI-GPT-Spain (Balearic Islands)": "#9c9dbc",
+            "AI-GPT-Other": "#e2ceca"
+        }
+        self._cache = {}  # Cache auto-generated colors
+    
+    def _get_auto_color(self, variety_name):
+        """Generate a deterministic color for an unmapped variety."""
+        if variety_name in self._cache:
+            return self._cache[variety_name]
+        
+        # Hash the variety name to get an index into the palette
+        hash_val = hash(variety_name)
+        palette_idx = abs(hash_val) % len(self.RESERVED_PALETTE)
+        color = self.RESERVED_PALETTE[palette_idx]
+        
+        self._cache[variety_name] = color
+        return color
+    
+    def __getitem__(self, key):
+        """Support dict-style access: color_map[variety]"""
+        return self.get(key, "#c49c94")
+    
+    def get(self, key, default="#c49c94"):
+        """Support .get() method like a dict."""
+        # Check if it's in the fixed map
+        if key in self.fixed_map:
+            return self.fixed_map[key]
+        
+        # Handle AI-GPT varieties
+        if isinstance(key, str) and key.startswith("AI-GPT-"):
+            base_variety = key[7:]  # Remove "AI-GPT-" prefix
+            
+            # Try to get the base variety color (which might be auto-generated)
+            base_color = self._get_variety_color(base_variety)
+            
+            # Tone down the color for AI-GPT variant
+            return _tone_down_color(base_color, factor=0.6)
+        
+        # Auto-generate color for unmapped non-AI varieties
+        return self._get_auto_color(key)
+    
+    def _get_variety_color(self, variety_name):
+        """Internal: get color for a variety (base or auto-generated)."""
+        if variety_name in self.fixed_map:
+            return self.fixed_map[variety_name]
+        return self._get_auto_color(variety_name)
+    
+    def items(self):
+        """Support .items() iteration (for fixed map only, for compatibility)."""
+        return self.fixed_map.items()
+    
+    def keys(self):
+        """Support .keys() iteration."""
+        return self.fixed_map.keys()
+    
+    def values(self):
+        """Support .values() iteration."""
+        return self.fixed_map.values()
+    
+    def __contains__(self, key):
+        """Support 'in' operator."""
+        return key in self.fixed_map
+
+    def __len__(self):
+        """Support len() — required by pandas 3.x when used as a mapper."""
+        return len(self.fixed_map)
+
+
 # function to map variety names to colors
 def get_color_for_variety(type="lexical"):
-    # Fixed color mapping for varieties
-    # Return the complete fixed map to ensure all varieties (including England subdivisions) have colors
-    fixed_color_map = {
-        "England": "#1f77b4",
-        "England_North": "#4a90c4",  # Lighter blue for North England
-        "England_South": "#0d5a8f",  # Darker blue for South England
-        "England_UNCLEAR": "#7bb3d9",  # Even lighter blue for UNCLEAR England
-        "Scotland": "#ff7f0e", 
-        "US": "#2ca02c",
-        "Gibraltar": "#d62728",
-        "Malta": "#9467bd",
-        "India": "#8c564b",
-        "Puerto Rico": "#e377c2",
-        "Slovenia": "#7f7f7f",
-        "Germany": "#bcbd22",
-        "Sweden": "#17becf",
-        "Spain (Balearic Islands)": "#393b79",
-        "Other": "#c49c94",
-        # AI-GPT varieties: toned-down (pastel) variants of the original variety colors
-        "AI-GPT-England": "#8fbbd9",
-        "AI-GPT-England_North": "#a5c8e2",
-        "AI-GPT-England_South": "#86adc7",
-        "AI-GPT-England_UNCLEAR": "#b8d5e8",
-        "AI-GPT-Scotland": "#ffbf87",
-        "AI-GPT-US": "#96d096",
-        "AI-GPT-Gibraltar": "#eb9394",
-        "AI-GPT-Malta": "#cab3de",
-        "AI-GPT-India": "#c6aba5",
-        "AI-GPT-Puerto Rico": "#f1bbe1",
-        "AI-GPT-Slovenia": "#bfbfbf",
-        "AI-GPT-Germany": "#dede91",
-        "AI-GPT-Sweden": "#8bdef7",
-        "AI-GPT-Spain (Balearic Islands)": "#9c9dbc",
-        "AI-GPT-Other": "#e2ceca"
-    }
-    
-    return fixed_color_map
+    """
+    Returns a color map for varieties with auto-generation for unmapped ones.
+    All manually-mapped colors are preserved.
+    AI-GPT varieties automatically get toned-down versions of base variety colors.
+    """
+    return VarietyColorMap()
 
 
 def get_database_version():
@@ -320,7 +434,9 @@ def getInformantData(columns = None, informants = None, varieties = None, includ
         data = data.drop(columns=['CommentsTimeline'])
     
     float_columns = ['Age', 'YearsLivedOutside', 'YearsLivedInside', 'YearsLivedOtherEnglish', 'Ratio', 'YearsLivedInMainVariety', 'RatioMainVariety']
-    data.loc[:,float_columns] = data.loc[:,float_columns].apply(pd.to_numeric, errors='coerce')
+    for col in float_columns:
+        if col in data.columns:
+            data[col] = pd.to_numeric(data[col], errors='coerce')
     variety_counts = data['MainVariety'].value_counts()
 
     # Store original MainVariety before grouping
@@ -385,7 +501,9 @@ def getInformantDataGrammar(columns = None, participants = None, varieties = Non
         data = data.drop(columns=['CommentsTimeline'])
     
     float_columns = ['Age', 'YearsLivedOutside', 'YearsLivedInside', 'YearsLivedOtherEnglish', 'Ratio', 'YearsLivedInMainVariety', 'RatioMainVariety']
-    data.loc[:,float_columns] = data.loc[:,float_columns].apply(pd.to_numeric, errors='coerce')
+    for col in float_columns:
+        if col in data.columns:
+            data[col] = pd.to_numeric(data[col], errors='coerce')
     data = data[~data['InformantID'].str.startswith('Unnamed')]
     
     # Filter out AI-generated participants unless explicitly requested
@@ -694,7 +812,9 @@ def getGrammarData(imputed=False,pairs=False, regional_mapping=False, include_ai
     # delete all records where InformantID starts with "Unnamed"
 
     float_columns = ['Age', 'YearsLivedOutside', 'YearsLivedInside', 'YearsLivedOtherEnglish', 'Ratio', 'YearsLivedInMainVariety', 'RatioMainVariety'] 
-    data.loc[:,float_columns] = data.loc[:,float_columns].apply(pd.to_numeric, errors='coerce')
+    for col in float_columns:
+        if col in data.columns:
+            data[col] = pd.to_numeric(data[col], errors='coerce')
 
     data = data[~data['InformantID'].str.startswith('Unnamed')]
     
