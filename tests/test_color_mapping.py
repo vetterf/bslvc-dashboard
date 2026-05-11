@@ -116,6 +116,7 @@ KNOWN_VARIETIES = [
     ("Germany",                 "#bcbd22"),
     ("Sweden",                  "#17becf"),
     ("Spain (Balearic Islands)","#393b79"),
+    ("Ireland",                  "#169B62"),
     ("Other",                   "#c49c94"),
 ]
 
@@ -134,6 +135,7 @@ KNOWN_AI_VARIETIES = [
     ("AI-GPT-Germany",                  "#dede91"),
     ("AI-GPT-Sweden",                   "#8bdef7"),
     ("AI-GPT-Spain (Balearic Islands)", "#9c9dbc"),
+    ("AI-GPT-Ireland",                   "#8acdb1"),
     ("AI-GPT-Other",                    "#e2ceca"),
 ]
 

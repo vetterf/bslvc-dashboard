@@ -77,7 +77,7 @@ except (OSError, PermissionError) as e:
 
 plot_cache = dc.Cache(cache_dir)
 
-def create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, regional_mapping=False, include_ai=False):
+def create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, regional_mapping=False, include_ai=False, umap_3d=False):
     """Create a unique cache key for plot parameters"""
     key_data = {
         'participants': sorted(participants) if participants else 'all',
@@ -89,18 +89,23 @@ def create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_
         'densemap': densemap,
         'pairs': pairs,
         'regional_mapping': regional_mapping,
-        'include_ai': include_ai
+        'include_ai': include_ai,
+        'umap_3d': umap_3d
     }
     key_string = str(key_data)
     return hashlib.md5(key_string.encode()).hexdigest()
 
-def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, informants=None, regional_mapping=False, include_ai=False):
-    """Get UMAP plot from cache or compute if not exists"""
-    cache_key = f"umap_{create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, regional_mapping, include_ai)}"
+def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, informants=None, regional_mapping=False, include_ai=False, umap_3d=False):
+    """Get UMAP plot (and quality metrics) from cache or compute if not exists.
+    Returns (figure, metrics_dict)."""
+    cache_key = f"umap_{create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, regional_mapping, include_ai, umap_3d)}"
     
-    cached_plot = plot_cache.get(cache_key)
-    if cached_plot is not None:
-        return cached_plot
+    cached = plot_cache.get(cache_key)
+    if cached is not None:
+        # Support old cached entries that stored just the figure
+        if isinstance(cached, tuple):
+            return cached
+        return cached, {}
     
     # Use provided informants or fall back to module-level Informants
     if informants is None:
@@ -121,7 +126,7 @@ def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_m
         grammarData = retrieve_data.getGrammarData(imputed=True, participants=participants, columns=items, pairs=True, regional_mapping=regional_mapping, include_ai=include_ai)
         grammarCols = GrammarItemsColsPairs
         
-    plot = getUMAPplot(
+    plot, quality_metrics = getUMAPplot(
         grammarData=grammarData,
         GrammarItemsCols=grammarCols,
         informants=informants_df,
@@ -133,13 +138,12 @@ def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_m
         standardize=standardize,
         densemap=densemap,
         pairs=pairs,
-        regional_mapping=regional_mapping
+        regional_mapping=regional_mapping,
+        umap_3d=umap_3d
     )
     
-    # Cache the result for 24 hours
-    #plot_cache.set(cache_key, plot, expire=86400)
-    plot_cache.set(cache_key, plot)
-    return plot
+    plot_cache.set(cache_key, (plot, quality_metrics))
+    return plot, quality_metrics
 
 @lru_cache(maxsize=4)
 def get_grammar_data_cached(regional_mapping=False, include_ai=False):
@@ -293,7 +297,19 @@ UmapPlotContainer = dmc.Container([
                                 'filename': 'umap_plot',
                                 'scale': 1
                             }
-                        })
+                        }),
+                        # Quality metrics bar shown below the plot after rendering
+                        html.Div(id="umap-quality-metrics-display", style={"display": "none"},
+                            children=[
+                                dmc.Divider(my="xs"),
+                                dmc.Group(
+                                    id="umap-quality-metrics-badges",
+                                    gap="md",
+                                    justify="center",
+                                    children=[]
+                                ),
+                            ]
+                        ),
                     ],
                     style={"display": "block"}
                 ),
@@ -906,7 +922,7 @@ informantSelectionAccordion = dmc.AccordionItem(
                 dmc.Group([
                     dmc.Switch(
                         id='regional-mapping-switch',
-                        label="Split England into regions (North/South)",
+                        label="Advanced regional mapping",
                         size="sm",
                         checked=False,
                     )
@@ -1239,8 +1255,15 @@ umapSettingsAccordion = dmc.AccordionItem(
                             persistence=persist_UI, persistence_type=persistence_type
                         ),
                         dmc.Checkbox(
+                            id="umap-3d-checkbox",
+                            label="3D UMAP (experimental — lasso selection unavailable)",
+                            size="sm",
+                            checked=False,
+                            persistence=persist_UI, persistence_type=persistence_type
+                        ),
+                        dmc.Checkbox(
                             id="umap-kde-contours-checkbox",
-                            label="Show KDE density contours",
+                            label="Show density contours",
                             size="sm",
                             checked=False,
                             persistence=persist_UI, persistence_type=persistence_type
@@ -1780,6 +1803,7 @@ layout = html.Div([
     dcc.Store(id="leiden-cluster-data", storage_type="memory"),
     dcc.Store(id="umap-render-trigger", storage_type="memory"),  # Trigger for background UMAP computation
     dcc.Store(id="umap-render-settings", storage_type="memory", data={"pairs": False, "use_imputed": True}),  # Store settings used for UMAP render (for RF plot consistency)
+    dcc.Store(id="umap-quality-metrics", storage_type="memory", data={}),  # Store for UMAP quality metrics
     
     # Settings persistence stores
     dcc.Store(id="saved-item-settings", storage_type="local"),
@@ -2104,6 +2128,84 @@ def toggle_plot_type_ui(plot_type):
             {"display": "block"},  # show distance matrix button
             {"display": "none"}    # hide aggregated item data button
         )
+
+# Hide lasso buttons when 3D UMAP is active (lasso selection not supported in 3D)
+@callback(
+    Output('lasso-selection-buttons', 'style', allow_duplicate=True),
+    Input('umap-3d-checkbox', 'checked'),
+    State('grammar-plot-type', 'value'),
+    prevent_initial_call=True
+)
+def toggle_lasso_for_3d(umap_3d, plot_type):
+    if plot_type != 'umap':
+        raise PreventUpdate
+    return {"display": "none"} if umap_3d else {"display": "block"}
+
+
+# Render UMAP quality metrics below the plot
+@callback(
+    [Output('umap-quality-metrics-display', 'style'),
+     Output('umap-quality-metrics-badges', 'children')],
+    Input('umap-quality-metrics', 'data'),
+    prevent_initial_call=True
+)
+def render_umap_quality_metrics(metrics):
+    if not metrics:
+        return {"display": "none"}, []
+
+    def _badge(label, value, description, color):
+        return dmc.Group(gap=4, align="center", children=[
+            dmc.Text(label, size="xs", c="dimmed"),
+            dmc.Badge(
+                f"{value:.3f}",
+                color=color,
+                variant="light",
+                size="sm",
+            ),
+            dmc.Tooltip(
+                label=description,
+                position="top",
+                children=dmc.ActionIcon(
+                    dmc.Text("?", size="xs"),
+                    size="xs",
+                    variant="subtle",
+                    color="gray",
+                )
+            ),
+        ])
+
+    k = metrics.get('k', 10)
+    trust = metrics.get('trustworthiness', 0)
+    cont  = metrics.get('continuity', 0)
+    knn   = metrics.get('knn_preservation', 0)
+
+    badges = [
+        _badge(
+            "Trustworthiness",
+            trust,
+            f"Fraction of each point's {k}-NN in the low-D space that were also neighbours in the high-D space. "
+            "Penalises false neighbours introduced by the projection.",
+            "blue" if trust >= 0.9 else "yellow" if trust >= 0.75 else "red",
+        ),
+        _badge(
+            "Continuity",
+            cont,
+            f"Fraction of each point's {k}-NN in the high-D space that remain neighbours in the low-D space. "
+            "Penalises true neighbours that were torn apart by the projection.",
+            "blue" if cont >= 0.9 else "yellow" if cont >= 0.75 else "red",
+        ),
+        _badge(
+            "KNN Preservation",
+            knn,
+            f"Average overlap of {k}-NN sets between the high-D and low-D spaces. "
+            "Combines both trustworthiness and continuity aspects.",
+            "blue" if knn >= 0.5 else "yellow" if knn >= 0.3 else "red",
+        ),
+        dmc.Text(f"(k = {k})", size="xs", c="dimmed"),
+    ]
+
+    return {"display": "block"}, badges
+
 
 # Callback to manage imputed data switch based on plot type
 @callback(
@@ -2565,9 +2667,9 @@ def export_aggregated_item_data(n_clicks, participants, items, pairs, use_impute
     if groupby == "variety":
         data['group'] = data['MainVariety']
     elif groupby == "vtype" or groupby == "vtype_balanced":
-        variety_mapping = gf.get_variety_mapping()
-        data['group'] = data['MainVariety'].map(variety_mapping).fillna("Other")
-        data = data[data['group'] != "Other"]
+        # Use Variety_Type column from database
+        data['group'] = data['Variety_Type'].fillna("Other")
+        data = data[~data['group'].isin(["Other", "UNCLEAR"])]
     elif groupby == "gender":
         # Handle missing gender values by filling with "Not specified"
         data['group'] = data['Gender'].fillna("Not specified")
@@ -3708,7 +3810,8 @@ def initiate_umap_rendering(BTNrenderPlot, modal_ok, modal_cancel, figure, runni
     Output('UMAPparticipants','data'),
     Output('UMAPitems','data'),
     Output('UMAPGroupsForRF', 'data', allow_duplicate=True),
-    Output('umap-render-settings', 'data')],  # Store settings for RF plot consistency
+    Output('umap-render-settings', 'data'),
+    Output('umap-quality-metrics', 'data', allow_duplicate=True)],
     Input('umap-render-trigger', 'data'),
     [State("participantsTree", "checked"),
     State("grammarItemsTree", "checked"),
@@ -3718,6 +3821,7 @@ def initiate_umap_rendering(BTNrenderPlot, modal_ok, modal_cancel, figure, runni
     State('umap-distance-metric-dropdown', 'value'), 
     State('umap-standardize-checkbox', 'checked'),
     State('umap-densemap-checkbox', 'checked'),
+    State('umap-3d-checkbox', 'checked'),
     State('grammar-type-switch', 'checked'), 
     State('use-imputed-data-switch', 'checked'),
     State('informants-store', 'data'),  # Add informants store
@@ -3729,7 +3833,7 @@ def initiate_umap_rendering(BTNrenderPlot, modal_ok, modal_cancel, figure, runni
 )
 def compute_umap_background(trigger_data, selected_informants, items, n_neighbours, 
                            min_dist, selected_presets, distance_metric, 
-                           standardize_participant_ratings, densemap, pairs, use_imputed, informants_data, regional_mapping, include_ai):
+                           standardize_participant_ratings, densemap, umap_3d, pairs, use_imputed, informants_data, regional_mapping, include_ai):
     """Compute UMAP in background - this is the slow operation"""
     if trigger_data is None:
         raise PreventUpdate
@@ -3754,7 +3858,7 @@ def compute_umap_background(trigger_data, selected_informants, items, n_neighbou
     data = 0
     
     # Use cached UMAP plot generation for better performance
-    figure = get_cached_umap_plot(
+    figure, quality_metrics = get_cached_umap_plot(
         participants=selected_informants,
         items=items,
         n_neighbours=n_neighbours,
@@ -3765,7 +3869,8 @@ def compute_umap_background(trigger_data, selected_informants, items, n_neighbou
         pairs=pairs,
         informants=informants_data,
         regional_mapping=regional_mapping,
-        include_ai=include_ai
+        include_ai=include_ai,
+        umap_3d=umap_3d
     )
     groupsCache = getColorGroupingsFromFigure(figure)
     
@@ -3778,7 +3883,7 @@ def compute_umap_background(trigger_data, selected_informants, items, n_neighbou
         "use_imputed": True  # UMAP always uses imputed data
     }
     
-    return figure, data, selected_informants, items, groupsCache, render_settings
+    return figure, data, selected_informants, items, groupsCache, render_settings, quality_metrics
 
 
 # Callback 4: Handle UMAP completion (clear loading states)
@@ -4640,9 +4745,9 @@ def download_item_plot_data(n_clicks, settings):
         if groupby == "variety":
             data['group'] = data['MainVariety']
         elif groupby in ("vtype", "vtype_balanced"):
-            variety_mapping = gf.get_variety_mapping()
-            data['group'] = data['MainVariety'].map(variety_mapping).fillna("Other")
-            data = data[data['group'] != "Other"]
+            # Use Variety_Type column from database
+            data['group'] = data['Variety_Type'].fillna("Other")
+            data = data[~data['group'].isin(["Other", "UNCLEAR"])]
         elif groupby == "gender":
             data['group'] = data['Gender']
         item_cols = [c for c in items if c in data.columns]
@@ -4669,9 +4774,9 @@ def download_item_plot_data(n_clicks, settings):
         if groupby == "variety":
             data['group'] = data['MainVariety']
         elif groupby in ("vtype", "vtype_balanced"):
-            variety_mapping = gf.get_variety_mapping()
-            data['group'] = data['MainVariety'].map(variety_mapping).fillna("Other")
-            data = data[data['group'] != "Other"]
+            # Use Variety_Type column from database
+            data['group'] = data['Variety_Type'].fillna("Other")
+            data = data[~data['group'].isin(["Other", "UNCLEAR"])]
         elif groupby == "gender":
             data['group'] = data['Gender']
 
@@ -5242,7 +5347,7 @@ def generate_umap_plots_for_all_presets(grammarData, GrammarItemsCols, Informant
         regional_suffix = "_regional" if regional_mapping else ""
         preset_filename = f"umap_{participants_hash}_{items_hash}_{n_neighbours}_{min_dist}{regional_suffix}.pkl"
         filename = os.path.join(output_dir, preset_filename)
-        fig = getUMAPplot(
+        fig, _metrics = getUMAPplot(
             grammarData=grammarData,
             GrammarItemsCols=GrammarItemsCols,
             informants=Informants,

@@ -136,7 +136,7 @@ Participants can be selected via the participant tree, either by clicking the ch
 
 ##### Advanced Regional Mapping
 
-The switch "Split England into regions (North/South")" controls whether participants from England should be divided into England_North, England_South and England_UNCLEAR.
+The switch "Advanced regional mapping" applies a custom variety mapping to participants based on the `advanced_regional_mapping.csv` file. For each participant listed in that file, their `MainVariety` is replaced with the value specified in the CSV. Participants not listed in the file keep their original `MainVariety` unchanged. This allows fine-grained regional splits beyond the standard variety categories (e.g. splitting England into sub-regional varieties).
 
 ![Regional mapping activated](img/UI_regional_mapping.png)
 
@@ -174,10 +174,19 @@ The UMAP Settings allow the user to tweak the UMAP hyperparameters, as well as t
 - **Color**: Select coloring variable (Variety, Variety type, Gender). This setting does not trigger a rerender of the plot and can be changed after rendering the plot.
 - **Distance metric**: Choose metric (Cosine, Euclidean, Manhattan).
 - **Standardize participant ratings**: Checkbox to standardize ratings. Standardization is advised for use with Euclidean and Manhattan distances.
-- **Use density-preserving embedding (DensMAP)**: Checkbox for DensMAP (https://umap-learn.readthedocs.io/en/latest/densmap_demo.html). By default, UMAP does not preserve densities of clusters well. DensMAP tries to preserve the density of clusters when reducing dimensionality.
-- **Show KDE density contours**: Checkbox to overlay 2D kernel density estimation (KDE) contours on the UMAP plot. When enabled, filled contour regions are drawn behind the scatter points for each variety, visualizing the density distribution of participants in the embedding space. Contour visibility is linked to the legend: hiding a variety via the legend also hides its contours. This option can be toggled at any time without re-rendering the plot.
+- **Use density-preserving embedding (DensMAP)**: Checkbox for DensMAP (https://umap-learn.readthedocs.io/en/latest/densmap_demo.html). By default, UMAP does not preserve densities of clusters well. DensMAP tries to preserve the density of clusters when reducing dimensionality. Not available in 3D mode.
+- **3D UMAP (experimental)**: Renders the embedding in three dimensions. Lasso selection is not available in 3D mode. DensMAP is automatically disabled.
+- **Show KDE density contours**: Checkbox to overlay 2D kernel density estimation (KDE) contours on the UMAP plot. When enabled, filled contour regions are drawn behind the scatter points for each variety, visualizing the density distribution of participants in the embedding space. Contour visibility is linked to the legend: hiding a variety via the legend also hides its contours. This option can be toggled at any time without re-rendering the plot. Not available in 3D mode.
 - **Number of neighbours**: Slider for UMAP hyperparameter. Check the UMAP docs for more info.
 - **Minimal distance**: Slider for UMAP hyperparameter. Check the UMAP docs for more info.
+
+#### UMAP Quality Metrics
+
+After each UMAP render, three quality metrics are displayed below the plot. All values are between 0 and 1; higher is better. The metrics are computed using k = *n_neighbours* (the same value used for the UMAP embedding).
+
+- **Trustworthiness**: Measures how many of each point's k nearest neighbours in the low-dimensional plot were also close in the original high-dimensional space. A low value indicates that the plot introduces false closeness — points that appear nearby were not actually similar. Values above ~0.85 are generally good for this type of data.
+- **Continuity**: The complement of trustworthiness: measures how many true high-dimensional neighbours remain close in the plot. A low value indicates that genuinely similar participants have been pulled apart in the embedding. Values above ~0.88 are generally good.
+- **KNN Preservation**: The fraction of each point's k nearest neighbours that are shared exactly between the high-dimensional and low-dimensional spaces. This is a stricter criterion than the above two and is most useful for comparing different UMAP settings with each other rather than as an absolute quality threshold.
 
 #### Item Plot Settings
 

@@ -36,13 +36,13 @@ class Conf:
                                                          'assets', 'data')),
                                               'BSLVC_sqlite.db'))
     
-    # England mapping CSV file path - construct from data directory (same pattern as database)
-    englandMappingFile: str = os.environ.get('ENGLAND_MAPPING_PATH',
+    # Advanced regional mapping CSV file path - construct from data directory (same pattern as database)
+    advancedMappingFile: str = os.environ.get('ADVANCED_MAPPING_PATH',
                                            os.path.join(os.environ.get('DATA_DIR',
                                                       os.path.join(os.environ.get('APP_DIR',
                                                                  os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
                                                                  'assets', 'data')),
-                                                      'england_N_S_mapping.csv'))
+                                                      'advanced_regional_mapping.csv'))
     
     dataFileName: str = 'Questionnaire_db_export_all_inkl_grammar_231002.csv'
     columnsFileName: str = 'column_mapping_lexical.csv'
@@ -125,6 +125,7 @@ class VarietyColorMap:
             "Germany": "#bcbd22",
             "Sweden": "#17becf",
             "Spain (Balearic Islands)": "#393b79",
+            "Ireland": "#169B62",
             "Other": "#c49c94",
             # AI-GPT varieties (manually toned-down)
             "AI-GPT-England": "#8fbbd9",
@@ -141,6 +142,7 @@ class VarietyColorMap:
             "AI-GPT-Germany": "#dede91",
             "AI-GPT-Sweden": "#8bdef7",
             "AI-GPT-Spain (Balearic Islands)": "#9c9dbc",
+            "AI-GPT-Ireland": "#8acdb1",
             "AI-GPT-Other": "#e2ceca"
         }
         self._cache = {}  # Cache auto-generated colors
@@ -149,12 +151,14 @@ class VarietyColorMap:
         """Generate a deterministic color for an unmapped variety."""
         if variety_name in self._cache:
             return self._cache[variety_name]
-        
-        # Hash the variety name to get an index into the palette
-        hash_val = hash(variety_name)
-        palette_idx = abs(hash_val) % len(self.RESERVED_PALETTE)
+
+        # Use MD5 so the result is stable across Python restarts
+        # (built-in hash() is randomised per process since Python 3.3)
+        import hashlib
+        hash_val = int(hashlib.md5(variety_name.encode()).hexdigest(), 16)
+        palette_idx = hash_val % len(self.RESERVED_PALETTE)
         color = self.RESERVED_PALETTE[palette_idx]
-        
+
         self._cache[variety_name] = color
         return color
     
@@ -563,32 +567,23 @@ def getInformantDataGrammar(columns = None, participants = None, varieties = Non
     # if main variety unclear, set to "Other"
     data['MainVariety'] = data['MainVariety'].apply(lambda x: x if x != 'UNCLEAR' else 'Other')
 
-    # Apply England North/South mapping if requested
+    # Apply advanced regional mapping if requested
     if regional_mapping:
-        # Load the England mapping CSV - use configured path like database file
-        regional_mapping_file = Conf.englandMappingFile
+        # Load the advanced regional mapping CSV - use configured path like database file
+        regional_mapping_file = Conf.advancedMappingFile
         if os.path.exists(regional_mapping_file):
             regional_map_df = pd.read_csv(regional_mapping_file)
             # Create a dictionary for quick lookup (note: CSV has "Informant ID" with space)
             # Rename column if necessary
             if 'Informant ID' in regional_map_df.columns:
                 regional_map_df = regional_map_df.rename(columns={'Informant ID': 'InformantID'})
-            regional_map_dict = dict(zip(regional_map_df['InformantID'], regional_map_df['north_south']))
+            regional_map_dict = dict(zip(regional_map_df['InformantID'], regional_map_df['MainVariety']))
             
-            # Apply mapping to England participants
-            def apply_regional_mapping(row):
-                if row['MainVariety'] == 'England':
-                    informant_id = row['InformantID']
-                    region = regional_map_dict.get(informant_id, 'UNCLEAR')
-                    if region == 'north':
-                        return 'England_North'
-                    elif region == 'south':
-                        return 'England_South'
-                    else:
-                        return 'England_UNCLEAR'
-                return row['MainVariety']
-            
-            data['MainVariety'] = data.apply(apply_regional_mapping, axis=1)
+            # Apply mapping: replace MainVariety for informants listed in the CSV, leave others unchanged
+            data['MainVariety'] = data.apply(
+                lambda row: regional_map_dict.get(row['InformantID'], row['MainVariety']),
+                axis=1
+            )
 
     if varieties is not None:
         data = data[data['MainVariety'].isin(varieties)]
@@ -874,32 +869,23 @@ def getGrammarData(imputed=False,pairs=False, regional_mapping=False, include_ai
     )
     data.loc[:,'MainVariety'] = data.loc[:,'MainVariety'].apply(lambda x: x if x != 'UNCLEAR' else 'Other')
 
-    # Apply England North/South mapping if requested
+    # Apply advanced regional mapping if requested
     if regional_mapping:
-        # Load the England mapping CSV - use configured path like database file
-        regional_mapping_file = Conf.englandMappingFile
+        # Load the advanced regional mapping CSV - use configured path like database file
+        regional_mapping_file = Conf.advancedMappingFile
         if os.path.exists(regional_mapping_file):
             regional_map_df = pd.read_csv(regional_mapping_file)
             # Create a dictionary for quick lookup (note: CSV has "Informant ID" with space)
             # Rename column if necessary
             if 'Informant ID' in regional_map_df.columns:
                 regional_map_df = regional_map_df.rename(columns={'Informant ID': 'InformantID'})
-            regional_map_dict = dict(zip(regional_map_df['InformantID'], regional_map_df['north_south']))
+            regional_map_dict = dict(zip(regional_map_df['InformantID'], regional_map_df['MainVariety']))
             
-            # Apply mapping to England participants
-            def apply_regional_mapping(row):
-                if row['MainVariety'] == 'England':
-                    informant_id = row['InformantID']
-                    region = regional_map_dict.get(informant_id, 'UNCLEAR')
-                    if region == 'north':
-                        return 'England_North'
-                    elif region == 'south':
-                        return 'England_South'
-                    else:
-                        return 'England_UNCLEAR'
-                return row['MainVariety']
-            
-            data.loc[:, 'MainVariety'] = data.apply(apply_regional_mapping, axis=1)
+            # Apply mapping: replace MainVariety for informants listed in the CSV, leave others unchanged
+            data.loc[:, 'MainVariety'] = data.apply(
+                lambda row: regional_map_dict.get(row['InformantID'], row['MainVariety']),
+                axis=1
+            )
 
     if pairs:
         # substract item pairs from each other, spoken item - written item

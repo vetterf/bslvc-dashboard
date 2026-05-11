@@ -184,8 +184,8 @@ def getColorGroupingsFromFigure(figure):
         traces = figure['data']
         
         for trace in traces:
-            # Only process scatter-type traces
-            if trace['type'] == 'scatter' and 'marker' in trace:
+            # Process both 2D scatter and 3D scatter traces
+            if trace['type'] in ('scatter', 'scatter3d') and 'marker' in trace:
                 # Extract info from each trace
                 if 'marker' in trace and 'color' in trace['marker']:
                     color = trace['marker']['color']
@@ -245,7 +245,45 @@ def performLeidenClustering(data, n_neighbors=15, resolution=0.5, mode="connecti
     partition = la.find_partition(g, la.ModularityVertexPartition)
     return partition.membership
 
-def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='cosine',pairs=False, regional_mapping=False, **kwargs):
+def compute_umap_quality_metrics(X, embedding, k=10):
+    """
+    Compute UMAP information retention metrics.
+
+    - Trustworthiness: are low-D neighbours also close in high-D? (false-neighbour penalty)
+    - Continuity: are high-D neighbours also close in low-D? (missing-neighbour penalty)
+    - KNN preservation: fraction of k-NN shared between high-D and low-D spaces
+
+    All values are in [0, 1]; higher is better.
+    """
+    from sklearn.manifold import trustworthiness as _trustworthiness
+    from sklearn.neighbors import NearestNeighbors
+    import numpy as np
+
+    X = np.array(X, dtype=float)
+    embedding = np.array(embedding, dtype=float)
+    n = len(X)
+    k = min(k, n - 1)
+
+    trust = float(_trustworthiness(X, embedding, n_neighbors=k))
+    cont  = float(_trustworthiness(embedding, X, n_neighbors=k))
+
+    nbrs_high = NearestNeighbors(n_neighbors=k + 1, algorithm='auto').fit(X)
+    nbrs_low  = NearestNeighbors(n_neighbors=k + 1, algorithm='auto').fit(embedding)
+    idx_high = nbrs_high.kneighbors(X, return_distance=False)[:, 1:]
+    idx_low  = nbrs_low.kneighbors(embedding, return_distance=False)[:, 1:]
+    knn_pres = float(np.mean([
+        len(set(idx_high[i]) & set(idx_low[i])) / k
+        for i in range(n)
+    ]))
+
+    return {
+        'trustworthiness': round(trust, 3),
+        'continuity':      round(cont,  3),
+        'knn_preservation': round(knn_pres, 3),
+        'k': k,
+    }
+
+def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='cosine',pairs=False, regional_mapping=False, umap_3d=False, **kwargs):
     """
     Generate UMAP plot for grammar data with Leiden clustering
     
@@ -296,6 +334,8 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
             standardize = value
         if key == 'densemap':
             densemap = value
+        if key == 'umap_3d':
+            umap_3d = value
 
 
     # Determine which informants to use for UMAP calculation
@@ -316,7 +356,8 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
     items_hash = _hash_list(items)
     # --- include distance_metric and regional_mapping in the hash/filename ---
     regional_suffix = "_regional" if regional_mapping else ""
-    preset_filename = f"umap_{umap_informants_hash}_{items_hash}_{n_neighbours}_{min_dist}_{distance_metric}_{standardize}_{densemap}{regional_suffix}.pkl"
+    dim_suffix = "_3d" if umap_3d else ""
+    preset_filename = f"umap_{umap_informants_hash}_{items_hash}_{n_neighbours}_{min_dist}_{distance_metric}_{standardize}_{densemap}{regional_suffix}{dim_suffix}.pkl"
     preset_path = os.path.join(preset_dir, preset_filename)
     if os.path.exists(preset_path) and not force_rerender:
         try:
@@ -331,7 +372,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                     else:
                         marker['opacity'] = 0.8
                     trace['marker'] = marker
-            return fig
+            return fig, {}
         except Exception:
             pass  # If loading fails, fall back to normal rendering
     
@@ -350,27 +391,35 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
         filtered_data = filtered_data.div(row_stds, axis=0)
 
     # run umap
+    # densemap is incompatible with n_components=3; disable it silently in 3D mode
     reducer = umap.UMAP(
+        n_components=3 if umap_3d else 2,
         n_neighbors=n_neighbours,
         min_dist=min_dist,
         metric=distance_metric,
         n_jobs=-1,
         low_memory=False,
-        densmap=densemap
+        densmap=False if umap_3d else densemap
     )
-    embedding = reducer.fit_transform(filtered_data)
+    embedding_array = reducer.fit_transform(filtered_data)
 
-    # Calculate distance matrix with cosine metric
-    # from sklearn.metrics import pairwise_distances
-    # distance_matrix = pairwise_distances(filtered_data, metric='cosine')
-    
-    # Convert to dataframe and map sociodemographic details back
-    # distance_df = pd.DataFrame(distance_matrix, 
-    #                          index=data['InformantID'], 
-    #                           columns=data['InformantID'])
+    # Compute quality metrics on the raw numpy arrays before converting to DataFrame
+    # Use n_neighbours as k so the metrics reflect exactly what UMAP was optimising for
+    try:
+        quality_metrics = compute_umap_quality_metrics(
+            filtered_data.values,
+            embedding_array,
+            k=n_neighbours
+        )
+    except Exception:
+        quality_metrics = {}
 
     # to dataframe for plotting
-    embedding = pd.DataFrame(embedding, columns=['x', 'y'])
+    if umap_3d:
+        embedding = pd.DataFrame(embedding_array, columns=['x', 'y', 'z'])
+    else:
+        embedding = pd.DataFrame(embedding_array, columns=['x', 'y'])
+
 
     embedding['CountryCollection'] = data['CountryCollection']
     embedding['MainVariety'] = data['MainVariety']
@@ -423,40 +472,68 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
     # else:
     embedding['opacity'] = 0.8
 
-    # Add KDE density contour traces per variety (rendered behind scatter points)
-    for c in sorted(embedding['MainVariety'].unique()):
-        df_contour = embedding[embedding['MainVariety'] == c]
-        if len(df_contour) < 3:
-            continue
-        variety_color = variety_to_color.get(c, '#c49c94')
-        hex_c = variety_color.lstrip('#')
-        r, g, b = int(hex_c[0:2], 16), int(hex_c[2:4], 16), int(hex_c[4:6], 16)
-        color_transparent = f'rgba({r},{g},{b},0)'
-        color_fill = f'rgba({r},{g},{b},0.35)'
-        contour_trace = go.Histogram2dContour(
-            x=df_contour['x'].tolist(),
-            y=df_contour['y'].tolist(),
-            name=c + ' (density)',
-            legendgroup=c,
-            colorscale=[[0, color_transparent], [1, color_fill]],
-            showscale=False,
-            contours=dict(coloring='fill'),
-            line=dict(color=variety_color, width=1.5),
-            ncontours=6,
-            showlegend=False,
-            hoverinfo='skip',
-            visible=False,
-            meta={'kde_contour': True},
-        )
-        if leiden:
-            fig.add_trace(contour_trace, row=1, col=1)
-        else:
-            fig.add_trace(contour_trace)
+    # Add KDE density contour traces per variety (2D only)
+    if not umap_3d:
+        for c in sorted(embedding['MainVariety'].unique()):
+            df_contour = embedding[embedding['MainVariety'] == c]
+            if len(df_contour) < 3:
+                continue
+            variety_color = variety_to_color.get(c, '#c49c94')
+            hex_c = variety_color.lstrip('#')
+            r, g, b = int(hex_c[0:2], 16), int(hex_c[2:4], 16), int(hex_c[4:6], 16)
+            color_transparent = f'rgba({r},{g},{b},0)'
+            color_fill = f'rgba({r},{g},{b},0.35)'
+            contour_trace = go.Histogram2dContour(
+                x=df_contour['x'].tolist(),
+                y=df_contour['y'].tolist(),
+                name=c + ' (density)',
+                legendgroup=c,
+                colorscale=[[0, color_transparent], [1, color_fill]],
+                showscale=False,
+                contours=dict(coloring='fill'),
+                line=dict(color=variety_color, width=1.5),
+                ncontours=6,
+                showlegend=False,
+                hoverinfo='skip',
+                visible=False,
+                meta={'kde_contour': True},
+            )
+            if leiden:
+                fig.add_trace(contour_trace, row=1, col=1)
+            else:
+                fig.add_trace(contour_trace)
 
     # Add UMAP traces - sort varieties alphabetically for consistent legend order
     for c in sorted(embedding['MainVariety'].unique()):
         df_color = embedding[embedding['MainVariety'] == c]
-        if leiden:
+        if umap_3d:
+            fig.add_trace(
+                go.Scatter3d(
+                    x=df_color['x'],
+                    y=df_color['y'],
+                    z=df_color['z'],
+                    name=c,
+                    legendgroup=c,
+                    mode='markers',
+                    text=df_color['InformantID'],
+                    ids=df_color['InformantID'],
+                    marker=dict(color=df_color['color'], size=3, opacity=0.8),
+                    showlegend=True,
+                    customdata=df_color[['InformantID','MainVariety','MainVariety_Original','Age','Gender','RatioMainVariety','YearsLivedInMainVariety','CountryCollection','Year']],
+                    hovertemplate='<br>'.join([
+                        'InformantID: %{customdata[0]}',
+                        'Main Variety: %{customdata[1]}',
+                        'Main Variety (other): %{customdata[2]}',
+                        'Age: %{customdata[3]}',
+                        'Gender: %{customdata[4]}',
+                        'Ratio (Main Variety): %{customdata[5]}',
+                        'Years lived in (Main Variety): %{customdata[6]}',
+                        'CountryCollection: %{customdata[7]}',
+                        'Year: %{customdata[8]}',
+                    ]),
+                )
+            )
+        elif leiden:
             fig.add_trace(
                 go.Scatter(
                     x=df_color['x'], 
@@ -531,17 +608,26 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
 
     # if all markers of a trace have the same opacity, plotly sets opacity to a single value
     # when hiding data points via opacity, this needs to be a list of the same value for each data point
-    for trace in fig.data:
-        if hasattr(trace, 'marker'):
-            marker = getattr(trace, 'marker', None)
-            ids = getattr(trace, 'ids', None)
-            if marker and hasattr(marker, 'opacity'):
-                opacity = marker.opacity
-                if isinstance(opacity, (int, float)) and ids is not None:
-                    marker.opacity = [opacity] * len(ids)
+    if not umap_3d:
+        for trace in fig.data:
+            if hasattr(trace, 'marker'):
+                marker = getattr(trace, 'marker', None)
+                ids = getattr(trace, 'ids', None)
+                if marker and hasattr(marker, 'opacity'):
+                    opacity = marker.opacity
+                    if isinstance(opacity, (int, float)) and ids is not None:
+                        marker.opacity = [opacity] * len(ids)
 
     fig.update_layout(template="simple_white")
-    if leiden:
+    if umap_3d:
+        fig.update_layout(
+            scene=dict(
+                xaxis_title="UMAP 1",
+                yaxis_title="UMAP 2",
+                zaxis_title="UMAP 3",
+            )
+        )
+    elif leiden:
         fig.update_xaxes(title_text="UMAP Dimension 1", row=1, col=1)
         fig.update_yaxes(title_text="UMAP Dimension 2", scaleanchor="x", scaleratio=1, row=1, col=1)
     else:
@@ -561,7 +647,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
     except Exception:
         pass  # Ignore errors in saving
 
-    return fig
+    return fig, quality_metrics
 
 def computeDistanceMatrix(grammarData, GrammarItemsCols, distance_metric='cosine', standardize=False, **kwargs):
     """
@@ -1625,32 +1711,29 @@ def get_balanced_informants(informants, groupby):
     informant_data = retrieve_data.getInformantDataGrammar(imputed=True)
     informant_data = informant_data[informant_data['InformantID'].isin(informants)]
     
-    # Use centralized variety classification
-    variety_mapping = get_variety_mapping()
-    variety_classification = get_variety_classification()
-    
-    # Filter out unknown varieties
-    informant_data = informant_data[informant_data['MainVariety'].isin(variety_mapping.keys())]
+    # Use Variety_Type column from database to classify informants
+    # Filter out unknown varieties (None, UNCLEAR)
+    informant_data = informant_data[informant_data['Variety_Type'].notna()]
+    informant_data = informant_data[~informant_data['Variety_Type'].isin(['UNCLEAR'])]
     
     # Apply balanced sampling within each variety type (including AI types)
     balanced_informants = []
     
     for vtype in ["ENL", "ESL", "EFL"]:
-        # Get varieties within this type using centralized classification
-        # Include both human and AI-GPT- varieties
-        varieties_in_type = variety_classification[vtype] + [f"AI-GPT-{v}" for v in variety_classification[vtype]]
-        varieties_present = [v for v in varieties_in_type if v in informant_data['MainVariety'].unique()]
+        # Find all varieties with this type or AI version of this type
+        type_mask = informant_data['Variety_Type'].isin([vtype, f"AI-{vtype}"])
+        varieties_present = informant_data.loc[type_mask, 'MainVariety'].unique()
         
         if len(varieties_present) > 0:
             # Find minimum sample size across varieties in this type
             min_variety_size = min([
-                informant_data[informant_data['MainVariety'] == variety]['InformantID'].nunique() 
+                informant_data[(informant_data['MainVariety'] == variety) & type_mask]['InformantID'].nunique()
                 for variety in varieties_present
             ])
             
             # Sample equally from each variety within this type
             for variety in varieties_present:
-                variety_informants = informant_data[informant_data['MainVariety'] == variety]['InformantID'].unique()
+                variety_informants = informant_data[(informant_data['MainVariety'] == variety) & type_mask]['InformantID'].unique()
                 if len(variety_informants) >= min_variety_size:
                     sampled_informants = np.random.choice(
                         variety_informants, 
@@ -1692,10 +1775,9 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
         # Get color mapping for varieties
         variety_color_map = retrieve_data.get_color_for_variety(type="grammar")
     elif groupby == "vtype" or groupby == "vtype_balanced":
-        # Use centralized variety mapping
-        variety_mapping = get_variety_mapping()
-        df['group'] = df['MainVariety'].map(variety_mapping).fillna("Other")
-        df= df[df['group'] != "Other"]  # filter out "Other" group
+        # Use Variety_Type column from database
+        df['group'] = df['Variety_Type'].fillna("Other")
+        df = df[~df['group'].isin(["Other", "UNCLEAR"])]  # filter out unknown types
         variety_color_map = None
     elif groupby == "gender":
         df['group'] = df['Gender']
@@ -3124,10 +3206,9 @@ def create_diverging_stacked_bar_plot(df_orig, items, modes, groupby, variety_co
     if groupby == "variety":
         raw_df['group'] = raw_df['MainVariety']
     elif groupby == "vtype" or groupby == "vtype_balanced":
-        # Use centralized variety mapping
-        variety_mapping = get_variety_mapping()
-        raw_df['group'] = raw_df['MainVariety'].map(variety_mapping).fillna("Other")
-        raw_df = raw_df[raw_df['group'] != "Other"]
+        # Use Variety_Type column from database
+        raw_df['group'] = raw_df['Variety_Type'].fillna("Other")
+        raw_df = raw_df[~raw_df['group'].isin(["Other", "UNCLEAR"])]
     elif groupby == "gender":
         # Use normalized gender column
         raw_df['group'] = raw_df['Gender']
@@ -4302,10 +4383,9 @@ def create_informant_mean_boxplot(df_orig, items, modes, groupby, variety_color_
     if groupby == "variety":
         raw_df['group'] = raw_df['MainVariety']
     elif groupby == "vtype" or groupby == "vtype_balanced":
-        # Use centralized variety mapping
-        variety_mapping = get_variety_mapping()
-        raw_df['group'] = raw_df['MainVariety'].map(variety_mapping).fillna("Other")
-        raw_df = raw_df[raw_df['group'] != "Other"]
+        # Use Variety_Type column from database
+        raw_df['group'] = raw_df['Variety_Type'].fillna("Other")
+        raw_df = raw_df[~raw_df['group'].isin(["Other", "UNCLEAR"])]
     elif groupby == "gender":
         raw_df['group'] = raw_df['Gender']
     
@@ -4695,9 +4775,9 @@ def create_twin_correlation_plot(informants, items, groupby="variety", sortby="m
         data['group'] = data['MainVariety']
         variety_color_map = retrieve_data.get_color_for_variety(type="grammar")
     elif groupby in ("vtype", "vtype_balanced"):
-        variety_mapping = get_variety_mapping()
-        data['group'] = data['MainVariety'].map(variety_mapping).fillna("Other")
-        data = data[data['group'] != "Other"]
+        # Use Variety_Type column from database
+        data['group'] = data['Variety_Type'].fillna("Other")
+        data = data[~data['group'].isin(["Other", "UNCLEAR"])]
         variety_color_map = None
     elif groupby == "gender":
         data['group'] = data['Gender']
@@ -4868,9 +4948,9 @@ def create_twin_correlation_dataframe(informants, items, groupby="variety", sort
     if groupby == "variety":
         data['group'] = data['MainVariety']
     elif groupby in ("vtype", "vtype_balanced"):
-        variety_mapping = get_variety_mapping()
-        data['group'] = data['MainVariety'].map(variety_mapping).fillna("Other")
-        data = data[data['group'] != "Other"]
+        # Use Variety_Type column from database
+        data['group'] = data['Variety_Type'].fillna("Other")
+        data = data[~data['group'].isin(["Other", "UNCLEAR"])]
     elif groupby == "gender":
         data['group'] = data['Gender']
     else:
