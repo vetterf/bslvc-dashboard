@@ -6,13 +6,15 @@ All notable changes to the BSLVC Dashboard will be documented in this file.
 
 ### Added
 - **3D UMAP (experimental)**: New checkbox renders the UMAP embedding in three dimensions. Lasso selection is automatically hidden in 3D mode. DensMAP is automatically disabled in 3D mode.
-- **UMAP quality metrics**: After each UMAP render, trustworthiness, continuity and KNN preservation are displayed below the plot as colour-coded badges with tooltips. Metrics are computed using k = n_neighbours.
+- **UMAP quality metrics**: After each UMAP render, trustworthiness and continuity are displayed below the plot as colour-coded badges with tooltips. Metrics are computed using k = n_neighbours.
+- **Variable ordering in group comparison**: Kruskal-Wallis ε² is now the default measure and implemented alongside RF Gini impurity
 
 ### Changed
 - **Variety classification from database**: All groupby operations in item plots and UMAP now use the `Variety_Type` column from the database instead of a hardcoded mapping, making the classification data-driven.
 - **Advanced regional mapping**: The "Split England into regions (North/South)" button has been renamed to "Advanced regional mapping". The underlying CSV (`advanced_regional_mapping.csv`) now maps InformantID directly to a MainVariety replacement value; participants not listed keep their original variety unchanged.
 - **Color stability**: Variety colors for unmapped varieties are now stable across app restarts (switched from Python's randomised `hash()` to MD5).
-- **Ireland color**: Ireland is now hardcoded to `#169B62` (Irish flag green), distinct from US green (`#2ca02c`).
+- **Existing colors**: Existing varieties have now more appropriate colors.
+- **Library updates**: Updated to newer docker container with python 3.14.5. Updated all relevant python libraries.
 
 ### Fixed
 - DensMAP incompatibility with n_components=3 (DensMAP is now force-disabled in 3D mode).

@@ -62,8 +62,8 @@ class TestRgbToHex:
 
 class TestRoundTrip:
     @pytest.mark.parametrize("hex_color", [
-        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728",
-        "#9467bd", "#8c564b", "#e377c2", "#000000", "#ffffff",
+        "#1f77b4", "#7B3394", "#B22234", "#d62728",
+        "#9467bd", "#FF9933", "#00A693", "#000000", "#ffffff",
     ])
     def test_round_trip(self, hex_color):
         r, g, b = _hex_to_rgb(hex_color)
@@ -106,17 +106,16 @@ KNOWN_VARIETIES = [
     ("England_North",           "#4a90c4"),
     ("England_South",           "#0d5a8f"),
     ("England_UNCLEAR",         "#7bb3d9"),
-    ("Scotland",                "#ff7f0e"),
-    ("US",                      "#2ca02c"),
+    ("Scotland",                "#7B3394"),
+    ("US",                      "#B22234"),
     ("Gibraltar",               "#d62728"),
     ("Malta",                   "#9467bd"),
-    ("India",                   "#8c564b"),
-    ("Puerto Rico",             "#e377c2"),
+    ("India",                   "#FF9933"),
+    ("Puerto Rico",             "#00A693"),
     ("Slovenia",                "#7f7f7f"),
-    ("Germany",                 "#bcbd22"),
-    ("Sweden",                  "#17becf"),
+    ("Germany",                 "#FFCE00"),
+    ("Sweden",                  "#006AA7"),
     ("Spain (Balearic Islands)","#393b79"),
-    ("Ireland",                  "#169B62"),
     ("Other",                   "#c49c94"),
 ]
 
@@ -125,17 +124,16 @@ KNOWN_AI_VARIETIES = [
     ("AI-GPT-England_North",            "#a5c8e2"),
     ("AI-GPT-England_South",            "#86adc7"),
     ("AI-GPT-England_UNCLEAR",          "#b8d5e8"),
-    ("AI-GPT-Scotland",                 "#ffbf87"),
-    ("AI-GPT-US",                       "#96d096"),
+    ("AI-GPT-Scotland",                 "#af84be"),
+    ("AI-GPT-US",                       "#d07a85"),
     ("AI-GPT-Gibraltar",                "#eb9394"),
     ("AI-GPT-Malta",                    "#cab3de"),
-    ("AI-GPT-India",                    "#c6aba5"),
-    ("AI-GPT-Puerto Rico",              "#f1bbe1"),
+    ("AI-GPT-India",                    "#ffc184"),
+    ("AI-GPT-Puerto Rico",              "#66c9be"),
     ("AI-GPT-Slovenia",                 "#bfbfbf"),
-    ("AI-GPT-Germany",                  "#dede91"),
-    ("AI-GPT-Sweden",                   "#8bdef7"),
+    ("AI-GPT-Germany",                  "#ffe166"),
+    ("AI-GPT-Sweden",                   "#66a5ca"),
     ("AI-GPT-Spain (Balearic Islands)", "#9c9dbc"),
-    ("AI-GPT-Ireland",                   "#8acdb1"),
     ("AI-GPT-Other",                    "#e2ceca"),
 ]
 

@@ -1263,7 +1263,7 @@ umapSettingsAccordion = dmc.AccordionItem(
                         ),
                         dmc.Checkbox(
                             id="umap-kde-contours-checkbox",
-                            label="Show density contours",
+                            label="Show density contours (2D only)",
                             size="sm",
                             checked=False,
                             persistence=persist_UI, persistence_type=persistence_type
@@ -1359,6 +1359,19 @@ umapGroupCompAccordion = dmc.AccordionItem(
                 ),
                 dmc.AccordionPanel(
                     dmc.Stack(gap='md',children=[
+                        dmc.Text("Variable ordering method:", size="xs", fw=600, c="dimmed"),
+                        dmc.SegmentedControl(
+                            id="rf-ordering-method",
+                            data=[
+                                {"value": "kw", "label": "Kruskal-Wallis ε²"},
+                                {"value": "rf", "label": "Random Forest"},
+                            ],
+                            value="kw",
+                            size="xs",
+                            fullWidth=True,
+                            persistence=persist_UI,
+                            persistence_type=persistence_type,
+                        ),
                         dmc.Stack(gap="xs", children=[
                             dmc.Text("Filter by Average Rating:", size="xs", fw=600, c="dimmed"),
                             dmc.Text("Show only items where all groups rate within this range", size="xs", c="dimmed"),
@@ -1386,7 +1399,7 @@ umapGroupCompAccordion = dmc.AccordionItem(
                         ]),
                         dmc.Checkbox(
                             id="rf-use-zscores",
-                            label="Use Z-Scores",
+                            label="Use Z-Scores for Random Forest",
                             description="Standardize participant ratings row-wise before training",
                             size="sm",
                             checked=False,
@@ -2142,6 +2155,20 @@ def toggle_lasso_for_3d(umap_3d, plot_type):
     return {"display": "none"} if umap_3d else {"display": "block"}
 
 
+# Disable KDE density contours checkbox when 3D UMAP is active (2D-only feature)
+@callback(
+    Output('umap-kde-contours-checkbox', 'disabled'),
+    Output('umap-kde-contours-checkbox', 'checked'),
+    Input('umap-3d-checkbox', 'checked'),
+    State('umap-kde-contours-checkbox', 'checked'),
+    prevent_initial_call=True
+)
+def disable_kde_for_3d(umap_3d, kde_checked):
+    if umap_3d:
+        return True, False  # disable and uncheck
+    return False, kde_checked  # re-enable, preserve state
+
+
 # Render UMAP quality metrics below the plot
 @callback(
     [Output('umap-quality-metrics-display', 'style'),
@@ -2177,7 +2204,6 @@ def render_umap_quality_metrics(metrics):
     k = metrics.get('k', 10)
     trust = metrics.get('trustworthiness', 0)
     cont  = metrics.get('continuity', 0)
-    knn   = metrics.get('knn_preservation', 0)
 
     badges = [
         _badge(
@@ -2185,21 +2211,14 @@ def render_umap_quality_metrics(metrics):
             trust,
             f"Fraction of each point's {k}-NN in the low-D space that were also neighbours in the high-D space. "
             "Penalises false neighbours introduced by the projection.",
-            "blue" if trust >= 0.9 else "yellow" if trust >= 0.75 else "red",
+            "blue" if trust >= 0.8 else "yellow" if trust >= 0.70 else "red",
         ),
         _badge(
             "Continuity",
             cont,
             f"Fraction of each point's {k}-NN in the high-D space that remain neighbours in the low-D space. "
             "Penalises true neighbours that were torn apart by the projection.",
-            "blue" if cont >= 0.9 else "yellow" if cont >= 0.75 else "red",
-        ),
-        _badge(
-            "KNN Preservation",
-            knn,
-            f"Average overlap of {k}-NN sets between the high-D and low-D spaces. "
-            "Combines both trustworthiness and continuity aspects.",
-            "blue" if knn >= 0.5 else "yellow" if knn >= 0.3 else "red",
+            "blue" if cont >= 0.80 else "yellow" if cont >= 0.70 else "red",
         ),
         dmc.Text(f"(k = {k})", size="xs", c="dimmed"),
     ]
@@ -4004,10 +4023,11 @@ def clear_rf_plot_loading(figure, notification):
     State('umap-render-settings', 'data'),  # Use stored settings instead of UI state
     State('rf-use-zscores','checked'),
     State('use-imputed-data-switch', 'checked'),
-    State('include-ai-param', 'data')],
+    State('include-ai-param', 'data'),
+    State('rf-ordering-method', 'value')],  # Variable ordering method
     prevent_initial_call=True
 )
-def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants,render_settings,use_zscores,user_imputed_switch,include_ai):
+def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants,render_settings,use_zscores,user_imputed_switch,include_ai,ordering_method):
     # Set default value for split_by_variety since checkbox was removed
     split_by_variety = False
     
@@ -4107,16 +4127,23 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
         
         # Use lazy data loading for better performance
         data = retrieve_data.getGrammarData(imputed=use_imputed,participants=df['ids'],columns=items, pairs=pairs, include_ai=include_ai)
-        rf, importanceRatings = trainRF(items,data,datacols=items,groupcol=groupcol,pairs=pairs,use_zscores=use_zscores)
+
+        # --- Dispatch to ordering method ---
+        use_kw = (ordering_method != 'rf')  # default to KW if unset
+        if use_kw:
+            importanceRatings = computeKruskalWallisOrdering(items, data, datacols=items, groupcol=groupcol, pairs=pairs)
+            rf = None
+        else:
+            rf, importanceRatings = trainRF(items, data, datacols=items, groupcol=groupcol, pairs=pairs, use_zscores=use_zscores)
 
         # --- Extract RF metrics for table view ---
         # OOB error
-        oob_score = rf.oob_score_ if hasattr(rf, 'oob_score_') else None
+        oob_score = rf.oob_score_ if (rf is not None and hasattr(rf, 'oob_score_')) else None
         oob_error = 1.0 - oob_score if oob_score is not None else None
 
         # OOB confusion matrix - need to reconstruct y_true from groupcol merged with data
-        oob_decision = rf.oob_decision_function_ if hasattr(rf, 'oob_decision_function_') else None
-        classes = rf.classes_
+        oob_decision = rf.oob_decision_function_ if (rf is not None and hasattr(rf, 'oob_decision_function_')) else None
+        classes = rf.classes_ if rf is not None else np.array([])
         # Reconstruct y_true by merging data with groupcol the same way trainRF does
         data_with_groups = pd.merge(data, groupcol, left_on='InformantID', right_on='ids')
         y_true = data_with_groups['group']
@@ -4149,8 +4176,30 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
         )
 
         # Build OOB error display
-        if oob_score is not None:
-            oob_items = [imputed_note]
+        if use_kw:
+            kw_note = dmc.Alert(
+                "Variables are ordered by Kruskal-Wallis ε² effect size (rank-based, no metric assumption). "
+                "ε² = H / (n − 1) where H is the Kruskal-Wallis statistic and n is the total sample size. "
+                "Values range from 0 (no between-group variance) to 1 (all variance explained by group). ",
+                title="Kruskal-Wallis ε² ordering",
+                color="blue",
+                icon=DashIconify(icon="tabler:info-circle", width=18),
+                mb="sm",
+            )
+            oob_children = dmc.Stack(gap="xs", children=[kw_note])
+        elif oob_score is not None:
+            rf_note = dmc.Alert(
+                f"A Random Forest classifier ({rf.n_estimators} trees, balanced class weights) was trained on the "
+                f"{len(importanceRatings)} selected grammar items to predict group membership. "
+                "Variables are ordered by mean decrease in Gini impurity (Gini Importance): Higher values indicate "
+                "items that contribute more to separating the groups. "
+                "OOB Accuracy is estimated on out-of-bag samples (held-out from each tree).",
+                title="Random Forest ordering",
+                color="blue",
+                icon=DashIconify(icon="tabler:info-circle", width=18),
+                mb="sm",
+            )
+            oob_items = [imputed_note, rf_note]
             oob_items.extend([
                 dmc.Group([
                     dmc.Text("OOB Accuracy:", size="sm", fw=600),
@@ -4182,7 +4231,9 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
             oob_children = dmc.Text("OOB score not available.", size="sm", c="dimmed")
 
         # Build confusion matrix display
-        if not cm_df.empty:
+        if use_kw:
+            cm_children = dmc.Text("Not applicable for Kruskal-Wallis ε² ordering (no classifier trained).", size="sm", c="dimmed")
+        elif not cm_df.empty:
             # Pre-compute background colors for off-diagonal cells
             cm_values_arr = cm.copy().astype(float)
             np.fill_diagonal(cm_values_arr, 0)
@@ -4258,7 +4309,9 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
             cm_children = dmc.Text("Confusion matrix not available.", size="sm", c="dimmed")
 
         # Build F1 scores display
-        if not f1_df.empty:
+        if use_kw:
+            f1_children = dmc.Text("Not applicable for Kruskal-Wallis ε² ordering (no classifier trained).", size="sm", c="dimmed")
+        elif not f1_df.empty:
             f1_col_defs = [
                 {"field": "Variety", "headerName": "Variety", "width": 180, "pinned": "left", "sortable": True},
                 {"field": "F1 Score", "headerName": "F1 Score", "width": 120, "sortable": True,
@@ -4314,8 +4367,8 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
         plotDF = plotDF.merge(importanceRatings, on='item', how='left')
 
         # --- Build top features table (top 15 or fewer) ---
-        n_top = min(15, len(importanceRatings))
-        top_features = importanceRatings.head(n_top)['item'].to_list()
+        n_top = len(importanceRatings)  # include all features so the full table is downloadable
+        top_features = importanceRatings['item'].to_list()
         top_plotDF = plotDF[plotDF['item'].isin(top_features)].copy()
         # Get metadata for feature descriptions
         if not pairs:
@@ -4352,10 +4405,11 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
                     top_pivot[col] = top_pivot[col].round(4)
                 else:
                     top_pivot[col] = top_pivot[col].round(2)
-        # Rename 'item' to 'Item Code' and 'importance' to 'Gini Importance'
-        top_pivot = top_pivot.rename(columns={'item': 'Item Code', 'importance': 'Gini Importance'})
-        # Reorder columns: Rank, Item Code, Feature, eWAVE, Feature Group, Sentence, Gini Importance, then group means, then counts
-        priority_cols = ['Rank', 'Item Code', 'Feature', 'eWAVE', 'Feature Group', 'Sentence', 'Gini Importance']
+        # Rename 'item' to 'Item Code' and 'importance' to method-appropriate label
+        importance_label = "Kruskal-Wallis ε²" if use_kw else "Gini Importance"
+        top_pivot = top_pivot.rename(columns={'item': 'Item Code', 'importance': importance_label})
+        # Reorder columns: Rank, Item Code, Feature, eWAVE, Feature Group, Sentence, importance, then group means, then counts
+        priority_cols = ['Rank', 'Item Code', 'Feature', 'eWAVE', 'Feature Group', 'Sentence', importance_label]
         other_cols = [c for c in top_pivot.columns if c not in priority_cols]
         top_pivot = top_pivot[priority_cols + other_cols]
 
@@ -4380,17 +4434,18 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
             elif col_str == 'Sentence':
                 col_def['minWidth'] = 200
                 col_def['flex'] = 2
-            elif col_str == 'Gini Importance':
-                col_def['width'] = 140
+            elif col_str in ('Gini Importance', 'Kruskal-Wallis ε²'):
+                col_def['width'] = 160
             elif '(n)' in col_str:
                 col_def['width'] = 90
             else:
                 col_def['width'] = 110
             top_col_defs.append(col_def)
 
+        sort_label = "Kruskal-Wallis ε²" if use_kw else "Gini importance"
         top_features_children = dmc.Stack(gap="xs", children=[
             dmc.Group([
-                dmc.Text(f"Showing top {n_top} of {len(importanceRatings)} features, sorted by Gini importance.", size="xs", c="dimmed"),
+                dmc.Text(f"Showing all {n_top} features, sorted by {sort_label}.", size="xs", c="dimmed"),
                 dmc.Button(
                     "Download CSV",
                     id="download-rf-features-button",
@@ -5135,7 +5190,7 @@ clientside_callback(
 # Clientside callback to download top features CSV
 clientside_callback(
     """
-    function(n_clicks) {
+    function(n_clicks, orderingMethod) {
         if (!n_clicks) {
             return window.dash_clientside.no_update;
         }
@@ -5144,8 +5199,9 @@ clientside_callback(
             return window.dash_clientside.no_update;
         }
         const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+        const prefix = (orderingMethod === 'kw') ? 'kw_epsilon2_' : 'rf_gini_';
         api.exportDataAsCsv({
-            fileName: 'rf_top_features_' + timestamp + '.csv',
+            fileName: prefix + 'top_items_' + timestamp + '.csv',
             onlySelected: false,
             allColumns: true,
         });
@@ -5154,6 +5210,7 @@ clientside_callback(
     """,
     Output("download-rf-features-button", "n_clicks"),
     Input("download-rf-features-button", "n_clicks"),
+    State("rf-ordering-method", "value"),
     prevent_initial_call=True
 )
 
@@ -5209,26 +5266,26 @@ clientside_callback(
 
     var varietyColorMap = {
         "England": "#1f77b4",
-        "Scotland": "#ff7f0e", 
-        "US": "#2ca02c",
+        "Scotland": "#7B3394", 
+        "US": "#B22234",
         "Gibraltar": "#d62728",
         "Malta": "#9467bd",
-        "India": "#8c564b",
-        "Puerto Rico": "#e377c2",
+        "India": "#FF9933",
+        "Puerto Rico": "#00A693",
         "Slovenia": "#7f7f7f",
-        "Germany": "#bcbd22",
-        "Sweden": "#17becf",
+        "Germany": "#FFCE00",
+        "Sweden": "#006AA7",
         "Other": "#c49c94",
         "AI-GPT-England": "#8fbbd9",
-        "AI-GPT-Scotland": "#ffbf87",
-        "AI-GPT-US": "#96d096",
+        "AI-GPT-Scotland": "#af84be",
+        "AI-GPT-US": "#d07a85",
         "AI-GPT-Gibraltar": "#eb9394",
         "AI-GPT-Malta": "#cab3de",
-        "AI-GPT-IND": "#c6aba5",
-        "AI-GPT-Puerto Rico": "#f1bbe1",
+        "AI-GPT-IND": "#ffc184",
+        "AI-GPT-Puerto Rico": "#66c9be",
         "AI-GPT-Slovenia": "#bfbfbf",
-        "AI-GPT-DE": "#dede91",
-        "AI-GPT-Sweden": "#8bdef7",
+        "AI-GPT-DE": "#ffe166",
+        "AI-GPT-Sweden": "#66a5ca",
         "AI-GPT-Other": "#e2ceca"
     };
 

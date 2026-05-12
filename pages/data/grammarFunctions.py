@@ -391,7 +391,6 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
         filtered_data = filtered_data.div(row_stds, axis=0)
 
     # run umap
-    # densemap is incompatible with n_components=3; disable it silently in 3D mode
     reducer = umap.UMAP(
         n_components=3 if umap_3d else 2,
         n_neighbors=n_neighbours,
@@ -399,7 +398,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
         metric=distance_metric,
         n_jobs=-1,
         low_memory=False,
-        densmap=False if umap_3d else densemap
+        densmap=densemap
     )
     embedding_array = reducer.fit_transform(filtered_data)
 
@@ -767,6 +766,76 @@ def trainRF(GrammarItemsCols,data,datacols,groupcol="MainVariety",pairs=False,us
     else:
         feature_importances['mode'] = 'difference'
     return rf, feature_importances
+
+
+def computeKruskalWallisOrdering(items, data, datacols, groupcol, pairs=False):
+    """
+    Order grammar items by Kruskal-Wallis ε² effect size across groups.
+
+    For each item, the Kruskal-Wallis H statistic is computed across group
+    ratings and converted to epsilon-squared:
+
+        ε² = H / (n − 1)
+
+    where n is the total number of observations.  ε² ranges from 0 to 1 and
+    represents the proportion of rank variance explained by group membership.
+    It is rank-based (no metric assumption) and unaffected by correlations
+    between items, making it well-suited for ordering ordinal survey data.
+
+    The returned DataFrame has the same columns as trainRF's feature_importances
+    so downstream code is compatible with both methods.
+
+    Args:
+        items (list): Item column names (used only for mode lookup).
+        data (pd.DataFrame): Grammar data with InformantID and item columns.
+        datacols (list): Column names of the items to test.
+        groupcol (pd.DataFrame): DataFrame with 'ids' and 'group' columns.
+        pairs (bool): Whether items are item pairs (determines mode column).
+
+    Returns:
+        pd.DataFrame: Columns: item, importance (ε²), mode — sorted descending.
+    """
+    from scipy.stats import kruskal
+
+    merged = pd.merge(data, groupcol, left_on='InformantID', right_on='ids')
+    group_labels = merged['group'].unique()
+
+    results = []
+    for col in datacols:
+        group_arrays = [
+            pd.to_numeric(merged.loc[merged['group'] == g, col], errors='coerce').dropna().values
+            for g in group_labels
+        ]
+        # Need at least 2 groups with ≥2 observations each
+        valid = [g for g in group_arrays if len(g) >= 2]
+        if len(valid) < 2:
+            results.append({'item': col, 'importance': 0.0})
+            continue
+        try:
+            stat, _ = kruskal(*valid)
+            n = sum(len(g) for g in valid)
+            eps2 = stat / (n - 1) if n > 1 else 0.0
+            eps2 = float(min(eps2, 1.0))
+        except Exception:
+            eps2 = 0.0
+        results.append({'item': col, 'importance': eps2})
+
+    feature_importances = (
+        pd.DataFrame(results)
+        .sort_values(by='importance', ascending=False)
+        .reset_index(drop=True)
+    )
+
+    if not pairs:
+        spoken = pd.DataFrame({'item': retrieve_data.getGrammarItemsCols("spoken"), 'mode': 'spoken'})
+        written = pd.DataFrame({'item': retrieve_data.getGrammarItemsCols("written"), 'mode': 'written'})
+        all_items = pd.concat([spoken, written], ignore_index=True)
+        feature_importances = feature_importances.merge(all_items, on='item', how='left')
+    else:
+        feature_importances['mode'] = 'difference'
+
+    return feature_importances
+
 
 def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_variety=False):
     if not pairs:

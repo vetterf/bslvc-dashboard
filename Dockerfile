@@ -1,5 +1,5 @@
 # Use the official Python image
-FROM python:3.13.2-slim-bookworm
+FROM python:3.14.5-slim-bookworm
 # Set the database path environment variable
 ENV APP_DIR=/app
 ENV DATA_DIR=/app/assets/data
@@ -10,7 +10,7 @@ ENV CACHE_DIR=/app/cache
 ENV MPLCONFIGDIR=/tmp/matplotlib
 
 # Install dependencies
-COPY requirements.txt ./requirements.txt
+COPY requirements_3.14.txt ./requirements.txt
 RUN pip install --no-cache-dir -r ./requirements.txt
 COPY . ./
 

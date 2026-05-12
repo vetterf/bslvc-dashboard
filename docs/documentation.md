@@ -100,10 +100,10 @@ The "Deselect Lasso Selection" and "Select Only Lasso Selection" buttons modify 
 - **Clear Groups**: Remove all defined groups.
 - **Select Only Lasso Selection**: Select only participants currently selected via lasso tool.
 - **Deselect Lasso Selection**: Deselect participants selected via lasso tool.
-- **Compare Selected Groups**: Render a Random Forest comparison. The group comparison view provides a toggle between **Plot** and **Table** view. The plot view shows a horizontal bar chart of feature importances with per-group mean ratings and confidence intervals. The table view shows:
-    - **Random Forest Performance**: OOB accuracy and error rate, number of trees, classes, features, and samples.
-    - **Confusion Matrix (OOB Predictions)**: An interactive table with colour-coded cells (green for diagonal/correct, red-scaled for off-diagonal/misclassifications). Downloadable as CSV.
-    - **Top Features by Gini Importance**: An interactive table listing up to 15 top-ranked features with their item code, feature description, eWAVE label, feature group, sentence, Gini importance and per-group mean ratings. Downloadable as CSV.
+- **Compare Selected Groups**: Run a statistical group comparison. The ordering method can be switched between **Kruskal-Wallis ε²** (default) and **Random Forest** using the segmented control above this button. The group comparison view provides a toggle between **Plot** and **Table** view. The plot view shows a horizontal bar chart of feature importances with per-group mean ratings and confidence intervals. The table view contains three tabs:
+    - **Performance**: Describes the method used. For Kruskal-Wallis ε² this tab explains the effect size measure; for Random Forest it shows OOB accuracy and error rate, number of trees, classes, features, and samples.
+    - **Confusion Matrix (OOB Predictions)**: Available for Random Forest only. An interactive table with colour-coded cells (green for diagonal/correct, red-scaled for off-diagonal/misclassifications). Downloadable as CSV.
+    - **Top Items**: An interactive table listing all ranked features with their item code, feature description, eWAVE label, feature group, sentence, effect size or Gini importance, and per-group mean ratings. Downloadable as CSV.
     - A **data source badge** indicates whether imputed or raw data were used.
 
 #### Participant Selection
@@ -174,8 +174,8 @@ The UMAP Settings allow the user to tweak the UMAP hyperparameters, as well as t
 - **Color**: Select coloring variable (Variety, Variety type, Gender). This setting does not trigger a rerender of the plot and can be changed after rendering the plot.
 - **Distance metric**: Choose metric (Cosine, Euclidean, Manhattan).
 - **Standardize participant ratings**: Checkbox to standardize ratings. Standardization is advised for use with Euclidean and Manhattan distances.
-- **Use density-preserving embedding (DensMAP)**: Checkbox for DensMAP (https://umap-learn.readthedocs.io/en/latest/densmap_demo.html). By default, UMAP does not preserve densities of clusters well. DensMAP tries to preserve the density of clusters when reducing dimensionality. Not available in 3D mode.
-- **3D UMAP (experimental)**: Renders the embedding in three dimensions. Lasso selection is not available in 3D mode. DensMAP is automatically disabled.
+- **Use density-preserving embedding (DensMAP)**: Checkbox for DensMAP (https://umap-learn.readthedocs.io/en/latest/densmap_demo.html). By default, UMAP does not preserve densities of clusters well. DensMAP tries to preserve the density of clusters when reducing dimensionality. Compatible with both 2D and 3D modes.
+- **3D UMAP (experimental)**: Renders the embedding in three dimensions. Lasso selection is not available in 3D mode.
 - **Show KDE density contours**: Checkbox to overlay 2D kernel density estimation (KDE) contours on the UMAP plot. When enabled, filled contour regions are drawn behind the scatter points for each variety, visualizing the density distribution of participants in the embedding space. Contour visibility is linked to the legend: hiding a variety via the legend also hides its contours. This option can be toggled at any time without re-rendering the plot. Not available in 3D mode.
 - **Number of neighbours**: Slider for UMAP hyperparameter. Check the UMAP docs for more info.
 - **Minimal distance**: Slider for UMAP hyperparameter. Check the UMAP docs for more info.
@@ -186,7 +186,7 @@ After each UMAP render, three quality metrics are displayed below the plot. All 
 
 - **Trustworthiness**: Measures how many of each point's k nearest neighbours in the low-dimensional plot were also close in the original high-dimensional space. A low value indicates that the plot introduces false closeness — points that appear nearby were not actually similar. Values above ~0.85 are generally good for this type of data.
 - **Continuity**: The complement of trustworthiness: measures how many true high-dimensional neighbours remain close in the plot. A low value indicates that genuinely similar participants have been pulled apart in the embedding. Values above ~0.88 are generally good.
-- **KNN Preservation**: The fraction of each point's k nearest neighbours that are shared exactly between the high-dimensional and low-dimensional spaces. This is a stricter criterion than the above two and is most useful for comparing different UMAP settings with each other rather than as an absolute quality threshold.
+
 
 #### Item Plot Settings
 
@@ -206,12 +206,15 @@ After each UMAP render, three quality metrics are displayed below the plot. All 
 - **Sort by**: Sort items by mean, standard deviation, or alphabetically.
 
 #### Group Comparison Settings
-This is only available if mode is set to "Participant Similarity". These functions can be used to filter out items that fall outside a certain rating range, or to apply standardization of the ratings before training the random forest.
+This is only available if mode is set to "Participant Similarity". These functions can be used to filter out items that fall outside a certain rating range, or to apply standardization of the ratings before training the Random Forest.
 
 ![Group comparison settings](img/UI_UMAP_group_comparison_settings.png)
 
+- **Ordering method**: Segmented control to select the variable ranking method:
+    - **Kruskal-Wallis ε²** (default): Ranks items by the Kruskal-Wallis effect size ε² = H / (n − 1), where H is the Kruskal-Wallis test statistic and n is the total sample size. ε² ranges from 0 (no difference between groups) to 1 (all variance explained by group membership). This is a non-parametric rank-based test that makes no assumptions about the distribution of ratings and tests each item independently.
+    - **Random Forest**: Trains a Random Forest classifier (500 trees, balanced class weights) and ranks items by their mean decrease in Gini impurity. Provides additional outputs: OOB accuracy, confusion matrix, and per-class F1 scores.
 - **Filter by Average Rating**: Range slider to filter items by group average.
-- **Use Z-Scores**: Checkbox to standardize ratings (participant-wise) before training the random forest.
+- **Use Z-Scores**: Checkbox to standardize ratings (participant-wise) before training the Random Forest. Only relevant when Random Forest is selected.
 
 #### Advanced Actions
 
@@ -257,7 +260,7 @@ Custom group comparison allows you to compare groups of participants beyond the 
 3. Click "Add Group" to save the selected participants as a group
 ![Adding a group](img/UI_custom_groups_lasso_button.png)
 4. Repeat steps 2-3 to add additional groups (if desired)
-5. Click "Compare Selected Groups" to generate a Random Forest comparison plot
+5. Click "Compare Selected Groups" to generate a group comparison (Kruskal-Wallis ε² by default, or Random Forest if selected in the ordering method control)
 
 **Important notes:**
 
@@ -300,6 +303,7 @@ The dashboard provides both imputed and raw (unimputed) data. The "Use imputed d
 | Component | Data used | Reason |
 |---|---|---|
 | **UMAP (Participant Similarity)** | Always **imputed** | UMAP cannot handle missing values. The switch is automatically forced on and disabled when in this mode. |
+| **Group Comparison (Kruskal-Wallis ε²)** | Always **imputed** | The Kruskal-Wallis test requires complete cases per item; imputed data ensures no rows are dropped. |
 | **Group Comparison (Random Forest model)** | Always **imputed** | scikit-learn's `RandomForestClassifier` cannot handle NaN values. If input contains missing values, rows are dropped before training. |
 | **Group Comparison (table means)** | Respects user switch | The per-group mean ratings and counts shown in the top features table use whichever data source the switch is set to. |
 | **Item Ratings plots** | Respects user switch | Works with both raw and imputed data. Raw data is the default. |
