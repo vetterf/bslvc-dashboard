@@ -17,7 +17,6 @@ All notable changes to the BSLVC Dashboard will be documented in this file.
 - **Library updates**: Updated to newer docker container with python 3.14.5. Updated all relevant python libraries.
 
 ### Fixed
-- DensMAP incompatibility with n_components=3 (DensMAP is now force-disabled in 3D mode).
 - `KeyError: 'ids'` when clicking "Compare groups" after rendering a 3D UMAP.
 
 ## [0.1.7] - 2026-04-17
