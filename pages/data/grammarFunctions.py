@@ -308,6 +308,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
     leiden_resolution = 0.8
     standardize=False
     densemap=False
+    dens_lambda=2.0
     # filter data
     for key, value in kwargs.items():
         if key == 'items':
@@ -334,6 +335,8 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
             standardize = value
         if key == 'densemap':
             densemap = value
+        if key == 'dens_lambda':
+            dens_lambda = value
         if key == 'umap_3d':
             umap_3d = value
 
@@ -357,7 +360,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
     # --- include distance_metric and regional_mapping in the hash/filename ---
     regional_suffix = "_regional" if regional_mapping else ""
     dim_suffix = "_3d" if umap_3d else ""
-    preset_filename = f"umap_{umap_informants_hash}_{items_hash}_{n_neighbours}_{min_dist}_{distance_metric}_{standardize}_{densemap}{regional_suffix}{dim_suffix}.pkl"
+    preset_filename = f"umap_{umap_informants_hash}_{items_hash}_{n_neighbours}_{min_dist}_{distance_metric}_{standardize}_{densemap}_{dens_lambda if densemap else 'nd'}{regional_suffix}{dim_suffix}.pkl"
     preset_path = os.path.join(preset_dir, preset_filename)
     if os.path.exists(preset_path) and not force_rerender:
         try:
@@ -398,7 +401,8 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
         metric=distance_metric,
         n_jobs=-1,
         low_memory=False,
-        densmap=densemap
+        densmap=densemap,
+        dens_lambda=dens_lambda
     )
     embedding_array = reducer.fit_transform(filtered_data)
 

@@ -15,7 +15,7 @@ layout = dmc.Container([
         # Introduction
         dmc.Text(
             "The BSLVC Dashboard is an interactive web application for exploring and analyzing data from the Bamberg Survey of Language Variation and Change. "
-            "It provides researchers with powerful tools to visualize lexical (coming soon) and grammatical variation across varieties of English.",
+            "It provides researchers with tools for visualizing lexical (coming soon) and grammatical variation across varieties of English.",
             size="md",
             mb="xl"
         ),
@@ -77,16 +77,15 @@ For more information, please visit the project homepage.
             dmc.Stack([
                 dmc.Text("Dashboard Citation:", fw=600, size="sm"),
                 dmc.Text(
-                    "Vetter, Fabian. 2025. BSLVC Dashboard (Version 0.1.5). https://doi.org/10.17605/OSF.IO/4BUEF",
+                    "Vetter, Fabian. 2026. BSLVC Dashboard (version 0.1.8). https://doi.org/10.17605/OSF.IO/4BUEF",
                 ),
                 
                 dmc.Space(h="md"),
                 
                 # Corpus Citation
                 dmc.Text("Data Set Citation:", fw=600, size="sm"),
-                dmc.Text("The BSLVC data set is currently unpublished. We expect to release the full data set in 2027 at the latest. Until then, please cite as follows:"),
                 dmc.Text(
-                    "Krug, Manfred, Fabian Vetter & Lukas Sönning. To appear. The Bamberg Survey of Language Variation and Change (Version 251118). University of Bamberg.",
+                    "Krug, Manfred & Fabian Vetter. 2026. The Bamberg Survey of Language Variation and Change. Zenodo. DOI: 10.5281/zenodo.20157295",
                 ),
                 
                 dmc.Space(h="md"),

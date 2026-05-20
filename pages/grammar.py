@@ -77,7 +77,7 @@ except (OSError, PermissionError) as e:
 
 plot_cache = dc.Cache(cache_dir)
 
-def create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, regional_mapping=False, include_ai=False, umap_3d=False):
+def create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, dens_lambda, pairs, regional_mapping=False, include_ai=False, umap_3d=False):
     """Create a unique cache key for plot parameters"""
     key_data = {
         'participants': sorted(participants) if participants else 'all',
@@ -87,6 +87,7 @@ def create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_
         'distance_metric': distance_metric,
         'standardize': standardize,
         'densemap': densemap,
+        'dens_lambda': dens_lambda if densemap else None,
         'pairs': pairs,
         'regional_mapping': regional_mapping,
         'include_ai': include_ai,
@@ -95,10 +96,10 @@ def create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_
     key_string = str(key_data)
     return hashlib.md5(key_string.encode()).hexdigest()
 
-def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, informants=None, regional_mapping=False, include_ai=False, umap_3d=False):
+def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, dens_lambda, pairs, informants=None, regional_mapping=False, include_ai=False, umap_3d=False):
     """Get UMAP plot (and quality metrics) from cache or compute if not exists.
     Returns (figure, metrics_dict)."""
-    cache_key = f"umap_{create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, pairs, regional_mapping, include_ai, umap_3d)}"
+    cache_key = f"umap_{create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, dens_lambda, pairs, regional_mapping, include_ai, umap_3d)}"
     
     cached = plot_cache.get(cache_key)
     if cached is not None:
@@ -137,6 +138,7 @@ def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_m
         distance_metric=distance_metric,
         standardize=standardize,
         densemap=densemap,
+        dens_lambda=dens_lambda,
         pairs=pairs,
         regional_mapping=regional_mapping,
         umap_3d=umap_3d
@@ -1254,6 +1256,25 @@ umapSettingsAccordion = dmc.AccordionItem(
                             checked=False,
                             persistence=persist_UI, persistence_type=persistence_type
                         ),
+                        html.Div(id="umap-dens-lambda-container", style={"display": "none", "marginBottom": "12px"}, children=[
+                            dmc.Stack(gap="xs",mb="md", children=[
+                                dmc.Text("DensMAP lambda:", size="xs"),
+                                dmc.Slider(
+                                    id="umap-dens-lambda-slider",
+                                    value=2.0,
+                                    min=0.1,
+                                    max=10.0,
+                                    step=0.1,
+                                    size="xs",
+                                    marks=[
+                                        {"value": 1, "label": "1"},
+                                        {"value": 5, "label": "5"},
+                                        {"value": 10, "label": "10"},
+                                    ],
+                                    persistence=persist_UI, persistence_type=persistence_type
+                                ),
+                            ]),
+                        ]),
                         dmc.Checkbox(
                             id="umap-3d-checkbox",
                             label="3D UMAP (experimental — lasso selection unavailable)",
@@ -1269,7 +1290,7 @@ umapSettingsAccordion = dmc.AccordionItem(
                             persistence=persist_UI, persistence_type=persistence_type
                         ),
                         dmc.Text("UMAP Hyperparameters:", size="xs", fw=600, c="dimmed", mt="xs"),
-                        dmc.Stack(gap="xs", children=[
+                        dmc.Stack(gap="xs", mb="md", children=[
                             dmc.Text("Number of neighbours:", size="xs"),
                             dmc.Slider(id="UMAP_neighbours",value=25,min=0,max=100,step=1,
                                 size="xs",
@@ -1280,7 +1301,7 @@ umapSettingsAccordion = dmc.AccordionItem(
                                 ],
                                 persistence=persist_UI,persistence_type=persistence_type),
                         ]),
-                        dmc.Stack(gap="xs", children=[
+                        dmc.Stack(gap="xs", mb="md", children=[
                             dmc.Text("Minimal distance:", size="xs"),
                             dmc.Slider(id="UMAP_mindist",value=0.1,min=0,max=0.99,step=0.05,
                                 size="xs",
@@ -1825,6 +1846,7 @@ layout = html.Div([
     dcc.Store(id="last-rendered-umap-plot", storage_type="session"),
     dcc.Store(id="item-plot-settings-store", storage_type="memory", data=None),  # Store settings used to generate last item plot
     dcc.Store(id="last-sociodemographic-settings", storage_type="session"),  # Cache for sociodemographic plot settings
+    dcc.Store(id="restore-items-pending", storage_type="memory", data=None),  # Pending grammar items to restore after type-switch on paste
     # Directly show Grammar Analysis content (no outer tabs)
     grammarAnalysisC,
     
@@ -2153,6 +2175,16 @@ def toggle_lasso_for_3d(umap_3d, plot_type):
     if plot_type != 'umap':
         raise PreventUpdate
     return {"display": "none"} if umap_3d else {"display": "block"}
+
+
+# Show/hide dens_lambda slider based on densemap checkbox
+@callback(
+    Output('umap-dens-lambda-container', 'style'),
+    Input('umap-densemap-checkbox', 'checked'),
+    prevent_initial_call=False
+)
+def toggle_dens_lambda_slider(densemap_checked):
+    return {"display": "block"} if densemap_checked else {"display": "none"}
 
 
 # Disable KDE density contours checkbox when 3D UMAP is active (2D-only feature)
@@ -3278,15 +3310,17 @@ def toggle_paste_modal(open_clicks, cancel_clicks, load_clicks, is_open):
      Output('grammar-type-switch', 'checked', allow_duplicate=True),
      Output('use-imputed-data-switch', 'checked', allow_duplicate=True),
      Output("notify-container", "children", allow_duplicate=True),
-     Output("paste-settings-textarea", "value")],
+     Output("paste-settings-textarea", "value"),
+     Output('restore-items-pending', 'data', allow_duplicate=True)],
     Input("load-pasted-settings", "n_clicks"),
-    State("paste-settings-textarea", "value"),
+    [State("paste-settings-textarea", "value"),
+     State('grammar-type-switch', 'checked')],
     prevent_initial_call=True
 )
-def load_pasted_settings(n_clicks, pasted_text):
+def load_pasted_settings(n_clicks, pasted_text, current_pairs):
     """Load and validate pasted settings with security checks"""
     if not n_clicks or not pasted_text:
-        return [no_update] * 14
+        return [no_update] * 15
     
     import json
     import base64
@@ -3302,7 +3336,7 @@ def load_pasted_settings(n_clicks, pasted_text):
                 autoClose=5000,
                 icon=DashIconify(icon="tabler:x"),
             )
-            return [no_update] * 12 + [notification, ""]
+            return [no_update] * 13 + [notification, "", no_update]
         
         # Security check 2: Base64 decode (will fail if not valid base64)
         try:
@@ -3317,7 +3351,7 @@ def load_pasted_settings(n_clicks, pasted_text):
                 autoClose=5000,
                 icon=DashIconify(icon="tabler:x"),
             )
-            return [no_update] * 12 + [notification, ""]
+            return [no_update] * 13 + [notification, "", no_update]
         
         # Security check 3: JSON parse with size limit
         try:
@@ -3331,7 +3365,7 @@ def load_pasted_settings(n_clicks, pasted_text):
                 autoClose=5000,
                 icon=DashIconify(icon="tabler:x"),
             )
-            return [no_update] * 12 + [notification, ""]
+            return [no_update] * 13 + [notification, "", no_update]
         
         # Security check 4: Validate expected structure
         required_keys = {'plot_type', 'participants', 'items', 'pairs', 'use_imputed', 
@@ -3345,7 +3379,7 @@ def load_pasted_settings(n_clicks, pasted_text):
                 autoClose=5000,
                 icon=DashIconify(icon="tabler:x"),
             )
-            return [no_update] * 12 + [notification, ""]
+            return [no_update] * 13 + [notification, "", no_update]
         
         # Security check 5: Validate data types
         if not isinstance(settings['participants'], list):
@@ -3370,7 +3404,7 @@ def load_pasted_settings(n_clicks, pasted_text):
                 autoClose=5000,
                 icon=DashIconify(icon="tabler:x"),
             )
-            return [no_update] * 12 + [notification, ""]
+            return [no_update] * 13 + [notification, "", no_update]
         
         # Extract validated values with defaults
         participants = settings['participants']
@@ -3411,9 +3445,17 @@ def load_pasted_settings(n_clicks, pasted_text):
             icon=DashIconify(icon="tabler:check"),
         )
         
+        # If the type switch already matches the saved state, set grammarItemsTree.checked directly
+        # (avoids triggering update_grammar_items_tree which would wipe the selection).
+        # If it differs, store the items so update_grammar_items_tree can apply them after rebuilding.
+        same_switch = (pairs == current_pairs)
+        grammar_items_out = items if same_switch else no_update
+        switch_out = no_update if same_switch else pairs
+        pending_out = None if same_switch else items
+        
         return [
             participants,
-            items,
+            grammar_items_out,
             plot_type,
             group_by,
             sort_by,
@@ -3422,10 +3464,11 @@ def load_pasted_settings(n_clicks, pasted_text):
             min_dist,
             distance_metric,
             standardize,
-            pairs,
+            switch_out,
             use_imputed,
             notification,
-            ""  # Clear textarea
+            "",  # Clear textarea
+            pending_out
         ]
         
     except Exception as e:
@@ -3438,7 +3481,7 @@ def load_pasted_settings(n_clicks, pasted_text):
             autoClose=5000,
             icon=DashIconify(icon="tabler:x"),
         )
-        return [no_update] * 12 + [notification, ""]
+        return [no_update] * 13 + [notification, "", no_update]
 
 # Settings persistence callbacks
 @callback(
@@ -3840,6 +3883,7 @@ def initiate_umap_rendering(BTNrenderPlot, modal_ok, modal_cancel, figure, runni
     State('umap-distance-metric-dropdown', 'value'), 
     State('umap-standardize-checkbox', 'checked'),
     State('umap-densemap-checkbox', 'checked'),
+    State('umap-dens-lambda-slider', 'value'),
     State('umap-3d-checkbox', 'checked'),
     State('grammar-type-switch', 'checked'), 
     State('use-imputed-data-switch', 'checked'),
@@ -3852,7 +3896,7 @@ def initiate_umap_rendering(BTNrenderPlot, modal_ok, modal_cancel, figure, runni
 )
 def compute_umap_background(trigger_data, selected_informants, items, n_neighbours, 
                            min_dist, selected_presets, distance_metric, 
-                           standardize_participant_ratings, densemap, umap_3d, pairs, use_imputed, informants_data, regional_mapping, include_ai):
+                           standardize_participant_ratings, densemap, dens_lambda, umap_3d, pairs, use_imputed, informants_data, regional_mapping, include_ai):
     """Compute UMAP in background - this is the slow operation"""
     if trigger_data is None:
         raise PreventUpdate
@@ -3885,6 +3929,7 @@ def compute_umap_background(trigger_data, selected_informants, items, n_neighbou
         distance_metric=distance_metric,
         standardize=standardize_participant_ratings,
         densemap=densemap,
+        dens_lambda=dens_lambda if dens_lambda is not None else 2.0,
         pairs=pairs,
         informants=informants_data,
         regional_mapping=regional_mapping,
@@ -5759,29 +5804,26 @@ def update_preset_options(type_switch_checked):
 
 @callback(
     [Output('grammarItemsTree', 'data'),
-     Output('grammarItemsTree', 'checked')],
+     Output('grammarItemsTree', 'checked'),
+     Output('restore-items-pending', 'data')],
     Input('grammar-type-switch', 'checked'),
+    State('restore-items-pending', 'data'),
     prevent_initial_call=False
 )
-def update_grammar_items_tree(type_switch_checked):
+def update_grammar_items_tree(type_switch_checked, pending_items):
     """
     Redraw the grammar items tree based on Type switch state.
-    If Type = "Mode difference" (checked=True), show pairs and check GrammarItemsColsPairs.
-    If Type = "Individual items" (checked=False), show individual items and check GrammarItemsCols.
+    If pending_items is set (from a paste operation that also changed the type switch),
+    apply those items instead of starting empty, then clear the pending store.
     """
-    # When checked=True, it's "Mode difference" - use pairs=True
-    # When checked=False, it's "Individual items" - use pairs=False
     if not type_switch_checked:
-        # Individual items, use the full grammarMeta
         meta = grammarMeta.copy(deep=True)
-        checked_items = []  # Start empty, no auto-selection
     else:
         meta = grammarMetaPairs.copy(deep=True)
-        # Mode difference, use pairs
-        checked_items = []  # Start empty, no auto-selection
-    pairs = type_switch_checked
-    tree_data = drawGrammarItemsTree(meta, pairs=pairs)
-    return tree_data, checked_items
+    tree_data = drawGrammarItemsTree(meta, pairs=type_switch_checked)
+    # Use pending items from paste restore if available, otherwise start empty
+    checked_items = pending_items if pending_items else []
+    return tree_data, checked_items, None  # Clear pending store after applying
 
 # Callback to parse URL parameters and set England mapping flag and AI participants toggle
 @callback(

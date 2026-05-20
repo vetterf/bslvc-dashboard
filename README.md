@@ -1,31 +1,28 @@
 # BSLVC Dashboard
 
-The BSLVC dashboard is an interactive visualization that allows researchers to explore the Bamberg Survey of Language Variation and Change (BSLVC; https://www.uni-bamberg.de/en/eng-ling/forschung/the-bslvc-project-dfg-funded/) data. As the BSLVC is not yet published, the repository does not contain the necessary sqlite database file. However, a password-protected live version of the dashboard is available (see Quick Start below).
+The BSLVC dashboard is an interactive visualization that allows researchers to explore the Bamberg Survey of Language Variation and Change (BSLVC; https://www.uni-bamberg.de/en/eng-ling/forschung/the-bslvc-project-dfg-funded/) data.
 
 ## Quick Start
 
-Visit the [live dashboard](https://bslvc.eng-ling.uni-bamberg.de). The getting started section contains instructions how you can work with the dashboard.
-As the dashboard is still in demo mode until the release of the BSLVC database, please contact Fabian Vetter if you want access to the demo version.
+Visit the [live dashboard](https://bslvc.uni-bamberg.de). The getting started section contains instructions how you can work with the dashboard.
 
-For details on all available functions, see the documentation.
+For details on all available functions, see the [documentation](https://vetterf.github.io/bslvc-dashboard/).
 
 ## Citation
 
-If you use the BSLVC Dashboard or data from the BSLVC project in your research, please cite it as follows:
+If you use the BSLVC Dashboard or data from the BSLVC project in your research, please cite as follows:
 
 Dashboard Citation:
 
-Vetter, Fabian. 2025. BSLVC Dashboard (Version 0.1.5). https://doi.org/10.17605/OSF.IO/4BUEF
+Vetter, Fabian. 2025. _BSLVC Dashboard_ (Version 0.1.8). https://doi.org/10.17605/OSF.IO/4BUEF
 
 Data Set Citation:
 
-The BSLVC data set is currently unpublished. We expect to release the full data set in 2027 at the latest. Until then, please cite as follows:
-
-Krug, Manfred, Fabian Vetter & Lukas Sönning. To appear. The Bamberg Survey of Language Variation and Change (Version 251118) [Data set]. University of Bamberg.
+Krug, Manfred & Fabian Vetter. 2026. _The Bamberg Survey of Language Variation and Change_. Zenodo. DOI: 10.5281/zenodo.20157295
 
 ## Installation
 
-The BSLVC Dashboard is written in Python and Dash and is designed to run as a docker container. Please consult the documentation of your systems docker/podman installation on how to create and run docker containers. 
+The BSLVC Dashboard is written in Python and Dash and is designed to run as a docker container. Please consult the documentation of your systems docker/podman installation on how to create and run docker containers.
 
 ---
 

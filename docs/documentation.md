@@ -171,10 +171,11 @@ The UMAP Settings allow the user to tweak the UMAP hyperparameters, as well as t
 
 ![UMAP settings](img/UI_umap_settings.png)
 
-- **Color**: Select coloring variable (Variety, Variety type, Gender). This setting does not trigger a rerender of the plot and can be changed after rendering the plot.
+- **Color**: Select coloring variable (Variety, Variety type, Gender). This setting does not trigger a re-render of the plot and can be changed after rendering the plot.
 - **Distance metric**: Choose metric (Cosine, Euclidean, Manhattan).
 - **Standardize participant ratings**: Checkbox to standardize ratings. Standardization is advised for use with Euclidean and Manhattan distances.
-- **Use density-preserving embedding (DensMAP)**: Checkbox for DensMAP (https://umap-learn.readthedocs.io/en/latest/densmap_demo.html). By default, UMAP does not preserve densities of clusters well. DensMAP tries to preserve the density of clusters when reducing dimensionality. Compatible with both 2D and 3D modes.
+- **Use density-preserving embedding (DensMAP)**: Checkbox for DensMAP (https://umap-learn.readthedocs.io/en/latest/densmap_demo.html). By default, UMAP does not preserve densities of clusters well. DensMAP tries to preserve the density of clusters when reducing dimensionality. Compatible with both 2D and 3D modes. Helpful for identifying outliers.
+- **DensMAP lambda (dens_lambda)**: Slider visible only when DensMAP is enabled. Controls the relative weight of the density-preserving loss term versus the standard UMAP embedding loss. Higher values enforce stronger density preservation at the potential cost of global structure quality. Range: 0.1–10.0, default: 2.0.
 - **3D UMAP (experimental)**: Renders the embedding in three dimensions. Lasso selection is not available in 3D mode.
 - **Show KDE density contours**: Checkbox to overlay 2D kernel density estimation (KDE) contours on the UMAP plot. When enabled, filled contour regions are drawn behind the scatter points for each variety, visualizing the density distribution of participants in the embedding space. Contour visibility is linked to the legend: hiding a variety via the legend also hides its contours. This option can be toggled at any time without re-rendering the plot. Not available in 3D mode.
 - **Number of neighbours**: Slider for UMAP hyperparameter. Check the UMAP docs for more info.

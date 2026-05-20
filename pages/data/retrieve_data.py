@@ -4,8 +4,6 @@ from dataclasses import dataclass
 import io
 import sqlite3
 import pandas as pd
-from pages.data.db_credentials import sqlserver_db_config
-import sqlalchemy as SA
 from dash import dcc
 
 import plotly.express as px
@@ -48,10 +46,7 @@ class Conf:
     columnsFileName: str = 'column_mapping_lexical.csv'
     metaFileName: str = 'meta_info.csv'
     debug: bool = True  # write print outputs in console for debugging
-    source: str = 'sqlite'  # where to get the data from; options: 'sql_server' for sql server, 'sqlite' for sqlite db file
-    SQLConfig = sqlserver_db_config[0]
-    SQLConfigStr = '; '.join(
-        [f"{key}={value}" for key, value in sqlserver_db_config[0].items()])
+    source: str = 'sqlite'  # where to get the data from; options: 'sqlite' for sqlite db file
 
 # to do: if local, use sqlite?
 #if Conf.source == 'sqlite':
@@ -237,12 +232,6 @@ def get_database_version():
         print(f"[WARNING] Could not retrieve database version: {e}")
     return "Unknown"
 
-
-if Conf.source == 'sql_server':
-    db_connection = SA.create_engine(f"mssql+pyodbc:///?odbc_connect={Conf.SQLConfigStr}")
-# sharing a sql server connection between threads/callbacks is no problem
-# for sqlite it is however, so if sqlite, then a connection if made for every function below. 
-# performance-wise this shouldn't be too much of a problem, especially as the app will run locally most of the time.
 
 # Helper function for inner join on two lists
 def inner_join_list(list1, list2):

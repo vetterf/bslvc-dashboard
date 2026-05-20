@@ -2,12 +2,13 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
-## [0.1.8] - 2026-05-11
+## [0.1.8] - 2026-05-20
 
 ### Added
 - **3D UMAP (experimental)**: New checkbox renders the UMAP embedding in three dimensions. Lasso selection is automatically hidden in 3D mode. DensMAP is automatically disabled in 3D mode.
 - **UMAP quality metrics**: After each UMAP render, trustworthiness and continuity are displayed below the plot as colour-coded badges with tooltips. Metrics are computed using k = n_neighbours.
 - **Variable ordering in group comparison**: Kruskal-Wallis ε² is now the default measure and implemented alongside RF Gini impurity
+- **Slider for dens_lamdba**: Slider to control how strongly the density should be preserved in the dimensionality reduction.
 
 ### Changed
 - **Variety classification from database**: All groupby operations in item plots and UMAP now use the `Variety_Type` column from the database instead of a hardcoded mapping, making the classification data-driven.
@@ -18,6 +19,8 @@ All notable changes to the BSLVC Dashboard will be documented in this file.
 
 ### Fixed
 - `KeyError: 'ids'` when clicking "Compare groups" after rendering a 3D UMAP.
+- Fixed an error when pasting settings.
+- UI fixes. 
 
 ## [0.1.7] - 2026-04-17
 
