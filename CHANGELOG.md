@@ -4,10 +4,17 @@ All notable changes to the BSLVC Dashboard will be documented in this file.
 
 ## [0.1.9] - 2026-05-28
 
+### Added
+- **UMAP coordinates export in Advanced Actions**: Added an "Export UMAP Coordinates" button in the Data Export section (Participant Similarity mode) to export the exact coordinates currently passed to Plotly.
+- **UMAP coordinate export log file**: UMAP coordinates are now exported as a ZIP that contains both the coordinate CSV and a log file with render settings and export metadata.
+
 ### Changed
 - **Group comparison (Kruskal-Wallis ε²) now follows the imputed-data switch**: The Kruskal-Wallis ranking now uses raw or imputed data based on the current UI switch state and drops missing responses item-wise before each test.
 - **Group comparison (Random Forest) remains imputed-only**: Random Forest training in group comparison continues to use imputed data because the classifier cannot handle missing values.
 - **Method-aware importance label in comparison plot**: The secondary importance trace in the group comparison plot now uses a method-specific legend label (e.g., "Kruskal-Wallis ε²" vs. "RF importance") instead of always showing "RF importance".
+- **UMAP coordinate export parsing**: Improved handling of Plotly typed-array payloads (especially for 3D UMAP) so exported CSV columns contain proper numeric `x`, `y`, and `z` values.
+- **Hidden-point export semantics**: UMAP coordinate export explicitly includes all points, including legend-hidden traces and zero-opacity points, with dedicated visibility columns in the CSV.
+
 
 ## [0.1.8] - 2026-05-20
 

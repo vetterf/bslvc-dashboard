@@ -13,7 +13,7 @@ The BSLVC Dashboard provides an interactive interface for exploring the Bamberg 
   - Item rating distributions and comparisons
   - Identify most discrimanitve features between groups
 - **Advanced Filtering**: Quick selection presets and custom filters
-- **Data Export**: Download filtered datasets and high-quality SVG plots
+- **Data Export**: Download filtered datasets, UMAP coordinate ZIP exports (CSV + log), and high-quality SVG plots
 
 ### Getting Started
 

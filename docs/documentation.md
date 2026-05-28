@@ -234,6 +234,10 @@ The data export section provides multiple options for exporting your selection:
     - Only item metadata: Transposed format (items as rows, participants as columns, with item metadata)
     - Both checked: Transposed format with participant metadata as header rows
 - **Export Distance Matrix** (visible only in Participant Similarity mode): Downloads a pairwise distance matrix using the same settings as the UMAP plot (distance metric, standardization, selected participants and items). Participant IDs are used as both row and column labels.
+- **Export UMAP Coordinates** (visible only in Participant Similarity mode): Downloads the exact coordinates currently passed to the Plotly UMAP figure as a ZIP archive containing:
+    - `umap_coordinates_<timestamp>.csv`: Point-level coordinates and metadata (`x`, `y`, and `z` for 3D mode), including hidden points
+    - `umap_coordinates_<timestamp>_log.txt`: Export metadata including timestamp, selections, and UMAP settings
+    - The CSV includes visibility flags so hidden traces and zero-opacity points can be identified (`hidden_by_legend`, `hidden_by_opacity`)
 - **Download Aggregated Item Data** (visible only in Item Ratings mode): Downloads aggregated statistics for the currently displayed item plot as a ZIP archive containing:
   - `aggregated_data.csv`: Mean ratings, confidence intervals, standard deviations, medians, missing value counts, and participant counts for each item-group combination
   - `participant_group_mapping.csv`: Mapping of participant IDs to their assigned groups
@@ -311,8 +315,9 @@ The dashboard provides both imputed and raw (unimputed) data. The "Use imputed d
 | **Item Ratings plots** | Respects user switch | Works with both raw and imputed data. Raw data is the default. |
 | **Data Export** | Respects user switch | Exports whichever version the switch is set to. |
 | **Distance Matrix Export** | Always **imputed** | Uses the same data as the UMAP plot. |
+| **UMAP Coordinates Export** | Always **imputed** | Exports the exact coordinate payload from the currently rendered UMAP figure. |
 
-When the user's switch is set to "off" (raw data) but a function requires imputed data (for example UMAP, Random Forest group comparison, or distance-matrix export), the dashboard displays a note informing the user that imputed data is being used.
+When the user's switch is set to "off" (raw data) but a function requires imputed data (for example UMAP, UMAP coordinates export, Random Forest group comparison, or distance-matrix export), the dashboard displays a note informing the user that imputed data is being used.
 
 ## Data Imputation
 

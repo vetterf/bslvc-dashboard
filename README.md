@@ -8,13 +8,20 @@ Visit the [live dashboard](https://bslvc.uni-bamberg.de). The getting started se
 
 For details on all available functions, see the [documentation](https://vetterf.github.io/bslvc-dashboard/).
 
+## Export Notes
+
+- In **Participant Similarity** mode, UMAP-related exports are available in **Advanced Actions → Data Export**.
+- The export is provided as a ZIP archive containing:
+  - a CSV with coordinate data and point-level visibility flags (including hidden points)
+  - a log file with export timestamp, UMAP settings, and selection metadata
+
 ## Citation
 
 If you use the BSLVC Dashboard or data from the BSLVC project in your research, please cite as follows:
 
 Dashboard Citation:
 
-Vetter, Fabian. 2025. _BSLVC Dashboard_ (Version 0.1.8). https://doi.org/10.17605/OSF.IO/4BUEF
+Vetter, Fabian. 2026. _BSLVC Dashboard_ (Version 0.1.9). https://doi.org/10.17605/OSF.IO/4BUEF
 
 Data Set Citation:
 

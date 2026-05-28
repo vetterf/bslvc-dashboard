@@ -1605,6 +1605,17 @@ SettingsGrammarAnalysis = dmc.Card([
                                             fullWidth=True
                                         ),
                                     ], grow=True),
+                                    dmc.Group([
+                                        dmc.Button(
+                                            "Export UMAP Coordinates",
+                                            id="download-umap-coordinates-button",
+                                            size="xs",
+                                            variant="light",
+                                            leftSection=DashIconify(icon="tabler:download", width=14),
+                                            disabled=True,
+                                            fullWidth=True,
+                                        ),
+                                    ], grow=True, mt="xs"),
                                 ],
                                 style={"display": "block"}  # Visible by default (UMAP is default)
                             ),
@@ -1686,6 +1697,7 @@ SettingsGrammarAnalysis = dmc.Card([
     dcc.Download(id="download-distance-matrix"),
     dcc.Download(id="download-aggregated-item-data"),
     dcc.Download(id="download-item-plot-data"),
+    dcc.Download(id="download-umap-coordinates"),
     
     # Clipboard store for settings (client-side only)
     dcc.Store(id='clipboard-settings-store', storage_type='memory'),
@@ -4807,6 +4819,235 @@ def save_item_plot(fig):
 def save_umap_plot(fig):
     """Save UMAP plot to session storage"""
     return fig
+
+@callback(
+    Output("download-umap-coordinates-button", "disabled"),
+    Input("UMAPfig", "figure"),
+    prevent_initial_call=False
+)
+def toggle_umap_coordinates_download_button(fig):
+    """Enable coordinate download when the UMAP figure contains plotted points."""
+    if not fig or 'data' not in fig:
+        return True
+
+    for trace in fig.get('data', []):
+        trace_type = trace.get('type')
+        has_xy = bool(trace.get('x')) and bool(trace.get('y'))
+        if trace_type in ('scatter', 'scattergl', 'scatter3d') and has_xy:
+            return False
+
+    return True
+
+@callback(
+    Output("download-umap-coordinates", "data"),
+    Input("download-umap-coordinates-button", "n_clicks"),
+    [State("UMAPfig", "figure"),
+     State("UMAPparticipants", "data"),
+     State("UMAPitems", "data"),
+     State("umap-render-settings", "data"),
+     State("UMAP_neighbours", "value"),
+     State("UMAP_mindist", "value"),
+     State("umap-distance-metric-dropdown", "value"),
+     State("umap-standardize-checkbox", "checked"),
+     State("umap-densemap-checkbox", "checked"),
+     State("umap-dens-lambda-slider", "value"),
+     State("umap-3d-checkbox", "checked"),
+     State("england-mapping-param", "data"),
+     State("include-ai-param", "data")],
+    prevent_initial_call=True
+)
+def download_umap_coordinates(
+    n_clicks,
+    figure,
+    umap_participants,
+    umap_items,
+    umap_render_settings,
+    n_neighbours,
+    min_dist,
+    distance_metric,
+    standardize,
+    densemap,
+    dens_lambda,
+    umap_3d,
+    regional_mapping,
+    include_ai,
+):
+    """Download the exact coordinate payload currently passed to the UMAP Plotly figure.
+
+    Includes all points, even when traces are hidden via legend or points are hidden by opacity.
+    """
+    if not n_clicks or not figure or 'data' not in figure:
+        return no_update
+
+    def _to_list(values):
+        def _numeric_key_dict_to_list(dct):
+            numeric_items = []
+            for key, val in dct.items():
+                try:
+                    numeric_items.append((int(key), val))
+                except (TypeError, ValueError):
+                    continue
+            if not numeric_items:
+                return None
+            numeric_items.sort(key=lambda x: x[0])
+            return [val for _, val in numeric_items]
+
+        if values is None:
+            return []
+        if isinstance(values, np.ndarray):
+            return values.tolist()
+        if isinstance(values, tuple):
+            return list(values)
+        if isinstance(values, list):
+            return values
+        if isinstance(values, dict):
+            # Plotly may serialize typed arrays as dicts with _inputArray and/or
+            # numeric string keys when figures are passed through Dash JSON.
+            if '_inputArray' in values:
+                return _to_list(values.get('_inputArray'))
+            numeric_values = _numeric_key_dict_to_list(values)
+            if numeric_values is not None:
+                return numeric_values
+            return []
+        return [values]
+
+    customdata_labels = {
+        9: [
+            'InformantID', 'MainVariety', 'MainVariety_Original', 'Age', 'Gender',
+            'RatioMainVariety', 'YearsLivedInMainVariety', 'CountryCollection', 'Year'
+        ],
+        10: [
+            'InformantID', 'MainVariety', 'MainVariety_Original', 'Age', 'Gender',
+            'RatioMainVariety', 'YearsLivedInMainVariety', 'CountryCollection', 'Year', 'LeidenCluster'
+        ],
+    }
+
+    rows = []
+    for trace in figure.get('data', []):
+        trace_type = trace.get('type')
+        if trace_type not in ('scatter', 'scattergl', 'scatter3d'):
+            continue
+
+        x_vals = _to_list(trace.get('x'))
+        y_vals = _to_list(trace.get('y'))
+        z_vals = _to_list(trace.get('z')) if trace_type == 'scatter3d' else []
+        ids = _to_list(trace.get('ids'))
+        texts = _to_list(trace.get('text'))
+        customdata = _to_list(trace.get('customdata'))
+        marker_opacity = trace.get('marker', {}).get('opacity', None)
+        opacity_vals = _to_list(marker_opacity)
+
+        n_points = max(len(x_vals), len(y_vals), len(z_vals), len(ids), len(texts), len(customdata), len(opacity_vals))
+        if n_points == 0:
+            continue
+
+        for idx in range(n_points):
+            row = {
+                'trace_name': trace.get('name'),
+                'trace_type': trace_type,
+                'trace_visible': trace.get('visible', True),
+                'hidden_by_legend': trace.get('visible', True) == 'legendonly',
+                'point_index': idx,
+                'x': x_vals[idx] if idx < len(x_vals) else None,
+                'y': y_vals[idx] if idx < len(y_vals) else None,
+                'z': z_vals[idx] if idx < len(z_vals) else None,
+                'id': ids[idx] if idx < len(ids) else None,
+                'text': texts[idx] if idx < len(texts) else None,
+            }
+
+            # Preserve point-level visibility context without filtering anything out.
+            if len(opacity_vals) == 1 and n_points > 1:
+                point_opacity = opacity_vals[0]
+            elif idx < len(opacity_vals):
+                point_opacity = opacity_vals[idx]
+            else:
+                point_opacity = None
+            row['marker_opacity'] = point_opacity
+            row['hidden_by_opacity'] = bool(point_opacity == 0)
+
+            if idx < len(customdata):
+                point_customdata = customdata[idx]
+                if isinstance(point_customdata, (list, tuple, np.ndarray)):
+                    custom_list = list(point_customdata)
+                    label_list = customdata_labels.get(len(custom_list), [])
+                    for c_idx, c_val in enumerate(custom_list):
+                        key = label_list[c_idx] if c_idx < len(label_list) else f'customdata_{c_idx}'
+                        row[key] = c_val
+                else:
+                    row['customdata_0'] = point_customdata
+
+            rows.append(row)
+
+    if not rows:
+        return no_update
+
+    export_df = pd.DataFrame(rows)
+
+    import pages.data.grammarFunctions as gf
+    from datetime import datetime
+    from version import __version__
+
+    total_points = len(export_df)
+    hidden_by_legend_count = int(export_df['hidden_by_legend'].sum()) if 'hidden_by_legend' in export_df.columns else 0
+    hidden_by_opacity_count = int(export_df['hidden_by_opacity'].sum()) if 'hidden_by_opacity' in export_df.columns else 0
+    trace_count = int(export_df['trace_name'].nunique()) if 'trace_name' in export_df.columns else 0
+
+    pairs = False
+    if isinstance(umap_render_settings, dict):
+        pairs = bool(umap_render_settings.get('pairs', False))
+
+    participants = sorted(umap_participants) if isinstance(umap_participants, list) else []
+    items = sorted(umap_items) if isinstance(umap_items, list) else []
+
+    log_content = f"""BSLVC UMAP Coordinates Export Log
+=======================================
+
+Export Information:
+-------------------
+Export Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Application Version: {__version__}
+Database Version: {retrieve_data.get_database_version()}
+
+UMAP Settings:
+--------------
+Number of Neighbours: {n_neighbours}
+Minimum Distance: {min_dist}
+Distance Metric: {distance_metric}
+Standardization: {"Enabled" if standardize else "Disabled"}
+DensMAP: {"Enabled" if densemap else "Disabled"}
+DensMAP Lambda: {dens_lambda if densemap else "n/a"}
+3D UMAP: {"Enabled" if umap_3d else "Disabled"}
+Item Pairs Mode: {"Enabled (spoken-written difference)" if pairs else "Disabled (raw ratings)"}
+Regional Mapping: {"Enabled (England split into North/South)" if regional_mapping else "Disabled"}
+Include AI Participants: {"Enabled" if include_ai else "Disabled"}
+
+Data Selection:
+---------------
+Number of Participants Used for UMAP: {len(participants)}
+Number of Items Used for UMAP: {len(items)}
+
+Participant IDs ({len(participants)} total):
+{", ".join(participants)}
+
+Item Codes ({len(items)} total):
+{", ".join(items)}
+
+Export Summary:
+---------------
+Traces exported: {trace_count}
+Total points exported: {total_points}
+Points hidden by legend: {hidden_by_legend_count}
+Points hidden by opacity: {hidden_by_opacity_count}
+
+Notes:
+------
+This export contains the exact point payload currently present in the Plotly UMAP figure,
+including points from hidden traces and points with zero opacity.
+"""
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    base_filename = f"umap_coordinates_{timestamp}"
+    return gf.create_zip_download(base_filename, export_df.to_csv(index=False), log_content)
 
 # Download item plot data as ZIP with log file
 @callback(
