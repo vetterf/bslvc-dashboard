@@ -2,6 +2,13 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
+## [0.1.9] - 2026-05-28
+
+### Changed
+- **Group comparison (Kruskal-Wallis ε²) now follows the imputed-data switch**: The Kruskal-Wallis ranking now uses raw or imputed data based on the current UI switch state and drops missing responses item-wise before each test.
+- **Group comparison (Random Forest) remains imputed-only**: Random Forest training in group comparison continues to use imputed data because the classifier cannot handle missing values.
+- **Method-aware importance label in comparison plot**: The secondary importance trace in the group comparison plot now uses a method-specific legend label (e.g., "Kruskal-Wallis ε²" vs. "RF importance") instead of always showing "RF importance".
+
 ## [0.1.8] - 2026-05-20
 
 ### Added

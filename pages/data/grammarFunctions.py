@@ -841,7 +841,7 @@ def computeKruskalWallisOrdering(items, data, datacols, groupcol, pairs=False):
     return feature_importances
 
 
-def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_variety=False):
+def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_variety=False, importance_label="RF importance"):
     if not pairs:
         Rating_map = {'0':'No-one','1':'Few','2':'Some','3':'Many','4':'Most','5':'Everyone'}
     else:
@@ -1096,7 +1096,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                         y=tempDF['importance'],
                         x=tempDF['item'],
                         xaxis='x',
-                        name="RF importance",
+                        name=importance_label,
                         visible='legendonly',
                     ), secondary_y=True
                 )
@@ -1121,7 +1121,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                     go.Scatter(
                         y=importance_y_vals,
                         x=importance_x_vals,
-                        name="RF importance",
+                        name=importance_label,
                         mode="markers+lines",
                         line=dict(color="black", dash="dash"),
                         marker=dict(color="black", symbol="diamond"),
@@ -1241,7 +1241,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                         y=tempDF['importance'],
                         x=tempDF['item'],
                         xaxis='x',
-                        name="RF importance",
+                        name=importance_label,
                         visible='legendonly',
                         marker=dict(color="black"),
                     ), secondary_y=True
@@ -1267,7 +1267,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                     go.Scatter(
                         y=importance_y_vals,
                         x=importance_x_vals,
-                        name="RF importance",
+                        name=importance_label,
                         mode="markers+lines",
                         line=dict(color="black", dash="dash"),
                         marker=dict(color="black", symbol="diamond"),
@@ -1470,7 +1470,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                     go.Scatter(
                         y=tempDF['importance'],
                         x=tempDF['item'],
-                        name=f"RF importance ({mode})",
+                        name=f"{importance_label} ({mode})",
                         visible='legendonly',
                         marker=dict(color="black"),
                     ),row=row,col=1, secondary_y=True
@@ -1493,7 +1493,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
                     go.Scatter(
                         y=importance_y_vals,
                         x=importance_x_vals,
-                        name=f"RF importance ({mode})",
+                        name=f"{importance_label} ({mode})",
                         mode="markers+lines",
                         line=dict(color="black", dash="dash"),
                         marker=dict(color="black", symbol="diamond"),

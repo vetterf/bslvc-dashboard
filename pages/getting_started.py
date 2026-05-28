@@ -325,7 +325,7 @@ If this switch is activated, the dashboard will calculate the difference between
 **Use imputed data**
 
 As the dataset contains missing values, we applied a random forest-based imputation method to estimate missing ratings. This allows us to include all features in the analysis without losing data due to incomplete responses.
-The dimensionality reduction by default uses the imputed data, even if the switch is disabled, because the algorithm cannot handle missing data. For all other plots, this switch controls whether the imputed data are used or not.
+The dimensionality reduction always uses imputed data, because UMAP cannot handle missing data. In group comparison, Random Forest also always uses imputed data, while Kruskal-Wallis follows this switch and drops missing responses item-wise before each test. For item plots and exports, this switch controls whether imputed or raw data are used.
 We recommend you leave this switch disabled unless you have a specific reason to include imputed data in your analysis.
  
             """, className="markdown-content"),

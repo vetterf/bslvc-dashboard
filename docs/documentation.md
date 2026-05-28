@@ -100,11 +100,11 @@ The "Deselect Lasso Selection" and "Select Only Lasso Selection" buttons modify 
 - **Clear Groups**: Remove all defined groups.
 - **Select Only Lasso Selection**: Select only participants currently selected via lasso tool.
 - **Deselect Lasso Selection**: Deselect participants selected via lasso tool.
-- **Compare Selected Groups**: Run a statistical group comparison. The ordering method can be switched between **Kruskal-Wallis ε²** (default) and **Random Forest** using the segmented control above this button. The group comparison view provides a toggle between **Plot** and **Table** view. The plot view shows a horizontal bar chart of feature importances with per-group mean ratings and confidence intervals. The table view contains three tabs:
+- **Compare Selected Groups**: Run a statistical group comparison. The ordering method can be switched between **Kruskal-Wallis ε²** (default) and **Random Forest** using the segmented control above this button. The group comparison view provides a toggle between **Plot** and **Table** view. The plot view shows per-group mean ratings with confidence intervals and an overlaid importance trace whose legend label matches the selected ordering method. The table view contains three tabs:
     - **Performance**: Describes the method used. For Kruskal-Wallis ε² this tab explains the effect size measure; for Random Forest it shows OOB accuracy and error rate, number of trees, classes, features, and samples.
     - **Confusion Matrix (OOB Predictions)**: Available for Random Forest only. An interactive table with colour-coded cells (green for diagonal/correct, red-scaled for off-diagonal/misclassifications). Downloadable as CSV.
     - **Top Items**: An interactive table listing all ranked features with their item code, feature description, eWAVE label, feature group, sentence, effect size or Gini importance, and per-group mean ratings. Downloadable as CSV.
-    - A **data source badge** indicates whether imputed or raw data were used.
+    - The **Performance** tab states which data source was used for the selected ordering method.
 
 #### Participant Selection
 Participants can be selected via the participant tree, either by clicking the checkboxes in the tree, by using presets or by using the buttons. Additionally, users can use the "Advanced Filters" section to select participants based on their sociodemographic details. 
@@ -158,7 +158,7 @@ All grammar items can be selected in the grammar items tree. They are first grou
 - **Advanced Options**:
 
     - **Use item difference (spoken-written)**: Toggle to use difference between item pairs. Most items feature in the spoken and the written section of the BSLVC. These features are referred to as *twin items*. If this switch is set to true, the interface calculates the difference of the ratings for twin items (spoken - written) for each participant and uses this value for all subsequent plots. Naturally, items that feature only in the written section are excluded.
-    - **Use imputed data**: Toggle between imputed and raw data. The dimensionality reduction always uses the imputed data, as UMAP cannot handle missing values. See [Data Imputation](#data-imputation) for details on how the imputation is performed.
+    - **Use imputed data**: Toggle between imputed and raw data. UMAP always uses imputed data because it cannot handle missing values. In group comparison, **Random Forest** always uses imputed data, while **Kruskal-Wallis ε²** follows the switch and drops missing responses item-wise. See [Data Imputation](#data-imputation) for details on how the imputation is performed.
     - **Toggle Written-Only**: Toggle items which feature only in the written section.
     - **Currency/Unit**: Toggle currency/unit items.
 
@@ -266,7 +266,8 @@ Custom group comparison allows you to compare groups of participants beyond the 
 **Important notes:**
 
 - Custom groups override the default variety-based grouping
-- The Random Forest comparison uses the same settings (participants, items, imputation) as the UMAP plot
+- The comparison uses the same participants and selected items as the UMAP plot.
+- For imputation in group comparison: **Random Forest** always uses imputed data, while **Kruskal-Wallis ε²** follows the current switch setting.
 - Use "Clear Groups" to reset and return to variety-based grouping
 - The "Deselect Lasso Selection" and "Select Only Lasso Selection" buttons can be used to refine your participant selection by excluding outliers visible in the UMAP plot
 
@@ -304,14 +305,14 @@ The dashboard provides both imputed and raw (unimputed) data. The "Use imputed d
 | Component | Data used | Reason |
 |---|---|---|
 | **UMAP (Participant Similarity)** | Always **imputed** | UMAP cannot handle missing values. The switch is automatically forced on and disabled when in this mode. |
-| **Group Comparison (Kruskal-Wallis ε²)** | Always **imputed** | The Kruskal-Wallis test requires complete cases per item; imputed data ensures no rows are dropped. |
+| **Group Comparison (Kruskal-Wallis ε²)** | Respects user switch | Uses whichever state the switch is currently in (raw or imputed). Missing responses are dropped item-wise before each test. |
 | **Group Comparison (Random Forest model)** | Always **imputed** | scikit-learn's `RandomForestClassifier` cannot handle NaN values. If input contains missing values, rows are dropped before training. |
 | **Group Comparison (table means)** | Respects user switch | The per-group mean ratings and counts shown in the top features table use whichever data source the switch is set to. |
 | **Item Ratings plots** | Respects user switch | Works with both raw and imputed data. Raw data is the default. |
 | **Data Export** | Respects user switch | Exports whichever version the switch is set to. |
 | **Distance Matrix Export** | Always **imputed** | Uses the same data as the UMAP plot. |
 
-When the user's switch is set to "off" (raw data) but a function requires imputed data, the dashboard displays a note informing the user that imputed data is being used.
+When the user's switch is set to "off" (raw data) but a function requires imputed data (for example UMAP, Random Forest group comparison, or distance-matrix export), the dashboard displays a note informing the user that imputed data is being used.
 
 ## Data Imputation
 

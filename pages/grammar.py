@@ -183,7 +183,7 @@ def get_grammar_items_cols_cached():
 def get_grammar_items_cols_pairs_cached():
     return retrieve_data.getGrammarItemsCols("item_pairs")
 
-def get_cached_rf_plot(data, importance_ratings, value_range, pairs, participants=None, split_by_variety=False):
+def get_cached_rf_plot(data, importance_ratings, value_range, pairs, participants=None, split_by_variety=False, importance_label="RF importance"):
     """Get RF plot from cache or compute if not exists"""
     # Create cache key from parameters
     key_data = {
@@ -193,6 +193,7 @@ def get_cached_rf_plot(data, importance_ratings, value_range, pairs, participant
         'pairs': pairs,
         'participants': sorted(participants) if participants is not None else None,
         'split_by_variety': split_by_variety,
+        'importance_label': importance_label,
         'data_hash': hashlib.md5(str(data.values.tolist() if hasattr(data, 'values') else str(data)).encode()).hexdigest()[:8]
     }
     cache_key = f"rf_{hashlib.md5(str(key_data).encode()).hexdigest()}"
@@ -207,7 +208,8 @@ def get_cached_rf_plot(data, importance_ratings, value_range, pairs, participant
         importanceRatings=importance_ratings,
         value_range=value_range,
         pairs=pairs,
-        split_by_variety=split_by_variety
+        split_by_variety=split_by_variety,
+        importance_label=importance_label,
     )
     
     # Cache the result for 24 hours
@@ -4078,7 +4080,7 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
     
     # Extract settings from the stored UMAP render settings
     pairs = render_settings.get('pairs', False)
-    use_imputed = render_settings.get('use_imputed', True)
+    rf_use_imputed = render_settings.get('use_imputed', True)
     
     button_clicked = ctx.triggered_id
     if button_clicked == 'render-rf-plot' and BTN is not None:
@@ -4170,11 +4172,20 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
             position="top-right"
         )
         
-        # Use lazy data loading for better performance
-        data = retrieve_data.getGrammarData(imputed=use_imputed,participants=df['ids'],columns=items, pairs=pairs, include_ai=include_ai)
-
         # --- Dispatch to ordering method ---
         use_kw = (ordering_method != 'rf')  # default to KW if unset
+        # KW should follow the user switch, while RF keeps using imputed data.
+        data_use_imputed = user_imputed_switch if use_kw else rf_use_imputed
+
+        # Use lazy data loading for better performance
+        data = retrieve_data.getGrammarData(
+            imputed=data_use_imputed,
+            participants=df['ids'],
+            columns=items,
+            pairs=pairs,
+            include_ai=include_ai
+        )
+
         if use_kw:
             importanceRatings = computeKruskalWallisOrdering(items, data, datacols=items, groupcol=groupcol, pairs=pairs)
             rf = None
@@ -4222,10 +4233,11 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
 
         # Build OOB error display
         if use_kw:
+            kw_data_type = "imputed" if data_use_imputed else "raw (non-imputed)"
             kw_note = dmc.Alert(
                 "Variables are ordered by Kruskal-Wallis ε² effect size (rank-based, no metric assumption). "
                 "ε² = H / (n − 1) where H is the Kruskal-Wallis statistic and n is the total sample size. "
-                "Values range from 0 (no between-group variance) to 1 (all variance explained by group). ",
+                f"Values range from 0 (no between-group variance) to 1 (all variance explained by group). Data source: {kw_data_type}.",
                 title="Kruskal-Wallis ε² ordering",
                 color="blue",
                 icon=DashIconify(icon="tabler:info-circle", width=18),
@@ -4512,7 +4524,15 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
         ])
 
         # to do: merge meta info here for hoverinfo in plot
-        RFPlot = get_cached_rf_plot(plotDF, importanceRatings, value_range, pairs=pairs, split_by_variety=split_by_variety)
+        importance_trace_label = "Kruskal-Wallis ε²" if use_kw else "RF importance"
+        RFPlot = get_cached_rf_plot(
+            plotDF,
+            importanceRatings,
+            value_range,
+            pairs=pairs,
+            split_by_variety=split_by_variety,
+            importance_label=importance_trace_label,
+        )
         return RFPlot, False, False, False, notification, 'rf-plot', "plot-view", oob_children, cm_children, top_features_children, f1_children, "plot-view"
     return no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update
 
