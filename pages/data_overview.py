@@ -4,6 +4,7 @@ import pages.data.retrieve_data as retrieve_data
 import plotly.express as px
 import pandas as pd
 import numpy as np
+import sqlite3
 from dash_iconify import DashIconify
 import dash_ag_grid as dag
 
@@ -23,6 +24,62 @@ except:
     lexicalData = pd.DataFrame()
     LexicalItemsCols = []
     HAS_LEXICAL = False
+
+
+def _clean_variant_label(value):
+    if pd.isna(value):
+        return ""
+    return str(value).strip()
+
+
+def get_lexical_variant_map():
+    """Map lexical data columns to British/American labels from LexicalColumns."""
+    variant_map = {
+        item: {
+            "british": item,
+            "american": item,
+            "axis_label": item,
+        }
+        for item in LexicalItemsCols
+    }
+
+    if not HAS_LEXICAL or not LexicalItemsCols:
+        return variant_map
+
+    try:
+        db_connection = sqlite3.connect(retrieve_data.Conf.sqliteFile)
+        lexical_columns = pd.read_sql(
+            'SELECT "British", "American" FROM LexicalColumns',
+            con=db_connection,
+        )
+        db_connection.close()
+
+        for idx, item in enumerate(LexicalItemsCols):
+            if idx >= len(lexical_columns):
+                break
+
+            british = _clean_variant_label(lexical_columns.iloc[idx]["British"])
+            american = _clean_variant_label(lexical_columns.iloc[idx]["American"])
+
+            if british and american:
+                axis_label = f"{american} - {british}"
+            elif american:
+                axis_label = american
+            elif british:
+                axis_label = british
+            else:
+                axis_label = item
+
+            variant_map[item] = {
+                "british": british or item,
+                "american": american or item,
+                "axis_label": axis_label,
+            }
+    except Exception:
+        # Keep fallback labels if metadata table is unavailable.
+        pass
+
+    return variant_map
 
 def generate_dynamic_feature_groups():
     """Generate feature groups dynamically from grammar metadata, similar to grammar.py"""
@@ -796,6 +853,8 @@ def create_lexical_items_heatmap():
             color="blue",
             icon=DashIconify(icon="tabler:info-circle")
         )
+
+    lexical_variant_map = get_lexical_variant_map()
     
     # Calculate mean per item and variety
     heatmap_data = {}
@@ -852,17 +911,42 @@ def create_lexical_items_heatmap():
     
     # Reorder columns by variety grand mean
     df_heatmap = df_heatmap[[v for v in variety_order if v in df_heatmap.columns]]
+
+    # Build display labels and hover metadata from lexical pair labels.
+    display_item_labels = [
+        lexical_variant_map.get(item, {}).get('axis_label', item)
+        for item in df_heatmap.index
+    ]
+
+    customdata = np.empty((len(df_heatmap.index), len(df_heatmap.columns), 2), dtype=object)
+    for row_idx, item in enumerate(df_heatmap.index):
+        american = lexical_variant_map.get(item, {}).get('american', item)
+        british = lexical_variant_map.get(item, {}).get('british', item)
+        customdata[row_idx, :, 0] = american
+        customdata[row_idx, :, 1] = british
+
+    df_heatmap_display = df_heatmap.copy()
+    df_heatmap_display.index = display_item_labels
     
     fig = px.imshow(
-        df_heatmap,
+        df_heatmap_display,
         labels=dict(x="Variety", y="Lexical Item", color="Mean Score"),
-        x=df_heatmap.columns,
-        y=df_heatmap.index,
+        x=df_heatmap_display.columns,
+        y=df_heatmap_display.index,
         color_continuous_scale='ylgnbu',  # Teal-Green scale (green to blue gradient)
         color_continuous_midpoint=0,
         aspect="auto",
         template='simple_white',
-        height=max(500, len(df_heatmap) * 20)
+        height=max(500, len(df_heatmap_display) * 20)
+    )
+
+    fig.update_traces(
+        customdata=customdata,
+        hovertemplate='<b>%{y}</b><br>' +
+                      'Variety: %{x}<br>' +
+                      'Mean score: %{z:.2f}<br>' +
+                      'American variant: %{customdata[0]}<br>' +
+                      'British variant: %{customdata[1]}<extra></extra>'
     )
     
     fig.update_xaxes(side="top")

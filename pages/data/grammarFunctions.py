@@ -42,7 +42,12 @@ def get_variety_classification():
     Returns a dictionary with variety mappings and ordered lists.
     """
     return {
-        "ENL": ["England", "Scotland", "US"],
+        "ENL": [
+            "England", "Scotland", "US", "Ireland",
+            "England_North", "England_South", "England_UNCLEAR",
+            "England (North)", "England (South)", "England (UNCLEAR)",
+            "Ireland (GB-NIR)", "Ireland (IRL)",
+        ],
         "ESL": ["Gibraltar", "India", "Malta", "Puerto Rico"], 
         "EFL": ["Germany", "Slovenia", "Sweden"]
     }
@@ -918,7 +923,7 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
     # Get color mapping for varieties if groups are main varieties
     variety_color_map = None
     known_varieties = get_ordered_varieties()
-    if df['group'].str.contains('|'.join(known_varieties)).any():
+    if df['group'].isin(known_varieties).any():
         variety_color_map = retrieve_data.get_color_for_variety(type="grammar")
     
     # Check for split by variety mode

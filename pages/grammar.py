@@ -2407,10 +2407,21 @@ def batch_select_participants(*args):
     data = Informants.copy()
     
     # Variety type mapping
-    def get_variety_type(variety):
+    def get_variety_type(variety, variety_type=None):
+        if isinstance(variety_type, str):
+            normalized_type = variety_type.strip()
+            if normalized_type.startswith("AI-"):
+                normalized_type = normalized_type[3:]
+            if normalized_type in ["ENL", "ESL", "EFL"]:
+                return normalized_type
+
         if variety and variety.startswith("AI-GPT-"):
-            return get_variety_type(variety[7:])
-        if variety in ["US", "England", "Scotland"]:
+            return get_variety_type(variety[7:], variety_type)
+        if variety in ["US", "England", "Scotland", "Ireland"]:
+            return "ENL"
+        if variety and (variety.startswith("England_") or variety.startswith("England (")):
+            return "ENL"
+        if variety and variety.startswith("Ireland ("):
             return "ENL"
         elif variety in ["Gibraltar", "Malta", "India", "Puerto Rico"]:
             return "ESL"
@@ -2418,12 +2429,18 @@ def batch_select_participants(*args):
             return "EFL"
         return "Other"
     
+    if button_id in ['batch-select-enl', 'batch-select-esl', 'batch-select-efl']:
+        resolved_variety_type = data.apply(
+            lambda row: get_variety_type(row.get('MainVariety'), row.get('Variety_Type')),
+            axis=1
+        )
+
     if button_id == 'batch-select-enl':
-        selected = data[data['MainVariety'].apply(get_variety_type) == "ENL"]['InformantID'].tolist()
+        selected = data[resolved_variety_type == "ENL"]['InformantID'].tolist()
     elif button_id == 'batch-select-esl':
-        selected = data[data['MainVariety'].apply(get_variety_type) == "ESL"]['InformantID'].tolist()
+        selected = data[resolved_variety_type == "ESL"]['InformantID'].tolist()
     elif button_id == 'batch-select-efl':
-        selected = data[data['MainVariety'].apply(get_variety_type) == "EFL"]['InformantID'].tolist()
+        selected = data[resolved_variety_type == "EFL"]['InformantID'].tolist()
     elif button_id == 'batch-select-age-18-25':
         selected = data[(data['Age'] >= 18) & (data['Age'] <= 25)]['InformantID'].tolist()
     elif button_id == 'batch-select-age-26-35':
@@ -4135,7 +4152,7 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
                     autoClose=5000,
                     position="top-right"
             )
-            return no_update, False, False, False, notification, no_update, no_update, no_update, no_update, no_update, no_update
+            return no_update, False, False, False, notification, no_update, no_update, no_update, no_update, no_update, no_update, no_update
         df = pd.DataFrame(groups['dataframe'])
         if("id" in df.columns):
             # rename column id to ids
@@ -4159,7 +4176,7 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
                 autoClose=5000,
                 position="top-right"
             )
-            return no_update, False, False, False, notification, no_update, no_update, no_update, no_update, no_update, no_update
+            return no_update, False, False, False, notification, no_update, no_update, no_update, no_update, no_update, no_update, no_update
 
         #data = retrieve_data
         # retrieve grammar data, add items from session cache
@@ -5560,11 +5577,27 @@ clientside_callback(
         infoMap[row.InformantID] = row;
     });
 
-    function getVarietyType(mainVariety) {
-        if (mainVariety && mainVariety.startsWith("AI-GPT-")) {
-            return getVarietyType(mainVariety.substring(7));
+    function getVarietyType(info) {
+        if (info && typeof info.Variety_Type === "string") {
+            var rawType = info.Variety_Type.trim();
+            if (rawType.startsWith("AI-")) {
+                rawType = rawType.substring(3);
+            }
+            if (["ENL", "ESL", "EFL"].includes(rawType)) {
+                return rawType;
+            }
         }
-        if (["US","England","Scotland"].includes(mainVariety)) return "ENL";
+
+        var mainVariety = info ? info.MainVariety : null;
+        if (mainVariety && mainVariety.startsWith("AI-GPT-")) {
+            return getVarietyType({
+                MainVariety: mainVariety.substring(7),
+                Variety_Type: info ? info.Variety_Type : null,
+            });
+        }
+        if (["US","England","Scotland","Ireland"].includes(mainVariety)) return "ENL";
+        if (mainVariety && (mainVariety.startsWith("England_") || mainVariety.startsWith("England ("))) return "ENL";
+        if (mainVariety && mainVariety.startsWith("Ireland (")) return "ENL";
         if (["Gibraltar","Malta","India","Puerto Rico"].includes(mainVariety)) return "ESL";
         if (["Slovenia","Germany","Sweden","Spain (Balearic Islands)"].includes(mainVariety)) return "EFL";
         return "Other";
@@ -5572,8 +5605,18 @@ clientside_callback(
 
     var varietyColorMap = {
         "England": "#1f77b4",
+        "England_North": "#4a90c4",
+        "England_South": "#0d5a8f",
+        "England_UNCLEAR": "#7bb3d9",
+        "England (North)": "#4a90c4",
+        "England (South)": "#0d5a8f",
+        "England (UNCLEAR)": "#7bb3d9",
+        "UNCLEAR": "#7bb3d9",
         "Scotland": "#7B3394", 
         "US": "#B22234",
+        "Ireland": "#169B62",
+        "Ireland (GB-NIR)": "#169B62",
+        "Ireland (IRL)": "#169B62",
         "Gibraltar": "#d62728",
         "Malta": "#9467bd",
         "India": "#FF9933",
@@ -5581,17 +5624,28 @@ clientside_callback(
         "Slovenia": "#7f7f7f",
         "Germany": "#FFCE00",
         "Sweden": "#006AA7",
+        "Spain (Balearic Islands)": "#393b79",
         "Other": "#c49c94",
         "AI-GPT-England": "#8fbbd9",
+        "AI-GPT-England_North": "#a5c8e2",
+        "AI-GPT-England_South": "#86adc7",
+        "AI-GPT-England_UNCLEAR": "#b8d5e8",
+        "AI-GPT-England (North)": "#a5c8e2",
+        "AI-GPT-England (South)": "#86adc7",
+        "AI-GPT-England (UNCLEAR)": "#b8d5e8",
         "AI-GPT-Scotland": "#af84be",
         "AI-GPT-US": "#d07a85",
+        "AI-GPT-Ireland": "#8acdb1",
+        "AI-GPT-Ireland (GB-NIR)": "#8acdb1",
+        "AI-GPT-Ireland (IRL)": "#8acdb1",
         "AI-GPT-Gibraltar": "#eb9394",
         "AI-GPT-Malta": "#cab3de",
-        "AI-GPT-IND": "#ffc184",
+        "AI-GPT-India": "#ffc184",
         "AI-GPT-Puerto Rico": "#66c9be",
         "AI-GPT-Slovenia": "#bfbfbf",
-        "AI-GPT-DE": "#ffe166",
+        "AI-GPT-Germany": "#ffe166",
         "AI-GPT-Sweden": "#66a5ca",
+        "AI-GPT-Spain (Balearic Islands)": "#9c9dbc",
         "AI-GPT-Other": "#e2ceca"
     };
 
@@ -5607,7 +5661,7 @@ clientside_callback(
                 if (colorMode === "Variety") {
                     return varietyColorMap[info.MainVariety] || "#cccccc";
                 } else if (colorMode === "Variety type") {
-                    var vType = getVarietyType(info.MainVariety);
+                    var vType = getVarietyType(info);
                     if (vType === "ENL") return "#1f77b4";
                     if (vType === "ESL") return "#ff7f0e";
                     if (vType === "EFL") return "#2ca02c";

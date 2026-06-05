@@ -2,6 +2,16 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
+## [0.2.0] - 2026-06-05
+
+### Changed
+- **Variety type classification now uses database values first**: UMAP "Variety type" coloring and ENL/ESL/EFL batch selection now prefer `Variety_Type` from the database, with fallback handling for mapped labels.
+- **Lexical heatmap variant metadata improved**: Axis labels and hover text now show both lexical variants from database metadata in `American - British` order.
+
+### Fixed
+- **Compare groups output schema mismatch**: Fixed a callback return-length bug when only one group (or no visible participants after filtering) was selected.
+- **Regex warning in group detection**: Replaced regex-based variety detection with exact membership checks to avoid `str.contains` warning messages for labels containing regex characters.
+
 ## [0.1.9] - 2026-05-28
 
 ### Added
