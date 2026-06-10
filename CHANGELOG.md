@@ -2,6 +2,12 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
+## [0.2.1] - 2026-06-10
+
+### Changed
+- **UMAP AI contour differentiation improved**: AI-generated varieties now render with stronger visual separation in UMAP, including a black dotted contour overlay and subtle point outlines to reduce blending with corresponding non-AI varieties.
+- **About page citation version is now dynamic**: The "How to Cite" dashboard citation now reads the version from `version.py` instead of using a hardcoded value.
+
 ## [0.2.0] - 2026-06-05
 
 ### Changed

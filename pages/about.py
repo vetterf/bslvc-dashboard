@@ -1,6 +1,7 @@
 import dash_mantine_components as dmc
 from dash import register_page, dcc
 from dash_iconify import DashIconify
+from version import __version__
 
 register_page(__name__, path="/about", name="About")
 
@@ -77,7 +78,7 @@ For more information, please visit the project homepage.
             dmc.Stack([
                 dmc.Text("Dashboard Citation:", fw=600, size="sm"),
                 dmc.Text(
-                    "Vetter, Fabian. 2026. BSLVC Dashboard (version 0.1.8). https://doi.org/10.17605/OSF.IO/4BUEF",
+                    f"Vetter, Fabian. 2026. BSLVC Dashboard (version {__version__}). https://doi.org/10.17605/OSF.IO/4BUEF",
                 ),
                 
                 dmc.Space(h="md"),

@@ -365,7 +365,9 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
     # --- include distance_metric and regional_mapping in the hash/filename ---
     regional_suffix = "_regional" if regional_mapping else ""
     dim_suffix = "_3d" if umap_3d else ""
-    preset_filename = f"umap_{umap_informants_hash}_{items_hash}_{n_neighbours}_{min_dist}_{distance_metric}_{standardize}_{densemap}_{dens_lambda if densemap else 'nd'}{regional_suffix}{dim_suffix}.pkl"
+    # Include a style version so cached figures stay in sync with marker/contour styling updates.
+    style_suffix = "_stylev3"
+    preset_filename = f"umap_{umap_informants_hash}_{items_hash}_{n_neighbours}_{min_dist}_{distance_metric}_{standardize}_{densemap}_{dens_lambda if densemap else 'nd'}{regional_suffix}{dim_suffix}{style_suffix}.pkl"
     preset_path = os.path.join(preset_dir, preset_filename)
     if os.path.exists(preset_path) and not force_rerender:
         try:
@@ -486,11 +488,12 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
             df_contour = embedding[embedding['MainVariety'] == c]
             if len(df_contour) < 3:
                 continue
+            is_ai_variety = isinstance(c, str) and c.startswith('AI-')
             variety_color = variety_to_color.get(c, '#c49c94')
             hex_c = variety_color.lstrip('#')
             r, g, b = int(hex_c[0:2], 16), int(hex_c[2:4], 16), int(hex_c[4:6], 16)
             color_transparent = f'rgba({r},{g},{b},0)'
-            color_fill = f'rgba({r},{g},{b},0.35)'
+            color_fill = f'rgba({r},{g},{b},{0.22 if is_ai_variety else 0.35})'
             contour_trace = go.Histogram2dContour(
                 x=df_contour['x'].tolist(),
                 y=df_contour['y'].tolist(),
@@ -499,7 +502,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                 colorscale=[[0, color_transparent], [1, color_fill]],
                 showscale=False,
                 contours=dict(coloring='fill'),
-                line=dict(color=variety_color, width=1.5),
+                line=dict(color=variety_color, width=1.8 if is_ai_variety else 1.5),
                 ncontours=6,
                 showlegend=False,
                 hoverinfo='skip',
@@ -511,9 +514,35 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
             else:
                 fig.add_trace(contour_trace)
 
+            # Add an extra black dotted contour line for AI varieties to improve contrast.
+            if is_ai_variety:
+                contour_trace_dotted = go.Histogram2dContour(
+                    x=df_contour['x'].tolist(),
+                    y=df_contour['y'].tolist(),
+                    name=c + ' (density dots)',
+                    legendgroup=c,
+                    showscale=False,
+                    contours=dict(coloring='none'),
+                    line=dict(color='rgba(0,0,0,0.85)', width=1.2, dash='dot'),
+                    ncontours=6,
+                    showlegend=False,
+                    hoverinfo='skip',
+                    visible=False,
+                    meta={'kde_contour': True},
+                )
+                if leiden:
+                    fig.add_trace(contour_trace_dotted, row=1, col=1)
+                else:
+                    fig.add_trace(contour_trace_dotted)
+
     # Add UMAP traces - sort varieties alphabetically for consistent legend order
     for c in sorted(embedding['MainVariety'].unique()):
         df_color = embedding[embedding['MainVariety'] == c]
+        is_ai_variety = isinstance(c, str) and c.startswith('AI-')
+        marker_line_style = dict(
+            color='rgba(30,30,30,0.35)' if is_ai_variety else 'rgba(0,0,0,0)',
+            width=0.8 if is_ai_variety else 0
+        )
         if umap_3d:
             fig.add_trace(
                 go.Scatter3d(
@@ -525,7 +554,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                     mode='markers',
                     text=df_color['InformantID'],
                     ids=df_color['InformantID'],
-                    marker=dict(color=df_color['color'], size=3, opacity=0.8),
+                    marker=dict(color=df_color['color'], size=3, opacity=0.8, line=marker_line_style),
                     showlegend=True,
                     customdata=df_color[['InformantID','MainVariety','MainVariety_Original','Age','Gender','RatioMainVariety','YearsLivedInMainVariety','CountryCollection','Year']],
                     hovertemplate='<br>'.join([
@@ -551,7 +580,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                     mode='markers',
                     text=df_color['InformantID'],
                     ids=df_color['InformantID'],
-                    marker=dict(color=df_color['color'], size=5, opacity=0.8, symbol=df_color['symbol']), 
+                    marker=dict(color=df_color['color'], size=5, opacity=0.8, symbol=df_color['symbol'], line=marker_line_style), 
                     showlegend=True, 
                     customdata=df_color[['InformantID','MainVariety','MainVariety_Original','Age','Gender','RatioMainVariety','YearsLivedInMainVariety','CountryCollection','Year','leiden_cluster']],
                     hovertemplate='<br>'.join([
@@ -579,7 +608,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                     mode='markers',
                     text=df_color['InformantID'],
                     ids=df_color['InformantID'],
-                    marker=dict(color=df_color['color'], size=5, opacity=0.8,symbol=0), 
+                    marker=dict(color=df_color['color'], size=5, opacity=0.8, symbol=0, line=marker_line_style), 
                     showlegend=True, 
                     customdata=df_color[['InformantID','MainVariety','MainVariety_Original','Age','Gender','RatioMainVariety','YearsLivedInMainVariety','CountryCollection','Year']],
                     hovertemplate='<br>'.join([
