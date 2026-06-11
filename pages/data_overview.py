@@ -32,6 +32,47 @@ def _clean_variant_label(value):
     return str(value).strip()
 
 
+def _normalize_lexical_rating(value):
+    """Normalize lexical responses into the heatmap distribution buckets."""
+    if pd.isna(value):
+        return "Null"
+
+    value_str = str(value).strip()
+    if not value_str:
+        return "Null"
+
+    if value_str.upper() == "NX":
+        return "NX"
+
+    try:
+        numeric_value = float(value_str)
+        if numeric_value in {-2.0, -1.0, 0.0, 1.0, 2.0}:
+            return str(int(numeric_value))
+    except (TypeError, ValueError):
+        pass
+
+    # Treat all other tokens (e.g. ND/NXC) as missing/null-like values.
+    return "Null"
+
+
+def _get_lexical_rating_distribution(series):
+    distribution = {
+        "-2": 0,
+        "-1": 0,
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "NX": 0,
+        "Null": 0,
+    }
+
+    for value in series:
+        bucket = _normalize_lexical_rating(value)
+        distribution[bucket] += 1
+
+    return distribution
+
+
 def get_lexical_variant_map():
     """Map lexical data columns to British/American labels from LexicalColumns."""
     variant_map = {
@@ -855,41 +896,62 @@ def create_lexical_items_heatmap():
         )
 
     lexical_variant_map = get_lexical_variant_map()
-    
-    # Calculate mean per item and variety
-    heatmap_data = {}
-    item_overall_means = {}
+
+    lexical_item_columns = [item for item in LexicalItemsCols if item in lexicalData.columns]
+    if not lexical_item_columns:
+        return dmc.Alert(
+            "No lexical item columns available",
+            title="Info",
+            color="blue",
+            icon=DashIconify(icon="tabler:info-circle")
+        )
+
+    varieties = [v for v in Informants['MainVariety'].dropna().unique()]
+
+    # Cache variety subsets and compute variety-level grand means across all lexical items.
+    variety_data_cache = {}
+    variety_participant_counts = {}
     variety_overall_means = {}
-    
-    for item in LexicalItemsCols:
-        if item in lexicalData.columns:
-            # Convert to numeric first
-            item_values = pd.to_numeric(lexicalData[item], errors='coerce')
-            
-            # Calculate overall mean for sorting
-            overall_mean = item_values.mean()
-            item_overall_means[item] = overall_mean if pd.notna(overall_mean) else 0
-            
-            # Calculate means per variety
-            variety_means = {}
-            for variety in Informants['MainVariety'].unique():
-                # Get informants for this variety
-                variety_informants = Informants[Informants['MainVariety'] == variety]['InformantID'].unique()
-                
-                # Filter lexical data for this variety
-                variety_mask = lexicalData['InformantID'].isin(variety_informants)
-                variety_values = item_values[variety_mask]
-                
-                mean_val = variety_values.mean()
-                if pd.notna(mean_val):
-                    variety_means[variety] = mean_val
-                    # Accumulate for variety grand mean
-                    if variety not in variety_overall_means:
-                        variety_overall_means[variety] = []
-                    variety_overall_means[variety].append(mean_val)
-            
-            heatmap_data[item] = variety_means
-    
+    for variety in varieties:
+        variety_informants = Informants[Informants['MainVariety'] == variety]['InformantID'].unique()
+        variety_subset = lexicalData[lexicalData['InformantID'].isin(variety_informants)]
+        if variety_subset.empty:
+            continue
+
+        variety_data_cache[variety] = variety_subset
+        variety_participant_counts[variety] = int(variety_subset['InformantID'].nunique())
+
+        variety_numeric = variety_subset[lexical_item_columns].apply(pd.to_numeric, errors='coerce')
+        variety_grand_mean = variety_numeric.stack().mean()
+        if pd.notna(variety_grand_mean):
+            variety_overall_means[variety] = float(variety_grand_mean)
+
+    # Calculate item-level and cell-level stats.
+    # Item means are balanced by variety (equal weight per variety).
+    item_balanced_means = {}
+    heatmap_data = {}
+    cell_metadata = {}
+
+    for item in lexical_item_columns:
+        variety_means = {}
+        for variety, variety_subset in variety_data_cache.items():
+            raw_values = variety_subset[item]
+            numeric_values = pd.to_numeric(raw_values, errors='coerce')
+            mean_val = numeric_values.mean()
+            variety_means[variety] = float(mean_val) if pd.notna(mean_val) else np.nan
+
+            rating_distribution = _get_lexical_rating_distribution(raw_values)
+            cell_metadata[(item, variety)] = {
+                'participants_variety': variety_participant_counts.get(variety, 0),
+                'participants_item_variety': int(len(raw_values)),
+                'valid_numeric_count': int(numeric_values.notna().sum()),
+                'distribution': rating_distribution,
+            }
+
+        valid_variety_means = [mean for mean in variety_means.values() if pd.notna(mean)]
+        item_balanced_means[item] = float(np.mean(valid_variety_means)) if valid_variety_means else np.nan
+        heatmap_data[item] = variety_means
+
     if not heatmap_data:
         return dmc.Alert(
             "No valid lexical data to display",
@@ -898,39 +960,104 @@ def create_lexical_items_heatmap():
             icon=DashIconify(icon="tabler:info-circle")
         )
     
-    # Create DataFrame for heatmap
+    # Create DataFrame for heatmap.
     df_heatmap = pd.DataFrame(heatmap_data).T
-    
-    # Sort items by overall mean
-    item_order = sorted(item_overall_means.keys(), key=lambda x: item_overall_means[x], reverse=True)
+
+    # Sort items by overall mean.
+    item_order = sorted(
+        df_heatmap.index,
+        key=lambda item: (
+            pd.notna(item_balanced_means.get(item, np.nan)),
+            item_balanced_means.get(item, -np.inf),
+        ),
+        reverse=True,
+    )
     df_heatmap = df_heatmap.loc[item_order]
     
-    # Calculate grand mean per variety and sort varieties by it
-    variety_grand_means = {v: np.mean(means) for v, means in variety_overall_means.items()}
-    variety_order = sorted(variety_grand_means.keys(), key=lambda x: variety_grand_means[x], reverse=False)
-    
-    # Reorder columns by variety grand mean
-    df_heatmap = df_heatmap[[v for v in variety_order if v in df_heatmap.columns]]
+    # Sort varieties by grand mean (ascending), then append varieties without numeric means.
+    variety_order = sorted(
+        [v for v in df_heatmap.columns if pd.notna(variety_overall_means.get(v, np.nan))],
+        key=lambda variety: variety_overall_means[variety],
+        reverse=False,
+    )
+    variety_order.extend([v for v in df_heatmap.columns if v not in variety_order])
+    df_heatmap = df_heatmap[variety_order]
 
-    # Build display labels and hover metadata from lexical pair labels.
-    display_item_labels = [
-        lexical_variant_map.get(item, {}).get('axis_label', item)
+    # Build display labels with overall averages in parentheses.
+    display_item_labels = []
+    for item in df_heatmap.index:
+        item_label = lexical_variant_map.get(item, {}).get('axis_label', item)
+        item_mean = item_balanced_means.get(item, np.nan)
+        item_mean_label = f"{item_mean:.2f}" if pd.notna(item_mean) else "N/A"
+        display_item_labels.append(f"{item_label} ({item_mean_label})")
+
+    display_variety_labels = []
+    for variety in df_heatmap.columns:
+        variety_mean = variety_overall_means.get(variety, np.nan)
+        variety_mean_label = f"{variety_mean:.2f}" if pd.notna(variety_mean) else "N/A"
+        display_variety_labels.append(f"{variety} ({variety_mean_label})")
+
+    hover_item_labels = {
+        item: lexical_variant_map.get(item, {}).get('axis_label', item)
         for item in df_heatmap.index
-    ]
+    }
 
-    customdata = np.empty((len(df_heatmap.index), len(df_heatmap.columns), 2), dtype=object)
+    # customdata fields:
+    # [0]=american, [1]=british, [2]=participants_variety,
+    # [3]=participants_item_variety, [4]=n_numeric,
+    # [5..11]=distribution(-2,-1,0,1,2,NX,Null), [12]=cell_mean,
+    # [13]=item_label_clean, [14]=variety_label_clean
+    customdata = np.empty((len(df_heatmap.index), len(df_heatmap.columns), 15), dtype=object)
     for row_idx, item in enumerate(df_heatmap.index):
         american = lexical_variant_map.get(item, {}).get('american', item)
         british = lexical_variant_map.get(item, {}).get('british', item)
-        customdata[row_idx, :, 0] = american
-        customdata[row_idx, :, 1] = british
+
+        for col_idx, variety in enumerate(df_heatmap.columns):
+            cell_mean = df_heatmap.iloc[row_idx, col_idx]
+            cell_mean_label = f"{cell_mean:.2f}" if pd.notna(cell_mean) else "N/A"
+
+            metadata = cell_metadata.get(
+                (item, variety),
+                {
+                    'participants_variety': 0,
+                    'participants_item_variety': 0,
+                    'valid_numeric_count': 0,
+                    'distribution': {
+                        '-2': 0,
+                        '-1': 0,
+                        '0': 0,
+                        '1': 0,
+                        '2': 0,
+                        'NX': 0,
+                        'Null': 0,
+                    },
+                },
+            )
+            distribution = metadata['distribution']
+
+            customdata[row_idx, col_idx, 0] = american
+            customdata[row_idx, col_idx, 1] = british
+            customdata[row_idx, col_idx, 2] = metadata['participants_variety']
+            customdata[row_idx, col_idx, 3] = metadata['participants_item_variety']
+            customdata[row_idx, col_idx, 4] = metadata['valid_numeric_count']
+            customdata[row_idx, col_idx, 5] = distribution['-2']
+            customdata[row_idx, col_idx, 6] = distribution['-1']
+            customdata[row_idx, col_idx, 7] = distribution['0']
+            customdata[row_idx, col_idx, 8] = distribution['1']
+            customdata[row_idx, col_idx, 9] = distribution['2']
+            customdata[row_idx, col_idx, 10] = distribution['NX']
+            customdata[row_idx, col_idx, 11] = distribution['Null']
+            customdata[row_idx, col_idx, 12] = cell_mean_label
+            customdata[row_idx, col_idx, 13] = hover_item_labels.get(item, item)
+            customdata[row_idx, col_idx, 14] = variety
 
     df_heatmap_display = df_heatmap.copy()
     df_heatmap_display.index = display_item_labels
+    df_heatmap_display.columns = display_variety_labels
     
     fig = px.imshow(
         df_heatmap_display,
-        labels=dict(x="Variety", y="Lexical Item", color="Mean Score"),
+        labels=dict(x="Variety (overall mean)", y="Lexical Item (balanced mean)", color="Mean Score"),
         x=df_heatmap_display.columns,
         y=df_heatmap_display.index,
         color_continuous_scale='ylgnbu',  # Teal-Green scale (green to blue gradient)
@@ -942,20 +1069,23 @@ def create_lexical_items_heatmap():
 
     fig.update_traces(
         customdata=customdata,
-        hovertemplate='<b>%{y}</b><br>' +
-                      'Variety: %{x}<br>' +
-                      'Mean score: %{z:.2f}<br>' +
+        hovertemplate='<b>%{customdata[13]}</b><br>' +
+                      '<b>Variety: %{customdata[14]}</b><br>' +
+                      '<b>Average: %{customdata[12]}</b><br>' +
+                      'Participants in variety: %{customdata[2]}<br>' +
+                      'Distribution -2/-1/0/1/2: %{customdata[5]} / %{customdata[6]} / %{customdata[7]} / %{customdata[8]} / %{customdata[9]}<br>' +
+                      'NX: %{customdata[10]} | Null: %{customdata[11]}<br>' +
                       'American variant: %{customdata[0]}<br>' +
                       'British variant: %{customdata[1]}<extra></extra>'
     )
     
     fig.update_xaxes(side="top")
     fig.update_layout(
-        margin=dict(l=10, r=10, t=80, b=10),
+        margin=dict(l=10, r=10, t=95, b=10),
         xaxis={'tickangle': -45},
         coloraxis_colorbar=dict(
             title=dict(
-                text="Mean Score<br>+2 = British (Blue)<br>-2 = American (Green)",
+                text="Mean Score<br>+2 = British (Blue)<br>-2 = American (Yellow)",
                 side="right"
             )
         )
@@ -1298,7 +1428,7 @@ layout = dmc.Container([
                         ),
                         dmc.Title("Lexical Items - Heatmap", order=5, mb="sm"),
                         dmc.Text(
-                            "Heatmap showing mean scores for all lexical items across varieties. Colors range from green (American variant, -2) to blue (British variant, +2). Varieties are ordered by their grand mean score.",
+                            "Heatmap showing mean scores for all lexical items across varieties. Item labels include balanced means in parentheses (equal weight per variety). Hover to inspect participant counts and response distributions (-2 to +2, NX, Null). Colors range from yellow (American variant, -2) to blue (British variant, +2).",
                             size="sm",
                             c="dimmed",
                             mb="sm"

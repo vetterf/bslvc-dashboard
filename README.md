@@ -31,6 +31,15 @@ Krug, Manfred & Fabian Vetter. 2026. _The Bamberg Survey of Language Variation a
 
 The BSLVC Dashboard is written in Python and Dash and is designed to run as a docker container. Please consult the documentation of your systems docker/podman installation on how to create and run docker containers.
 
+## Cache Management
+
+- URL-based cache clearing is disabled by default (`ENABLE_URL_CACHE_CLEAR=false`).
+- For manual cache clearing in development/admin workflows, run:
+
+```bash
+flask --app app clear-cache
+```
+
 ---
 
 *Funded by Deutsche Forschungsgemeinschaft (DFG) - Grant 548274092*

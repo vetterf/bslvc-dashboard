@@ -2,11 +2,15 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
-## [0.2.1] - 2026-06-10
+
+## [0.2.1] - 2026-06-11
 
 ### Changed
 - **UMAP AI contour differentiation improved**: AI-generated varieties now render with stronger visual separation in UMAP, including a black dotted contour overlay and subtle point outlines to reduce blending with corresponding non-AI varieties.
 - **About page citation version is now dynamic**: The "How to Cite" dashboard citation now reads the version from `version.py` instead of using a hardcoded value.
+- **Cache invalidation hardened for production**: URL-based cache clearing is now disabled by default and gated behind `ENABLE_URL_CACHE_CLEAR`. Added a manual server command (`flask --app app clear-cache`) to clear disk cache, plot cache, and LRU caches in development workflows.
+- **Lexical heatmap averages and hover refined**:
+  - Axis labels now include summary means in parentheses, with lexical-item means balanced across varieties (equal variety weighting).
 
 ## [0.2.0] - 2026-06-05
 

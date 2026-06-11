@@ -8,6 +8,7 @@ ENV ADVANCED_MAPPING_PATH=/assets/data/advanced_regional_mapping.csv
 # Optional: Set custom cache directories
 ENV CACHE_DIR=/app/cache
 ENV MPLCONFIGDIR=/tmp/matplotlib
+ENV ENABLE_URL_CACHE_CLEAR=false
 
 # Install system dependencies (git needed to pull the database repo)
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*

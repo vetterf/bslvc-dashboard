@@ -58,70 +58,86 @@ background_callback_manager = DiskcacheManager(
     cache, cache_by=[lambda: launch_uid], expire=60
 )
 
+def _is_url_cache_clear_enabled():
+    """Enable URL-triggered cache clear only when explicitly configured."""
+    return os.environ.get("ENABLE_URL_CACHE_CLEAR", "false").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def clear_all_caches(source="manual", clear_umap_presets=True):
+    """Clear server-side caches used by the dashboard."""
+    # Clear main diskcache
+    try:
+        cache.clear()
+        print(f"Main cache cleared via {source}")
+    except Exception as e:
+        print(f"Error clearing main cache via {source}: {e}")
+
+    # Try to clear plot cache if available
+    try:
+        from pages.grammar import plot_cache
+        plot_cache.clear()
+        print(f"Plot cache cleared via {source}")
+    except ImportError:
+        print(f"Plot cache not available for clearing via {source}")
+    except Exception as e:
+        print(f"Error clearing plot cache via {source}: {e}")
+
+    # Try to clear LRU caches from grammar functions
+    try:
+        from pages import grammar
+        lru_functions = [
+            'get_grammar_data_cached',
+            'get_grammar_data_pairs_cached',
+            'get_informants_cached',
+            'get_grammar_data_raw_cached',
+            'get_grammar_data_pairs_raw_cached',
+            'get_grammar_meta_cached',
+            'get_grammar_meta_pairs_cached',
+            'get_grammar_items_cols_cached',
+            'get_grammar_items_cols_pairs_cached'
+        ]
+
+        for func_name in lru_functions:
+            if hasattr(grammar, func_name):
+                func = getattr(grammar, func_name)
+                if hasattr(func, 'cache_clear'):
+                    func.cache_clear()
+
+        print(f"LRU caches cleared via {source}")
+    except ImportError:
+        print(f"Grammar module not available for LRU cache clearing via {source}")
+    except Exception as e:
+        print(f"Error clearing LRU caches via {source}: {e}")
+
+    # Optional: clear persisted UMAP presets directory
+    if clear_umap_presets:
+        try:
+            import shutil
+            umap_presets_dir = os.path.join("pages", "data", "umap_presets")
+            if os.path.exists(umap_presets_dir):
+                # Remove all files in the directory but keep the directory
+                for filename in os.listdir(umap_presets_dir):
+                    file_path = os.path.join(umap_presets_dir, filename)
+                    if os.path.isfile(file_path):
+                        os.remove(file_path)
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)
+                print(f"UMAP presets directory cleared via {source}")
+            else:
+                print(f"UMAP presets directory does not exist (source: {source})")
+        except Exception as e:
+            print(f"Error clearing UMAP presets directory via {source}: {e}")
+
+
 def invalidate_cache_if_requested():
     """Check for cache invalidation URL parameter and clear cache if requested"""
+    if not _is_url_cache_clear_enabled():
+        return False
+
     try:
         # Check if the clear_cache parameter is present in the URL
         if request and request.args.get('clear_cache') == 'true':
-            # Clear main diskcache
-            cache.clear()
-            print("Main cache cleared via URL parameter")
-            
-            # Try to clear plot cache if available
-            try:
-                from pages.grammar import plot_cache
-                plot_cache.clear()
-                print("Plot cache cleared via URL parameter")
-            except ImportError:
-                print("Plot cache not available for clearing")
-            except Exception as e:
-                print(f"Error clearing plot cache: {e}")
-            
-            # Try to clear LRU caches from grammar functions
-            try:
-                from pages import grammar
-                lru_functions = [
-                    'get_grammar_data_cached',
-                    'get_grammar_data_pairs_cached', 
-                    'get_informants_cached',
-                    'get_grammar_data_raw_cached',
-                    'get_grammar_data_pairs_raw_cached',
-                    'get_grammar_meta_cached',
-                    'get_grammar_meta_pairs_cached',
-                    'get_grammar_items_cols_cached',
-                    'get_grammar_items_cols_pairs_cached' 
-                ]
-                
-                for func_name in lru_functions:
-                    if hasattr(grammar, func_name):
-                        func = getattr(grammar, func_name)
-                        if hasattr(func, 'cache_clear'):
-                            func.cache_clear()
-                            
-                print("LRU caches cleared via URL parameter")
-            except ImportError:
-                print("Grammar module not available for LRU cache clearing")
-            except Exception as e:
-                print(f"Error clearing LRU caches: {e}")
-            
-            # Clear UMAP presets directory
-            try:
-                import shutil
-                umap_presets_dir = os.path.join("pages", "data", "umap_presets")
-                if os.path.exists(umap_presets_dir):
-                    # Remove all files in the directory but keep the directory
-                    for filename in os.listdir(umap_presets_dir):
-                        file_path = os.path.join(umap_presets_dir, filename)
-                        if os.path.isfile(file_path):
-                            os.remove(file_path)
-                        elif os.path.isdir(file_path):
-                            shutil.rmtree(file_path)
-                    print("UMAP presets directory cleared via URL parameter")
-                else:
-                    print("UMAP presets directory does not exist")
-            except Exception as e:
-                print(f"Error clearing UMAP presets directory: {e}")
-            
+            clear_all_caches(source="URL parameter", clear_umap_presets=True)
             return True
     except Exception as e:
         print(f"Error clearing cache: {e}")
@@ -139,6 +155,12 @@ app = Dash(
 )
 app.title = 'BSLVC Dashboard'
 server = app.server
+
+
+@server.cli.command("clear-cache")
+def clear_cache_command():
+    """Clear server-side caches (development/admin command)."""
+    clear_all_caches(source="CLI command", clear_umap_presets=True)
 
 # Add cache invalidation middleware
 @server.before_request
@@ -472,67 +494,12 @@ def toggle_navbar(mobile_clicks, desktop_clicks, navbar):
 )
 def handle_cache_invalidation(search, cache_status):
     """Handle cache invalidation via URL parameter"""
+    if not _is_url_cache_clear_enabled():
+        return cache_status
+
     if search and "clear_cache=true" in search:
         try:
-            # Clear main diskcache
-            cache.clear()
-            print("Main cache cleared via URL parameter")
-            
-            # Try to clear plot cache if available
-            try:
-                from pages.grammar import plot_cache
-                plot_cache.clear()
-                print("Plot cache cleared via URL parameter")
-            except ImportError:
-                print("Plot cache not available for clearing")
-            except Exception as e:
-                print(f"Error clearing plot cache: {e}")
-            
-            # Try to clear LRU caches from grammar functions
-            try:
-                from pages import grammar
-                lru_functions = [
-                    'get_grammar_data_cached',
-                    'get_grammar_data_pairs_cached', 
-                    'get_informants_cached',
-                    'get_grammar_data_raw_cached',
-                    'get_grammar_data_pairs_raw_cached',
-                    'get_grammar_meta_cached',
-                    'get_grammar_meta_pairs_cached',
-                    'get_grammar_items_cols_cached',
-                    'get_grammar_items_cols_pairs_cached'
-                ]
-                
-                for func_name in lru_functions:
-                    if hasattr(grammar, func_name):
-                        func = getattr(grammar, func_name)
-                        if hasattr(func, 'cache_clear'):
-                            func.cache_clear()
-                            
-                print("LRU caches cleared via URL parameter")
-            except ImportError:
-                print("Grammar module not available for LRU cache clearing")
-            except Exception as e:
-                print(f"Error clearing LRU caches: {e}")
-            
-            # Clear UMAP presets directory
-            try:
-                import shutil
-                umap_presets_dir = os.path.join("pages", "data", "umap_presets")
-                if os.path.exists(umap_presets_dir):
-                    # Remove all files in the directory but keep the directory
-                    for filename in os.listdir(umap_presets_dir):
-                        file_path = os.path.join(umap_presets_dir, filename)
-                        if os.path.isfile(file_path):
-                            os.remove(file_path)
-                        elif os.path.isdir(file_path):
-                            shutil.rmtree(file_path)
-                    print("UMAP presets directory cleared via URL parameter")
-                else:
-                    print("UMAP presets directory does not exist")
-            except Exception as e:
-                print(f"Error clearing UMAP presets directory: {e}")
-            
+            clear_all_caches(source="URL parameter callback", clear_umap_presets=True)
             return {"cleared": True, "timestamp": str(pd.Timestamp.now())}
         except Exception as e:
             print(f"Error clearing cache: {e}")
