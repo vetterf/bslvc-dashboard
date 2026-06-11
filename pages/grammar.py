@@ -1286,7 +1286,7 @@ umapSettingsAccordion = dmc.AccordionItem(
                         ),
                         dmc.Checkbox(
                             id="umap-kde-contours-checkbox",
-                            label="Show density contours (2D only)",
+                            label="Show binned density contours (2D only)",
                             size="sm",
                             checked=False,
                             persistence=persist_UI, persistence_type=persistence_type
@@ -2201,7 +2201,7 @@ def toggle_dens_lambda_slider(densemap_checked):
     return {"display": "block"} if densemap_checked else {"display": "none"}
 
 
-# Disable KDE density contours checkbox when 3D UMAP is active (2D-only feature)
+# Disable density contours checkbox when 3D UMAP is active (2D-only feature)
 @callback(
     Output('umap-kde-contours-checkbox', 'disabled'),
     Output('umap-kde-contours-checkbox', 'checked'),
@@ -3879,7 +3879,7 @@ def initiate_umap_rendering(BTNrenderPlot, modal_ok, modal_cancel, figure, runni
         notification = dmc.Notification(
             id="my-notification",
             title="Info",
-            message="Rendering UMAP plot with imputed data (UMAP cannot handle missing data), please wait.",
+            message="Rendering UMAP plot with imputed data, please wait.",
             color="blue",
             loading=True,
             action="show",
@@ -5695,7 +5695,7 @@ clientside_callback(
     prevent_initial_call=True
 )
 
-# Toggle KDE density contour visibility (client-side for instant response)
+# Toggle density contour visibility (client-side for instant response)
 clientside_callback(
     """
     function(checked, fig) {
@@ -5706,7 +5706,7 @@ clientside_callback(
         var visibleGroups = {};
         fig.data.forEach(function(trace) {
             if (!(trace.meta && trace.meta.kde_contour)) {
-                // This is a scatter (non-KDE) trace
+                // This is a scatter (non-contour) trace
                 var grp = trace.legendgroup;
                 if (grp !== undefined && grp !== null) {
                     // visible is true or undefined = shown; 'legendonly' = hidden by legend

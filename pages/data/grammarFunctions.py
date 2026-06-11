@@ -482,28 +482,29 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
     # else:
     embedding['opacity'] = 0.8
 
-    # Add KDE density contour traces per variety (2D only)
+    # Add density contour traces per variety (2D only)
     if not umap_3d:
         for c in sorted(embedding['MainVariety'].unique()):
             df_contour = embedding[embedding['MainVariety'] == c]
             if len(df_contour) < 3:
                 continue
+
             is_ai_variety = isinstance(c, str) and c.startswith('AI-')
             variety_color = variety_to_color.get(c, '#c49c94')
             hex_c = variety_color.lstrip('#')
             r, g, b = int(hex_c[0:2], 16), int(hex_c[2:4], 16), int(hex_c[4:6], 16)
             color_transparent = f'rgba({r},{g},{b},0)'
-            color_fill = f'rgba({r},{g},{b},{0.22 if is_ai_variety else 0.35})'
+            color_fill = f'rgba({r},{g},{b},{0.20 if is_ai_variety else 0.26})'
             contour_trace = go.Histogram2dContour(
-                x=df_contour['x'].tolist(),
-                y=df_contour['y'].tolist(),
+                x=df_contour['x'],
+                y=df_contour['y'],
                 name=c + ' (density)',
                 legendgroup=c,
                 colorscale=[[0, color_transparent], [1, color_fill]],
                 showscale=False,
-                contours=dict(coloring='fill'),
-                line=dict(color=variety_color, width=1.8 if is_ai_variety else 1.5),
-                ncontours=6,
+                contours=dict(coloring='fill', showlines=True),
+                line=dict(color=variety_color, width=1.3 if is_ai_variety else 1.15),
+                ncontours=10,
                 showlegend=False,
                 hoverinfo='skip',
                 visible=False,
@@ -517,14 +518,14 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
             # Add an extra black dotted contour line for AI varieties to improve contrast.
             if is_ai_variety:
                 contour_trace_dotted = go.Histogram2dContour(
-                    x=df_contour['x'].tolist(),
-                    y=df_contour['y'].tolist(),
+                    x=df_contour['x'],
+                    y=df_contour['y'],
                     name=c + ' (density dots)',
                     legendgroup=c,
                     showscale=False,
-                    contours=dict(coloring='none'),
-                    line=dict(color='rgba(0,0,0,0.85)', width=1.2, dash='dot'),
-                    ncontours=6,
+                    contours=dict(coloring='none', showlines=True),
+                    line=dict(color='rgba(0,0,0,0.65)', width=1.1, dash='dot'),
+                    ncontours=10,
                     showlegend=False,
                     hoverinfo='skip',
                     visible=False,
