@@ -1,0 +1,19 @@
+/* Custom CSS for BSLVC Dashboard Documentation */
+
+/* Add custom styling here if needed */
+
+/* Example: Custom link colors */
+:root {
+  --md-primary-fg-color: #2c5aa0;
+  --md-accent-fg-color: #1f77b4;
+}
+
+/* Improve code block styling */
+.highlight {
+  border-radius: 4px;
+}
+
+/* Better spacing for admonitions */
+.admonition {
+  margin: 1.5em 0;
+}
