@@ -1291,6 +1291,11 @@ umapSettingsAccordion = dmc.AccordionItem(
                             checked=False,
                             persistence=persist_UI, persistence_type=persistence_type
                         ),
+                        dmc.Text(
+                            "Contour levels are computed in embedding space. Without DensMAP, standard UMAP may distort high-dimensional densities.",
+                            size="xs",
+                            c="dimmed",
+                        ),
                         dmc.Text("UMAP Hyperparameters:", size="xs", fw=600, c="dimmed", mt="xs"),
                         dmc.Stack(gap="xs", mb="md", children=[
                             dmc.Text("Number of neighbours:", size="xs"),
@@ -2213,6 +2218,23 @@ def disable_kde_for_3d(umap_3d, kde_checked):
     if umap_3d:
         return True, False  # disable and uncheck
     return False, kde_checked  # re-enable, preserve state
+
+
+# Warn users when contour overlays are interpreted without density-preserving embedding
+@callback(
+    Output("notify-container", "children", allow_duplicate=True),
+    Input('umap-kde-contours-checkbox', 'checked'),
+    State('umap-densemap-checkbox', 'checked'),
+    prevent_initial_call=True
+)
+def warn_kde_without_densemap(kde_checked, densemap_checked):
+    if kde_checked and not densemap_checked:
+        return create_info_notification(
+            "Density contours are shown in 2D embedding space. Standard UMAP does not reliably preserve high-dimensional densities; use DensMAP for density-aware interpretation.",
+            color="orange",
+            autoClose=6500
+        )
+    return no_update
 
 
 # Render UMAP quality metrics below the plot

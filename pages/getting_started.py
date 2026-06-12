@@ -349,6 +349,7 @@ In this mode, you can mainly control the UMAP hyperparameters and how the data p
 - Choose distance metric (cosine, euclidean, manhattan)
 - Standardize data (recommended with euclidean and manhattan distances)
 - Use density-preserving embedding (DensMAP; experimental)
+- Show binned density contours (2D only; with standard UMAP, contour levels may not reflect high-dimensional density faithfully)
 
 **Analysis Mode "Item Ratings":**
 In this mode, you can control the plot type, how the data should be grouped, and how the data should be sorted in the plot.
