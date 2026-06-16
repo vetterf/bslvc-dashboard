@@ -173,11 +173,17 @@ The UMAP Settings allow the user to tweak the UMAP hyperparameters, as well as t
 
 - **Color**: Select coloring variable (Variety, Variety type, Gender). This setting does not trigger a re-render of the plot and can be changed after rendering the plot.
 - **Distance metric**: Choose metric (Cosine, Euclidean, Manhattan).
-- **Standardize participant ratings**: Checkbox to standardize ratings. Standardization is advised for use with Euclidean and Manhattan distances.
+- **Normalize participant ratings**: Dropdown to apply normalization to each participant's rating vector before computing UMAP or the distance matrix. Options:
+    - **No normalization** (default): Ratings are used as-is.
+    - **Z-Score (row / participant-wise)**: Row-wise Z-score standardization — each participant's ratings are centred at zero with unit standard deviation. Removes individual response-scale biases (e.g. participants who consistently rate high or low). Recommended when using Euclidean or Manhattan distance.
+    - **Z-Score (column / item-wise)**: Column-wise Z-score standardization — each item's ratings across all participants are centred at zero with unit standard deviation. Removes item-level mean differences (e.g. items that are globally accepted or rejected), making participant distances reflect relative variation patterns rather than absolute item means. Particularly useful when comparing groups whose overall response tendencies differ less than their within-group item profiles.
+    - **L2-normalization**: Each participant's rating vector is scaled to unit Euclidean norm ($\|\mathbf{x}\|_2 = 1$). Compatible with cosine distance.
+    - **Mean-center + L2-normalization**: Subtracts the row mean first, then L2-normalizes. Combines bias removal and scale normalisation.
 - **Use density-preserving embedding (DensMAP)**: Checkbox for DensMAP (https://umap-learn.readthedocs.io/en/latest/densmap_demo.html). By default, UMAP does not preserve densities of clusters well. DensMAP tries to preserve the density of clusters when reducing dimensionality. Compatible with both 2D and 3D modes. Helpful for identifying outliers.
 - **DensMAP lambda (dens_lambda)**: Slider visible only when DensMAP is enabled. Controls the relative weight of the density-preserving loss term versus the standard UMAP embedding loss. Higher values enforce stronger density preservation at the potential cost of global structure quality. Range: 0.1–10.0, default: 2.0.
 - **3D UMAP (experimental)**: Renders the embedding in three dimensions. Lasso selection is not available in 3D mode.
-- **Show binned density contours**: Checkbox to overlay 2D density contours on the UMAP plot. The contours are generated with Plotly `Histogram2dContour` (bin-based density contours, not KDE). When enabled, filled contour regions are drawn behind the scatter points for each variety, visualizing where participant points are concentrated in the embedding space. Since standard UMAP does not explicitly preserve high-dimensional density, contour levels should be interpreted cautiously unless DensMAP is enabled. Contour visibility is linked to the legend: hiding a variety via the legend also hides its contours. This option can be toggled at any time without re-rendering the plot. Not available in 3D mode.
+- **4D UMAP — two linked scatter plots**: Computes four UMAP dimensions and displays them as two side-by-side scatter plots: dimensions 1 & 2 on the left and dimensions 3 & 4 on the right. The two plots are linked — legend clicks show/hide the corresponding traces in both plots simultaneously, and lasso/box selections in one plot are mirrored to the other so that group additions and "Select Only Lasso" always capture the full four-dimensional neighbourhood. Mutually exclusive with 3D mode.
+- **Show binned density contours**: Checkbox to overlay 2D density contours on the UMAP plot. The contours are generated with Plotly `Histogram2dContour` (bin-based density contours, not KDE). When enabled, filled contour regions are drawn behind the scatter points for each variety, visualizing where participant points are concentrated in the embedding space. Since standard UMAP does not explicitly preserve high-dimensional density, contour levels should be interpreted cautiously unless DensMAP is enabled. Contour visibility is linked to the legend: hiding a variety via the legend also hides its contours. This option can be toggled at any time without re-rendering the plot. In 4D mode, contours are shown in both subplots. Not available in 3D mode.
 - **Number of neighbours**: Slider for UMAP hyperparameter. Check the UMAP docs for more info.
 - **Minimal distance**: Slider for UMAP hyperparameter. Check the UMAP docs for more info.
 
@@ -235,8 +241,8 @@ The data export section provides multiple options for exporting your selection:
     - Both checked: Transposed format with participant metadata as header rows
 - **Export Distance Matrix** (visible only in Participant Similarity mode): Downloads a pairwise distance matrix using the same settings as the UMAP plot (distance metric, standardization, selected participants and items). Participant IDs are used as both row and column labels.
 - **Export UMAP Coordinates** (visible only in Participant Similarity mode): Downloads the exact coordinates currently passed to the Plotly UMAP figure as a ZIP archive containing:
-    - `umap_coordinates_<timestamp>.csv`: Point-level coordinates and metadata (`x`, `y`, and `z` for 3D mode), including hidden points
-    - `umap_coordinates_<timestamp>_log.txt`: Export metadata including timestamp, selections, and UMAP settings
+    - `umap_coordinates_<timestamp>.csv`: Point-level coordinates and metadata, including hidden points. Coordinate columns are named `umap_dim1` and `umap_dim2` (standard 2D), `umap_dim1`–`umap_dim3` (3D mode), or `umap_dim1`–`umap_dim4` (4D mode). In 4D mode, dimensions 3 and 4 are retrieved from the paired subplot.
+    - `umap_coordinates_<timestamp>_log.txt`: Export metadata including timestamp, selections, UMAP settings, and the active normalization mode
     - The CSV includes visibility flags so hidden traces and zero-opacity points can be identified (`hidden_by_legend`, `hidden_by_opacity`)
 - **Download Aggregated Item Data** (visible only in Item Ratings mode): Downloads aggregated statistics for the currently displayed item plot as a ZIP archive containing:
   - `aggregated_data.csv`: Mean ratings, confidence intervals, standard deviations, medians, missing value counts, and participant counts for each item-group combination
@@ -341,7 +347,7 @@ UMAP (Uniform Manifold Approximation and Projection) computations are expensive 
 - Participant list (sorted)
 - Item list (sorted)
 - UMAP hyperparameters (n_neighbours, min_dist, distance_metric)
-- Standardization flag
+- Normalization mode (none / zscore / zscore_col / l2 / mean_l2)
 - DensMAP flag
 - Pairs mode flag
 - Regional mapping flag

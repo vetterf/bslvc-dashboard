@@ -3,6 +3,16 @@
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
 
+## [0.2.2] - t.b.a
+
+### Added
+- **Column-wise (item-wise) Z-score normalization**: Added a new "Z-Score (column / item-wise)" option (`zscore_col`) to the normalization dropdown. This standardizes each grammar item's ratings across all participants (column-wise) instead of standardizing each participant's ratings across all items (row-wise). It removes item-level mean differences and is particularly useful when group differences lie in relative item profiles rather than overall response levels. The option applies to UMAP computation and distance matrix export.
+- **UMAP 4D**: Added option to compute 4 UMAP dimensions. These are visualized as linked scatter plots.
+
+### Changed
+- **Normalization dropdown option labels clarified**: The existing "Z-Score" option has been renamed to "Z-Score (row / participant-wise)" for clarity.
+
+
 ## [0.2.1] - 2026-06-11
 
 ### Changed

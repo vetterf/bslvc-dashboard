@@ -77,7 +77,7 @@ except (OSError, PermissionError) as e:
 
 plot_cache = dc.Cache(cache_dir)
 
-def create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, dens_lambda, pairs, regional_mapping=False, include_ai=False, umap_3d=False):
+def create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, dens_lambda, pairs, regional_mapping=False, include_ai=False, umap_3d=False, umap_4d=False):
     """Create a unique cache key for plot parameters"""
     key_data = {
         'participants': sorted(participants) if participants else 'all',
@@ -91,15 +91,16 @@ def create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_
         'pairs': pairs,
         'regional_mapping': regional_mapping,
         'include_ai': include_ai,
-        'umap_3d': umap_3d
+        'umap_3d': umap_3d,
+        'umap_4d': umap_4d
     }
     key_string = str(key_data)
     return hashlib.md5(key_string.encode()).hexdigest()
 
-def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, dens_lambda, pairs, informants=None, regional_mapping=False, include_ai=False, umap_3d=False):
+def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, dens_lambda, pairs, informants=None, regional_mapping=False, include_ai=False, umap_3d=False, umap_4d=False):
     """Get UMAP plot (and quality metrics) from cache or compute if not exists.
     Returns (figure, metrics_dict)."""
-    cache_key = f"umap_{create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, dens_lambda, pairs, regional_mapping, include_ai, umap_3d)}"
+    cache_key = f"umap_{create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, dens_lambda, pairs, regional_mapping, include_ai, umap_3d, umap_4d)}"
     
     cached = plot_cache.get(cache_key)
     if cached is not None:
@@ -141,7 +142,8 @@ def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_m
         dens_lambda=dens_lambda,
         pairs=pairs,
         regional_mapping=regional_mapping,
-        umap_3d=umap_3d
+        umap_3d=umap_3d,
+        umap_4d=umap_4d
     )
     
     plot_cache.set(cache_key, (plot, quality_metrics))
@@ -1244,11 +1246,19 @@ umapSettingsAccordion = dmc.AccordionItem(
                             allowDeselect=False,
                             persistence=persist_UI, persistence_type=persistence_type
                         ),
-                        dmc.Checkbox(
+                        dmc.Select(
                             id="umap-standardize-checkbox",
-                            label="Standardize participant ratings",
-                            size="sm",
-                            checked=False,
+                            label="Normalize participant ratings:",
+                            data=[
+                                {"value": "none", "label": "No normalization"},
+                                {"value": "zscore", "label": "Z-Score (row / participant-wise)"},
+                                {"value": "zscore_col", "label": "Z-Score (column / item-wise)"},
+                                {"value": "l2", "label": "L2-normalization"},
+                                {"value": "mean_l2", "label": "Mean-center + L2-normalization"},
+                            ],
+                            value="none",
+                            size="xs",
+                            allowDeselect=False,
                             persistence=persist_UI, persistence_type=persistence_type
                         ),
                         dmc.Checkbox(
@@ -1280,6 +1290,13 @@ umapSettingsAccordion = dmc.AccordionItem(
                         dmc.Checkbox(
                             id="umap-3d-checkbox",
                             label="3D UMAP (experimental — lasso selection unavailable)",
+                            size="sm",
+                            checked=False,
+                            persistence=persist_UI, persistence_type=persistence_type
+                        ),
+                        dmc.Checkbox(
+                            id="umap-4d-checkbox",
+                            label="4D UMAP — two linked scatter plots (dims 1&2 and 3&4)",
                             size="sm",
                             checked=False,
                             persistence=persist_UI, persistence_type=persistence_type
@@ -2196,6 +2213,87 @@ def toggle_lasso_for_3d(umap_3d, plot_type):
     return {"display": "none"} if umap_3d else {"display": "block"}
 
 
+# Mutual exclusion: checking 4D unchecks 3D (they require different n_components)
+@callback(
+    Output('umap-3d-checkbox', 'checked', allow_duplicate=True),
+    Input('umap-4d-checkbox', 'checked'),
+    State('umap-3d-checkbox', 'checked'),
+    prevent_initial_call=True
+)
+def uncheck_3d_when_4d_enabled(umap_4d, umap_3d):
+    if umap_4d and umap_3d:
+        return False
+    return no_update
+
+
+# Mutual exclusion: checking 3D unchecks 4D
+@callback(
+    Output('umap-4d-checkbox', 'checked', allow_duplicate=True),
+    Input('umap-3d-checkbox', 'checked'),
+    State('umap-4d-checkbox', 'checked'),
+    prevent_initial_call=True
+)
+def uncheck_4d_when_3d_enabled(umap_3d, umap_4d):
+    if umap_3d and umap_4d:
+        return False
+    return no_update
+
+
+# Sync lasso/box selection between the two subplots in 4D UMAP mode
+@callback(
+    Output('UMAPfig', 'figure', allow_duplicate=True),
+    Input('UMAPfig', 'selectedData'),
+    State('UMAPfig', 'figure'),
+    prevent_initial_call=True
+)
+def sync_4d_subplot_selection(selectedData, figure):
+    """When a selection is made in one 4D subplot, highlight the same participants in the other."""
+    from dash import Patch
+    if figure is None or 'data' not in figure:
+        raise PreventUpdate
+
+    # Only active in 4D mode (subplot 2 traces carry meta={'subplot': 2})
+    has_4d = any(
+        isinstance(trace.get('meta'), dict) and trace['meta'].get('subplot') == 2
+        for trace in figure['data']
+    )
+    if not has_4d:
+        raise PreventUpdate
+
+    patched = Patch()
+
+    if not selectedData or not selectedData.get('points'):
+        # Clear programmatic selection on all data traces
+        for i, trace in enumerate(figure['data']):
+            if trace.get('ids'):
+                patched['data'][i]['selectedpoints'] = []
+        return patched
+
+    # Collect selected participant IDs
+    selected_ids = {
+        point.get('id') for point in selectedData['points']
+        if point.get('id') is not None
+    }
+
+    # Determine which subplot the selection came from
+    first_curve_num = selectedData['points'][0]['curveNumber']
+    if first_curve_num >= len(figure['data']):
+        raise PreventUpdate
+    first_trace = figure['data'][first_curve_num]
+    selection_axis = first_trace.get('xaxis') or 'x'
+    # Sync to the other subplot
+    target_axis = 'x2' if selection_axis == 'x' else 'x'
+
+    for i, trace in enumerate(figure['data']):
+        trace_axis = trace.get('xaxis') or 'x'
+        if trace_axis == target_axis and trace.get('ids'):
+            ids = trace['ids']
+            sp = [j for j, id_ in enumerate(ids) if id_ in selected_ids]
+            patched['data'][i]['selectedpoints'] = sp
+
+    return patched
+
+
 # Show/hide dens_lambda slider based on densemap checkbox
 @callback(
     Output('umap-dens-lambda-container', 'style'),
@@ -2624,7 +2722,7 @@ def export_data(n_clicks, participants, items, pairs, use_imputed, include_socio
      State('UMAP_neighbours','value'),
      State('UMAP_mindist','value'),
      State('umap-distance-metric-dropdown', 'value'),
-     State('umap-standardize-checkbox', 'checked'),
+     State('umap-standardize-checkbox', 'value'),
      State('grammar-type-switch', 'checked'),
      State('use-imputed-data-switch', 'checked'),
      State('informants-store', 'data'),
@@ -3278,7 +3376,7 @@ clientside_callback(
                 n_neighbors: n_neighbors,
                 min_dist: min_dist,
                 distance_metric: distance_metric,
-                standardize: standardize
+                standardize: standardize || "none"
             }
         };
         
@@ -3328,7 +3426,7 @@ clientside_callback(
      State('UMAP_neighbours', 'value'),
      State('UMAP_mindist', 'value'),
      State('umap-distance-metric-dropdown', 'value'),
-     State('umap-standardize-checkbox', 'checked'),
+     State('umap-standardize-checkbox', 'value'),
      State('grammar-type-switch', 'checked'),
      State('use-imputed-data-switch', 'checked')],
     prevent_initial_call=True
@@ -3359,7 +3457,7 @@ def toggle_paste_modal(open_clicks, cancel_clicks, load_clicks, is_open):
      Output('UMAP_neighbours', 'value', allow_duplicate=True),
      Output('UMAP_mindist', 'value', allow_duplicate=True),
      Output('umap-distance-metric-dropdown', 'value', allow_duplicate=True),
-     Output('umap-standardize-checkbox', 'checked', allow_duplicate=True),
+     Output('umap-standardize-checkbox', 'value', allow_duplicate=True),
      Output('grammar-type-switch', 'checked', allow_duplicate=True),
      Output('use-imputed-data-switch', 'checked', allow_duplicate=True),
      Output("notify-container", "children", allow_duplicate=True),
@@ -3469,7 +3567,12 @@ def load_pasted_settings(n_clicks, pasted_text, current_pairs):
         n_neighbors = umap_settings.get('n_neighbors', 25)
         min_dist = umap_settings.get('min_dist', 0.1)
         distance_metric = umap_settings.get('distance_metric', 'cosine')
-        standardize = umap_settings.get('standardize', False)
+        standardize = umap_settings.get('standardize', 'none')
+        # Coerce old bool values from saved settings
+        if standardize is True:
+            standardize = 'zscore'
+        elif standardize is False or standardize not in ('none', 'zscore', 'zscore_col', 'l2', 'mean_l2'):
+            standardize = 'none'
         pairs = settings['pairs']
         use_imputed = settings['use_imputed']
         
@@ -3551,7 +3654,7 @@ def load_pasted_settings(n_clicks, pasted_text, current_pairs):
      State('UMAP_neighbours', 'value'),
      State('UMAP_mindist', 'value'),
      State('umap-distance-metric-dropdown', 'value'),
-     State('umap-standardize-checkbox', 'checked'),
+     State('umap-standardize-checkbox', 'value'),
      State('grammar-type-switch', 'checked'),
      State('use-imputed-data-switch', 'checked')],
     prevent_initial_call=True
@@ -3604,7 +3707,7 @@ def save_settings(n_clicks, plot_type, participants, items, group_by, sort_by,
      Output('UMAP_neighbours', 'value', allow_duplicate=True),
      Output('UMAP_mindist', 'value', allow_duplicate=True),
      Output('umap-distance-metric-dropdown', 'value', allow_duplicate=True),
-     Output('umap-standardize-checkbox', 'checked', allow_duplicate=True),
+     Output('umap-standardize-checkbox', 'value', allow_duplicate=True),
      Output("notify-container", "children", allow_duplicate=True)],
     Input('restore-saved-settings', 'n_clicks'),
     [State('grammar-plot-type', 'value'),
@@ -3661,7 +3764,7 @@ def restore_settings(n_clicks, plot_type, item_settings, umap_settings):
             settings.get('n_neighbors', no_update),
             settings.get('min_dist', no_update),
             settings.get('distance_metric', no_update),
-            settings.get('standardize', no_update),
+            settings.get('standardize', 'none'),
             notification
         )
 
@@ -3785,7 +3888,7 @@ def manage_umap_groups(BTNaddgroup, BTNcleargroup, selectedData, figure, data, d
         for x in range(len(newFig['data'])):
             if newFig['data'][x].get('type') == 'scatter' and 'marker' in newFig['data'][x]:
                 newFig['data'][x]['marker']['symbol'] = 0
-        groupsCache = getColorGroupingsFromFigure(displayedFigure)
+        groupsCache = getColorGroupingsFromFigure(newFig)
         return newFig, 0, groupsCache, no_update
     
     # Add group
@@ -3831,7 +3934,37 @@ def manage_umap_groups(BTNaddgroup, BTNcleargroup, selectedData, figure, data, d
                 data = 0
             else:
                 data = data + 1
-            groupsCache = getGroupingsFromFigure(displayedFigure)
+            # In 4D mode, sync group symbols bidirectionally between the two subplots.
+            # getGroupingsFromFigure reads from subplot 1 (xaxis='x'), so we must ensure
+            # subplot 1 always has the current symbols regardless of where the selection was made.
+            has_4d = any(t.get('xaxis') == 'x2' for t in newFig['data'])
+            if has_4d:
+                # Build a map: legendgroup -> {axis: trace_index}
+                lg_map = {}
+                for j, t in enumerate(newFig['data']):
+                    if t.get('type') == 'scatter':
+                        lg = t.get('legendgroup')
+                        ax = t.get('xaxis') or 'x'
+                        if lg not in lg_map:
+                            lg_map[lg] = {}
+                        lg_map[lg][ax] = j
+                # For each modified trace, sync to its partner in the other subplot
+                for x in curve_numbers:
+                    t = newFig['data'][x]
+                    if t.get('type') != 'scatter':
+                        continue
+                    lg = t.get('legendgroup')
+                    ax = t.get('xaxis') or 'x'
+                    partner_ax = 'x2' if ax == 'x' else 'x'
+                    if lg in lg_map and partner_ax in lg_map[lg]:
+                        j = lg_map[lg][partner_ax]
+                        newFig['data'][j]['marker']['symbol'] = newFig['data'][x]['marker']['symbol'][:]
+                    # If the selection came from subplot 2, also copy back to subplot 1
+                    # so getGroupingsFromFigure (which reads subplot 1) has the right state
+                    if ax == 'x2' and lg in lg_map and 'x' in lg_map[lg]:
+                        j = lg_map[lg]['x']
+                        newFig['data'][j]['marker']['symbol'] = newFig['data'][x]['marker']['symbol'][:]
+            groupsCache = getGroupingsFromFigure(newFig)
             return newFig, data, groupsCache, no_update
     
     return no_update, no_update, no_update, no_update
@@ -3934,10 +4067,11 @@ def initiate_umap_rendering(BTNrenderPlot, modal_ok, modal_cancel, figure, runni
     State('UMAP_mindist','value'),
     State('grammar-items-preset', 'value'), 
     State('umap-distance-metric-dropdown', 'value'), 
-    State('umap-standardize-checkbox', 'checked'),
+    State('umap-standardize-checkbox', 'value'),
     State('umap-densemap-checkbox', 'checked'),
     State('umap-dens-lambda-slider', 'value'),
     State('umap-3d-checkbox', 'checked'),
+    State('umap-4d-checkbox', 'checked'),
     State('grammar-type-switch', 'checked'), 
     State('use-imputed-data-switch', 'checked'),
     State('informants-store', 'data'),  # Add informants store
@@ -3949,7 +4083,7 @@ def initiate_umap_rendering(BTNrenderPlot, modal_ok, modal_cancel, figure, runni
 )
 def compute_umap_background(trigger_data, selected_informants, items, n_neighbours, 
                            min_dist, selected_presets, distance_metric, 
-                           standardize_participant_ratings, densemap, dens_lambda, umap_3d, pairs, use_imputed, informants_data, regional_mapping, include_ai):
+                           standardize_participant_ratings, densemap, dens_lambda, umap_3d, umap_4d, pairs, use_imputed, informants_data, regional_mapping, include_ai):
     """Compute UMAP in background - this is the slow operation"""
     if trigger_data is None:
         raise PreventUpdate
@@ -3987,7 +4121,8 @@ def compute_umap_background(trigger_data, selected_informants, items, n_neighbou
         informants=informants_data,
         regional_mapping=regional_mapping,
         include_ai=include_ai,
-        umap_3d=umap_3d
+        umap_3d=umap_3d,
+        umap_4d=umap_4d
     )
     groupsCache = getColorGroupingsFromFigure(figure)
     
@@ -4887,12 +5022,13 @@ def toggle_umap_coordinates_download_button(fig):
      State("UMAP_neighbours", "value"),
      State("UMAP_mindist", "value"),
      State("umap-distance-metric-dropdown", "value"),
-     State("umap-standardize-checkbox", "checked"),
+     State("umap-standardize-checkbox", "value"),
      State("umap-densemap-checkbox", "checked"),
      State("umap-dens-lambda-slider", "value"),
      State("umap-3d-checkbox", "checked"),
      State("england-mapping-param", "data"),
-     State("include-ai-param", "data")],
+     State("include-ai-param", "data"),
+     State("umap-4d-checkbox", "checked")],
     prevent_initial_call=True
 )
 def download_umap_coordinates(
@@ -4910,6 +5046,7 @@ def download_umap_coordinates(
     umap_3d,
     regional_mapping,
     include_ai,
+    umap_4d,
 ):
     """Download the exact coordinate payload currently passed to the UMAP Plotly figure.
 
@@ -4961,20 +5098,37 @@ def download_umap_coordinates(
         ],
     }
 
+    # Build a lookup: legendgroup -> subplot2 trace (for 4D mode dim3/dim4 values)
+    subplot2_by_legendgroup = {}
+    for t in figure.get('data', []):
+        if isinstance(t.get('meta'), dict) and t['meta'].get('subplot') == 2:
+            lg = t.get('legendgroup') or t.get('name')
+            subplot2_by_legendgroup[lg] = t
+
     rows = []
     for trace in figure.get('data', []):
         trace_type = trace.get('type')
         if trace_type not in ('scatter', 'scattergl', 'scatter3d'):
             continue
+        # Skip subplot 2 traces in 4D mode (duplicates of subplot 1)
+        if isinstance(trace.get('meta'), dict) and trace['meta'].get('subplot') == 2:
+            continue
 
         x_vals = _to_list(trace.get('x'))
         y_vals = _to_list(trace.get('y'))
+        # For scatter3d: z is the 3rd UMAP dimension
         z_vals = _to_list(trace.get('z')) if trace_type == 'scatter3d' else []
         ids = _to_list(trace.get('ids'))
         texts = _to_list(trace.get('text'))
         customdata = _to_list(trace.get('customdata'))
         marker_opacity = trace.get('marker', {}).get('opacity', None)
         opacity_vals = _to_list(marker_opacity)
+
+        # For 4D mode: fetch dim3 & dim4 from the paired subplot 2 trace
+        lg = trace.get('legendgroup') or trace.get('name')
+        subplot2_trace = subplot2_by_legendgroup.get(lg)
+        dim3_vals = _to_list(subplot2_trace.get('x')) if subplot2_trace else []
+        dim4_vals = _to_list(subplot2_trace.get('y')) if subplot2_trace else []
 
         n_points = max(len(x_vals), len(y_vals), len(z_vals), len(ids), len(texts), len(customdata), len(opacity_vals))
         if n_points == 0:
@@ -4987,9 +5141,10 @@ def download_umap_coordinates(
                 'trace_visible': trace.get('visible', True),
                 'hidden_by_legend': trace.get('visible', True) == 'legendonly',
                 'point_index': idx,
-                'x': x_vals[idx] if idx < len(x_vals) else None,
-                'y': y_vals[idx] if idx < len(y_vals) else None,
-                'z': z_vals[idx] if idx < len(z_vals) else None,
+                'umap_dim1': x_vals[idx] if idx < len(x_vals) else None,
+                'umap_dim2': y_vals[idx] if idx < len(y_vals) else None,
+                'umap_dim3': z_vals[idx] if idx < len(z_vals) else (dim3_vals[idx] if idx < len(dim3_vals) else None),
+                'umap_dim4': dim4_vals[idx] if idx < len(dim4_vals) else None,
                 'id': ids[idx] if idx < len(ids) else None,
                 'text': texts[idx] if idx < len(texts) else None,
             }
@@ -5052,10 +5207,11 @@ UMAP Settings:
 Number of Neighbours: {n_neighbours}
 Minimum Distance: {min_dist}
 Distance Metric: {distance_metric}
-Standardization: {"Enabled" if standardize else "Disabled"}
+Normalization: {standardize if isinstance(standardize, str) and standardize != 'none' else ('Z-Score row-wise (legacy)' if standardize is True else 'None')}
 DensMAP: {"Enabled" if densemap else "Disabled"}
 DensMAP Lambda: {dens_lambda if densemap else "n/a"}
 3D UMAP: {"Enabled" if umap_3d else "Disabled"}
+4D UMAP: {"Enabled" if umap_4d else "Disabled"}
 Item Pairs Mode: {"Enabled (spoken-written difference)" if pairs else "Disabled (raw ratings)"}
 Regional Mapping: {"Enabled (England split into North/South)" if regional_mapping else "Disabled"}
 Include AI Participants: {"Enabled" if include_ai else "Disabled"}

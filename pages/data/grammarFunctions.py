@@ -32,6 +32,56 @@ import seaborn as sns
 symbols = [100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115]
 colorMap = px.colors.qualitative.Dark24
 
+
+def apply_normalization(df, mode):
+    """Apply normalization to a participant × item DataFrame.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Numeric participant × item matrix.
+    mode : str | bool
+        Normalization mode.  Accepts:
+        - 'none' or False/None  → no transformation
+        - 'zscore' or True      → row-wise Z-score per participant (mean=0, std=1)
+        - 'zscore_col'          → column-wise Z-score per item (mean=0, std=1 across participants)
+        - 'l2'                  → row-wise L2 normalization (unit norm)
+        - 'mean_l2'             → mean-center rows then L2 normalize
+    Returns
+    -------
+    pd.DataFrame with the same shape as *df*.
+    """
+    from sklearn.preprocessing import normalize as sk_normalize
+
+    df = df.apply(pd.to_numeric, errors='coerce')
+
+    # Coerce legacy boolean values
+    if mode is True:
+        mode = 'zscore'
+    elif mode is False or mode is None:
+        mode = 'none'
+
+    if mode == 'none':
+        return df
+    elif mode == 'zscore':
+        row_means = df.mean(axis=1)
+        row_stds = df.std(axis=1).replace(0, 1).fillna(1)
+        df = df.sub(row_means, axis=0).div(row_stds, axis=0)
+    elif mode == 'zscore_col':
+        col_means = df.mean(axis=0)
+        col_stds = df.std(axis=0).replace(0, 1).fillna(1)
+        df = df.sub(col_means, axis=1).div(col_stds, axis=1)
+    elif mode == 'l2':
+        normed = sk_normalize(df.fillna(0).values, norm='l2')
+        df = pd.DataFrame(normed, index=df.index, columns=df.columns)
+    elif mode == 'mean_l2':
+        row_means = df.mean(axis=1)
+        df = df.sub(row_means, axis=0)
+        normed = sk_normalize(df.fillna(0).values, norm='l2')
+        df = pd.DataFrame(normed, index=df.index, columns=df.columns)
+    return df
+
+
 # ============================================================================
 # CENTRALIZED VARIETY ORDERING AND CLASSIFICATION
 # ============================================================================
@@ -122,6 +172,10 @@ def getGroupingsFromFigure(figure):
         return marked_points
     
     for trace in figure['data']:
+        # Skip subplot 2 traces in 4D mode (duplicates of subplot 1)
+        _meta = trace.get('meta') if isinstance(trace, dict) else getattr(trace, 'meta', None)
+        if isinstance(_meta, dict) and _meta.get('subplot') == 2:
+            continue
         if 'marker' in trace and 'symbol' in trace['marker'] and 'opacity' in trace['marker']:
             # Only consider markers with opacity > 0
             marker_opacity = trace['marker']['opacity']
@@ -189,8 +243,13 @@ def getColorGroupingsFromFigure(figure):
         traces = figure['data']
         
         for trace in traces:
+            # Skip subplot 2 traces in 4D mode (duplicates of subplot 1)
+            _meta = trace.get('meta') if isinstance(trace, dict) else getattr(trace, 'meta', None)
+            if isinstance(_meta, dict) and _meta.get('subplot') == 2:
+                continue
             # Process both 2D scatter and 3D scatter traces
-            if trace['type'] in ('scatter', 'scatter3d') and 'marker' in trace:
+            _type = trace.get('type') if isinstance(trace, dict) else getattr(trace, 'type', '')
+            if _type in ('scatter', 'scatter3d') and 'marker' in trace:
                 # Extract info from each trace
                 if 'marker' in trace and 'color' in trace['marker']:
                     color = trace['marker']['color']
@@ -288,7 +347,7 @@ def compute_umap_quality_metrics(X, embedding, k=10):
         'k': k,
     }
 
-def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='cosine',pairs=False, regional_mapping=False, umap_3d=False, **kwargs):
+def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='cosine',pairs=False, regional_mapping=False, umap_3d=False, umap_4d=False, **kwargs):
     """
     Generate UMAP plot for grammar data with Leiden clustering
     
@@ -344,6 +403,11 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
             dens_lambda = value
         if key == 'umap_3d':
             umap_3d = value
+        if key == 'umap_4d':
+            umap_4d = value
+    # 4D and 3D are mutually exclusive; 4D takes precedence
+    if umap_4d:
+        umap_3d = False
 
 
     # Determine which informants to use for UMAP calculation
@@ -364,7 +428,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
     items_hash = _hash_list(items)
     # --- include distance_metric and regional_mapping in the hash/filename ---
     regional_suffix = "_regional" if regional_mapping else ""
-    dim_suffix = "_3d" if umap_3d else ""
+    dim_suffix = "_4d" if umap_4d else ("_3d" if umap_3d else "")
     # Include a style version so cached figures stay in sync with marker/contour styling updates.
     style_suffix = "_stylev3"
     preset_filename = f"umap_{umap_informants_hash}_{items_hash}_{n_neighbours}_{min_dist}_{distance_metric}_{standardize}_{densemap}_{dens_lambda if densemap else 'nd'}{regional_suffix}{dim_suffix}{style_suffix}.pkl"
@@ -390,19 +454,11 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
         dataCols = [item for item in dataCols if item in items]
     filtered_data = data.loc[:,dataCols]
 
-    if standardize:
-        # Standardize (Z-score) each participant's data row-wise
-        filtered_data = filtered_data.apply(pd.to_numeric, errors='coerce')
-        # Compute row-wise mean and std
-        row_means = filtered_data.mean(axis=1)
-        row_stds = filtered_data.std(axis=1).replace(0, 1).fillna(1)
-        # Standardize row-wise (Z-score)
-        filtered_data = filtered_data.sub(row_means, axis=0)
-        filtered_data = filtered_data.div(row_stds, axis=0)
+    filtered_data = apply_normalization(filtered_data, standardize)
 
     # run umap
     reducer = umap.UMAP(
-        n_components=3 if umap_3d else 2,
+        n_components=4 if umap_4d else (3 if umap_3d else 2),
         n_neighbors=n_neighbours,
         min_dist=min_dist,
         metric=distance_metric,
@@ -425,7 +481,9 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
         quality_metrics = {}
 
     # to dataframe for plotting
-    if umap_3d:
+    if umap_4d:
+        embedding = pd.DataFrame(embedding_array, columns=['x', 'y', 'z', 'w'])
+    elif umap_3d:
         embedding = pd.DataFrame(embedding_array, columns=['x', 'y', 'z'])
     else:
         embedding = pd.DataFrame(embedding_array, columns=['x', 'y'])
@@ -474,6 +532,12 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
             subplot_titles=('UMAP: Informant similarity with Leiden clusters', 'Confusion Matrix: Varieties vs Clusters'),
             specs=[[{"type": "scatter"}, {"type": "heatmap"}]]
         )
+    elif umap_4d:
+        fig = make_subplots(
+            rows=1, cols=2,
+            subplot_titles=('Dimensions 1 & 2', 'Dimensions 3 & 4'),
+            horizontal_spacing=0.06,
+        )
     else:
         fig = go.Figure()
         
@@ -512,6 +576,24 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
             )
             if leiden:
                 fig.add_trace(contour_trace, row=1, col=1)
+            elif umap_4d:
+                fig.add_trace(contour_trace, row=1, col=1)
+                contour_trace_34 = go.Histogram2dContour(
+                    x=df_contour['z'],
+                    y=df_contour['w'],
+                    name=c + ' (density 3&4)',
+                    legendgroup=c,
+                    colorscale=[[0, color_transparent], [1, color_fill]],
+                    showscale=False,
+                    contours=dict(coloring='fill', showlines=True),
+                    line=dict(color=variety_color, width=1.3 if is_ai_variety else 1.15),
+                    ncontours=10,
+                    showlegend=False,
+                    hoverinfo='skip',
+                    visible=False,
+                    meta={'kde_contour': True},
+                )
+                fig.add_trace(contour_trace_34, row=1, col=2)
             else:
                 fig.add_trace(contour_trace)
 
@@ -533,6 +615,23 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                 )
                 if leiden:
                     fig.add_trace(contour_trace_dotted, row=1, col=1)
+                elif umap_4d:
+                    fig.add_trace(contour_trace_dotted, row=1, col=1)
+                    contour_trace_dotted_34 = go.Histogram2dContour(
+                        x=df_contour['z'],
+                        y=df_contour['w'],
+                        name=c + ' (density dots 3&4)',
+                        legendgroup=c,
+                        showscale=False,
+                        contours=dict(coloring='none', showlines=True),
+                        line=dict(color='rgba(0,0,0,0.65)', width=1.1, dash='dot'),
+                        ncontours=10,
+                        showlegend=False,
+                        hoverinfo='skip',
+                        visible=False,
+                        meta={'kde_contour': True},
+                    )
+                    fig.add_trace(contour_trace_dotted_34, row=1, col=2)
                 else:
                     fig.add_trace(contour_trace_dotted)
 
@@ -598,6 +697,56 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                     ]), hoverinfo='text'
                 ),
                 row=1, col=1
+            )
+        elif umap_4d:
+            _customdata = df_color[['InformantID','MainVariety','MainVariety_Original','Age','Gender','RatioMainVariety','YearsLivedInMainVariety','CountryCollection','Year']]
+            _hovertemplate = '<br>'.join([
+                'InformantID: %{customdata[0]}',
+                'Main Variety: %{customdata[1]}',
+                'Main Variety (other): %{customdata[2]}',
+                'Age: %{customdata[3]}',
+                'Gender: %{customdata[4]}',
+                'Ratio (Main Variety): %{customdata[5]}',
+                'Years lived in (Main Variety): %{customdata[6]}',
+                'CountryCollection: %{customdata[7]}',
+                'Year: %{customdata[8]}',
+            ])
+            # Subplot 1: dimensions 1 & 2
+            fig.add_trace(
+                go.Scatter(
+                    x=df_color['x'],
+                    y=df_color['y'],
+                    name=c,
+                    legendgroup=c,
+                    mode='markers',
+                    text=df_color['InformantID'],
+                    ids=df_color['InformantID'],
+                    marker=dict(color=df_color['color'], size=5, opacity=0.8, symbol=0, line=marker_line_style),
+                    showlegend=True,
+                    customdata=_customdata,
+                    hovertemplate=_hovertemplate,
+                    hoverinfo='text',
+                ),
+                row=1, col=1
+            )
+            # Subplot 2: dimensions 3 & 4
+            fig.add_trace(
+                go.Scatter(
+                    x=df_color['z'],
+                    y=df_color['w'],
+                    name=c,
+                    legendgroup=c,
+                    mode='markers',
+                    text=df_color['InformantID'],
+                    ids=df_color['InformantID'],
+                    marker=dict(color=df_color['color'], size=5, opacity=0.8, symbol=0, line=marker_line_style),
+                    showlegend=False,
+                    customdata=_customdata,
+                    hovertemplate=_hovertemplate,
+                    hoverinfo='text',
+                    meta={'subplot': 2},
+                ),
+                row=1, col=2
             )
         else:
             fig.add_trace(
@@ -665,6 +814,11 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                 zaxis_title="UMAP 3",
             )
         )
+    elif umap_4d:
+        fig.update_xaxes(title_text="UMAP Dimension 1", row=1, col=1)
+        fig.update_yaxes(title_text="UMAP Dimension 2", row=1, col=1)
+        fig.update_xaxes(title_text="UMAP Dimension 3", row=1, col=2)
+        fig.update_yaxes(title_text="UMAP Dimension 4", row=1, col=2)
     elif leiden:
         fig.update_xaxes(title_text="UMAP Dimension 1", row=1, col=1)
         fig.update_yaxes(title_text="UMAP Dimension 2", scaleanchor="x", scaleratio=1, row=1, col=1)
@@ -729,17 +883,9 @@ def computeDistanceMatrix(grammarData, GrammarItemsCols, distance_metric='cosine
         dataCols = [item for item in dataCols if item in items]
     
     filtered_data = data.loc[:, dataCols]
-    
-    if standardize:
-        # Standardize (Z-score) each participant's data row-wise
-        filtered_data = filtered_data.apply(pd.to_numeric, errors='coerce')
-        # Compute row-wise mean and std
-        row_means = filtered_data.mean(axis=1)
-        row_stds = filtered_data.std(axis=1).replace(0, 1).fillna(1)
-        # Standardize row-wise (Z-score)
-        filtered_data = filtered_data.sub(row_means, axis=0)
-        filtered_data = filtered_data.div(row_stds, axis=0)
-    
+
+    filtered_data = apply_normalization(filtered_data, standardize)
+
     # Calculate distance matrix
     distance_matrix = pairwise_distances(filtered_data, metric=distance_metric)
     
@@ -5361,7 +5507,7 @@ Database Version: {retrieve_data.get_database_version()}
 Analysis Settings:
 ------------------
 Distance Metric: {distance_metric}
-Standardization: {"Enabled" if standardize else "Disabled"}
+Normalization: {standardize if standardize not in (False, None, True) else ('Z-Score row-wise' if standardize else 'None')}
 Item Pairs Mode: {"Enabled (spoken-written difference)" if pairs else "Disabled (raw ratings)"}
 Imputed Data: Always True (required for distance matrix)
 Regional Mapping: {"Enabled (England split into North/South)" if regional_mapping else "Disabled"}
