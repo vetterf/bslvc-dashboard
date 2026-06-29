@@ -78,9 +78,9 @@ Hovering over data points in plots displays an overlay with additional informati
 #### Analysis Type Selector
 This switch controls the analysis mode. Users can choose between "Participant Similarity" and "Item Ratings" plots. 
 
-In the mode "Participant Similarity", the dashboard applies dimensionality reduction to the selected data using Uniform Manifold Approximation and Projection (UMAP; https://umap-learn.readthedocs.io/en/latest/). Additionally, users can compare groups in the plot. This can be done either by selectively hiding varieties, or by using the lasso tool to create custom groups. For detailed instructions, see the instructions for [custom group comparison](#custom-group-comparison).
+In the mode **"Participant Similarity"**, the dashboard applies dimensionality reduction to the selected data using Uniform Manifold Approximation and Projection (UMAP; https://umap-learn.readthedocs.io/en/latest/). This mode is most meaningful when working with a large number of participants and variables as the dimensionality reduction reveals how similar speakers are based on many features at once. What the UMAP plot cannot show, however, is *which* variables drive that similarity. The **Group Comparison** function addresses this: it takes the groups (varieties or custom groups) as the outcome variable and ranks all features by how strongly they differentiate between groups (using either a Random Forest (Gini importance) or a Kruskal-Wallis test) so the most discriminating variables appear on the left and the least discriminating on the right. This provides a quick first overview before moving to more rigorous statistical modelling. Users can compare groups by selectively hiding varieties or by using the lasso tool to create custom groups. For detailed instructions, see [custom group comparison](#custom-group-comparison).
 
-In the mode "Item Ratings", users can compare the ratings of specific features. This mode is best suited for the comparison of a relatively small number of features. Some plot modes have limits of how much items and varieties can be displayed. Should you hit such a limit, the dashboard issues a warning notification. 
+In the mode **"Item Ratings"**, users can compare the ratings of specific features individually. This mode is recommended when working with a smaller number of features, as it offers more dedicated tools for exploring individual variables. Some plot modes have limits on how many items and varieties can be displayed; the dashboard issues a warning notification when such a limit is reached.
 
 ![Analysis type selector](img/UI_analysis_type_selector.png)
 
@@ -100,7 +100,7 @@ The "Deselect Lasso Selection" and "Select Only Lasso Selection" buttons modify 
 - **Clear Groups**: Remove all defined groups.
 - **Select Only Lasso Selection**: Select only participants currently selected via lasso tool.
 - **Deselect Lasso Selection**: Deselect participants selected via lasso tool.
-- **Compare Selected Groups**: Run a statistical group comparison. The ordering method can be switched between **Kruskal-Wallis ε²** (default) and **Random Forest** using the segmented control above this button. The group comparison view provides a toggle between **Plot** and **Table** view. The plot view shows per-group mean ratings with confidence intervals and an overlaid importance trace whose legend label matches the selected ordering method. The table view contains three tabs:
+- **Compare Selected Groups**: Run a statistical group comparison. The ordering method (**Kruskal-Wallis ε²** (default) or **Random Forest**) can be selected using the segmented control above this button. Both methods rank features by how strongly they differentiate between groups, placing the most discriminating variables on the left and the least discriminating on the right. This is intended as a quick-and-dirty first look at group differences, not as a replacement for proper statistical modelling (e.g. mixed-effects models). The group comparison view provides a toggle between **Plot** and **Table** view. The plot view shows per-group mean ratings with confidence intervals and an overlaid importance trace whose legend label matches the selected ordering method. The table view contains three tabs:
     - **Performance**: Describes the method used. For Kruskal-Wallis ε² this tab explains the effect size measure; for Random Forest it shows OOB accuracy and error rate, number of trees, classes, features, and samples.
     - **Confusion Matrix (OOB Predictions)**: Available for Random Forest only. An interactive table with colour-coded cells (green for diagonal/correct, red-scaled for off-diagonal/misclassifications). Downloadable as CSV.
     - **Top Items**: An interactive table listing all ranked features with their item code, feature description, eWAVE label, feature group, sentence, effect size or Gini importance, and per-group mean ratings. Downloadable as CSV.
@@ -115,9 +115,9 @@ Participants can be selected via the participant tree, either by clicking the ch
 - **Deselect All**: Deselect all participants.
 - **Quick Selection**: Batch select by variety, age, gender, completeness, or balanced groups. Available presets for common selections:
 
-    - **ENL**: Select all L1 varieties (England, Scotland, US)
+    - **ENL**: Select all L1 varieties (England, Scotland, US, Ireland)
     - **ESL**: Select all L2 varieties (Gibraltar, India, Malta, Puerto Rico)
-    - **EFL**: Select all EFL varieties (Germany, Slovenia, Sweden)
+    - **EFL**: Select all EFL varieties (Austria, Germany, Slovenia, Sweden)
     - **Balanced**: Select a balanced sample across all varieties
     - **Age Groups**: Select participants from specific age groups
     - **Gender**:
@@ -191,8 +191,8 @@ The UMAP Settings allow the user to tweak the UMAP hyperparameters, as well as t
 
 After each UMAP render, three quality metrics are displayed below the plot. All values are between 0 and 1; higher is better. The metrics are computed using k = *n_neighbours* (the same value used for the UMAP embedding).
 
-- **Trustworthiness**: Measures how many of each point's k nearest neighbours in the low-dimensional plot were also close in the original high-dimensional space. A low value indicates that the plot introduces false closeness — points that appear nearby were not actually similar. Values above ~0.85 are generally good for this type of data.
-- **Continuity**: The complement of trustworthiness: measures how many true high-dimensional neighbours remain close in the plot. A low value indicates that genuinely similar participants have been pulled apart in the embedding. Values above ~0.88 are generally good.
+- **Trustworthiness**: Measures how many of each point's k nearest neighbours in the low-dimensional plot were also close in the original high-dimensional space. A low value indicates that the plot introduces false closeness — points that appear nearby were not actually similar.
+- **Continuity**: The complement of trustworthiness: measures how many true high-dimensional neighbours remain close in the plot. A low value indicates that genuinely similar participants have been pulled apart in the embedding.
 
 
 #### Item Plot Settings

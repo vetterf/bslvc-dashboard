@@ -45,6 +45,9 @@ def apply_normalization(df, mode):
         - 'none' or False/None  → no transformation
         - 'zscore' or True      → row-wise Z-score per participant (mean=0, std=1)
         - 'zscore_col'          → column-wise Z-score per item (mean=0, std=1 across participants)
+        - 'mean_center'         → row-wise mean centering per participant (subtract participant mean)
+        - 'mean_center_col'     → column-wise mean centering per item (subtract item mean)
+        - 'residuals'           → two-way residualization: R[n,p] - item_mean[p] - subject_mean[n] + grand_mean
         - 'l2'                  → row-wise L2 normalization (unit norm)
         - 'mean_l2'             → mean-center rows then L2 normalize
     Returns
@@ -71,6 +74,17 @@ def apply_normalization(df, mode):
         col_means = df.mean(axis=0)
         col_stds = df.std(axis=0).replace(0, 1).fillna(1)
         df = df.sub(col_means, axis=1).div(col_stds, axis=1)
+    elif mode == 'mean_center':
+        row_means = df.mean(axis=1)
+        df = df.sub(row_means, axis=0)
+    elif mode == 'mean_center_col':
+        col_means = df.mean(axis=0)
+        df = df.sub(col_means, axis=1)
+    elif mode == 'residuals':
+        grand_mean = df.stack().mean()
+        item_means = df.mean(axis=0)   # mean across participants for each item (column-wise)
+        subject_means = df.mean(axis=1)  # mean across items for each participant (row-wise)
+        df = df.sub(item_means, axis=1).sub(subject_means, axis=0).add(grand_mean)
     elif mode == 'l2':
         normed = sk_normalize(df.fillna(0).values, norm='l2')
         df = pd.DataFrame(normed, index=df.index, columns=df.columns)

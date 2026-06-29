@@ -224,10 +224,17 @@ def create_summary_card():
                     c="dimmed",
                     mb="sm"
                 ),
+                dmc.Switch(
+                    id='map-labels-switch',
+                    label='Show variety labels',
+                    size='sm',
+                    checked=False,
+                    mb='xs'
+                ),
                 dcc.Graph(
                     id='participants-map-overview',
                     figure=create_participants_map(),
-                    config={'displayModeBar': True, 'scrollZoom': True}
+                    config={'displayModeBar': True, 'scrollZoom': True, 'toImageButtonOptions': {'format': 'svg'}}
                 )
             ], gap="sm")
         ])
@@ -311,7 +318,7 @@ def create_participants_plot():
     return fig
 
 
-def create_participants_map():
+def create_participants_map(show_labels=False):
     """Create a map showing participant locations with markers.
     
     Shows markers for each variety location, colored by data type availability 
@@ -380,6 +387,24 @@ def create_participants_map():
     # Create figure
     fig = go.Figure()
     
+    # Per-variety text positions to reduce label overlap in crowded regions
+    textposition_map = {
+        'England': 'middle right',
+        'Scotland': 'top center',
+        'Wales': 'bottom left',
+        'Ireland': 'middle left',
+        'Jersey': 'bottom right',
+        'Gibraltar': 'bottom left',
+        'Malta': 'bottom right',
+        'Spain (Balearic Islands)': 'bottom left',
+        'Denmark': 'top center',
+        'Sweden': 'top right',
+        'Germany': 'top right',
+        'Italy': 'bottom right',
+        'Serbia': 'bottom right',
+        'Slovenia': 'bottom left',
+    }
+
     # Add markers for each data type
     if markers:
         df_markers = pd.DataFrame(markers)
@@ -403,6 +428,21 @@ def create_participants_map():
                     name=data_type,
                     legendgroup=data_type
                 ))
+
+        # Separate text trace for variety labels (toggled via switch)
+        text_positions = [textposition_map.get(row['variety'], 'top center') for _, row in df_markers.iterrows()]
+        fig.add_trace(go.Scattergeo(
+            lon=df_markers['lon'],
+            lat=df_markers['lat'],
+            text=df_markers['variety'],
+            mode='text',
+            textposition=text_positions,
+            textfont=dict(size=11, color='#333333'),
+            showlegend=False,
+            hoverinfo='skip',
+            visible=show_labels,
+            name='_labels'
+        ))
     
     if not fig.data:
         return dmc.Alert(
@@ -1358,21 +1398,21 @@ layout = dmc.Container([
                         dcc.Graph(
                             id='participants-age-gender-hist',
                             figure=create_age_gender_histogram(),
-                            config={'displayModeBar': False}
+                            config={'displayModeBar': False, 'toImageButtonOptions': {'format': 'svg'}}
                         ),
                         dmc.Divider(my="sm"),
                         dmc.Title("Participants per Variety", order=5, mb="sm"),
                         dcc.Graph(
                             id='participants-variety-plot',
                             figure=create_participants_plot(),
-                            config={'displayModeBar': False}
+                            config={'displayModeBar': False, 'toImageButtonOptions': {'format': 'svg'}}
                         ),
                         dmc.Divider(my="md"),
                         dmc.Title("Participants by Survey Year and Variety", order=5, mb="sm"),
                         dcc.Graph(
                             id='participants-year-heatmap',
                             figure=create_participants_year_table(),
-                            config={'displayModeBar': False}
+                            config={'displayModeBar': False, 'toImageButtonOptions': {'format': 'svg'}}
                         )
                     ], gap="md")
                 ])
@@ -1436,7 +1476,7 @@ layout = dmc.Container([
                         dcc.Graph(
                             id='lexical-items-heatmap',
                             figure=create_lexical_items_heatmap(),
-                            config={'displayModeBar': False}
+                            config={'displayModeBar': False, 'toImageButtonOptions': {'format': 'svg'}}
                         ),
                         #dmc.Divider(my="md"),
                         #dmc.Title("Lexical Items - Mean Values per Variety and Item", order=5, mb="sm"),
@@ -1466,6 +1506,15 @@ def download_lexical_table(n_clicks):
             df = df.drop(columns=['NameSchool'])
         return dcc.send_data_frame(df.to_csv, "lexical_items_means.csv", index=False)
     return None
+
+# Callback for toggling variety labels on the overview map
+@callback(
+    Output('participants-map-overview', 'figure'),
+    Input('map-labels-switch', 'checked')
+)
+def toggle_map_labels(show_labels):
+    return create_participants_map(show_labels=show_labels)
+
 
 # Callback for grammar features table quick filter
 @callback(
