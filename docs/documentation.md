@@ -173,12 +173,15 @@ The UMAP Settings allow the user to tweak the UMAP hyperparameters, as well as t
 
 - **Color**: Select coloring variable (Variety, Variety type, Gender). This setting does not trigger a re-render of the plot and can be changed after rendering the plot.
 - **Distance metric**: Choose metric (Cosine, Euclidean, Manhattan).
-- **Normalize participant ratings**: Dropdown to apply normalization to each participant's rating vector before computing UMAP or the distance matrix. Options:
-    - **No normalization** (default): Ratings are used as-is.
-    - **Z-Score (row / participant-wise)**: Row-wise Z-score standardization — each participant's ratings are centred at zero with unit standard deviation. Removes individual response-scale biases (e.g. participants who consistently rate high or low). Recommended when using Euclidean or Manhattan distance.
-    - **Z-Score (column / item-wise)**: Column-wise Z-score standardization — each item's ratings across all participants are centred at zero with unit standard deviation. Removes item-level mean differences (e.g. items that are globally accepted or rejected), making participant distances reflect relative variation patterns rather than absolute item means. Particularly useful when comparing groups whose overall response tendencies differ less than their within-group item profiles.
-    - **L2-normalization**: Each participant's rating vector is scaled to unit Euclidean norm ($\|\mathbf{x}\|_2 = 1$). Compatible with cosine distance.
-    - **Mean-center + L2-normalization**: Subtracts the row mean first, then L2-normalizes. Combines bias removal and scale normalisation.
+- **Normalize participant ratings**: Dropdown to apply normalization to each participant's rating vector before computing UMAP or the distance matrix. Each option removes a different source of variance, so UMAP distances end up reflecting different aspects of the data. Options:
+    - **No normalization** (default): Ratings are used as-is. Retains all information — item main effects, subject main effects, and their interaction — so distances can be dominated by overall response tendency (e.g. one group uses the scale less) or by items with systematically different means.
+    - **Mean center (subject-wise)**: Subtracts each participant's mean rating. *Removes* subject main effect (overall leniency / severity). UMAP distances reflect the *within-subject profile shape* — which items a participant rates relatively higher or lower. Loses absolute intensity; may increase the influence of idiosyncratic noise.
+    - **Mean center (item-wise)**: Subtracts each item's mean rating. *Removes* item main effect (item baseline). UMAP distances reflect deviations from item baselines; subject overall tendency is still present, so group separation can reflect response-range differences.
+    - **Residuals / Double mean center (item-wise + subject-wise)**: Subtracts both item and subject means and adds back the grand mean. *Removes* both item and subject main effects; retains only the subject–item interaction component. UMAP distances reflect how each subject's item-specific deviations differ from what subject + item marginals would predict.
+    - **Z-score (subject-wise)**: Standardizes each participant's ratings to mean 0 and standard deviation 1. *Removes* subject mean and subject variance scale. UMAP distances reflect within-subject standardized contrasts, making participants comparable in relative terms. Low-variance subjects can produce disproportionately large standardized deviations.
+    - **Z-score (item-wise)**: Standardizes each item's ratings across participants to mean 0 and standard deviation 1. *Removes* item mean and item variance scale. Prevents high-variance items from dominating; differences are expressed in SD units per item. Noisier items may still drive structure after scaling.
+    - **L2-normalization (subject-wise)**: Scales each participant's vector to unit Euclidean norm. *Removes* magnitude; keeps direction. UMAP distances reflect the composition of responses across items (spherical / cosine geometry). Compatible with cosine distance. If the magnitude of extreme responses matters substantively, it is removed by construction.
+    - **Mean center rows + L2-normalization (subject-wise)**: Subtracts subject mean, then L2-normalizes. *Removes* subject mean and all magnitude; keeps centered direction. Targets deviation-from-mean pattern while ignoring overall level and scale. Sensitive to missingness and centering choices.
 - **Use density-preserving embedding (DensMAP)**: Checkbox for DensMAP (https://umap-learn.readthedocs.io/en/latest/densmap_demo.html). By default, UMAP does not preserve densities of clusters well. DensMAP tries to preserve the density of clusters when reducing dimensionality. Compatible with both 2D and 3D modes. Helpful for identifying outliers.
 - **DensMAP lambda (dens_lambda)**: Slider visible only when DensMAP is enabled. Controls the relative weight of the density-preserving loss term versus the standard UMAP embedding loss. Higher values enforce stronger density preservation at the potential cost of global structure quality. Range: 0.1–10.0, default: 2.0.
 - **3D UMAP (experimental)**: Renders the embedding in three dimensions. Lasso selection is not available in 3D mode.
@@ -347,7 +350,7 @@ UMAP (Uniform Manifold Approximation and Projection) computations are expensive 
 - Participant list (sorted)
 - Item list (sorted)
 - UMAP hyperparameters (n_neighbours, min_dist, distance_metric)
-- Normalization mode (none / zscore / zscore_col / l2 / mean_l2)
+- Normalization mode (none / mean_center / mean_center_col / residuals / zscore / zscore_col / l2 / mean_l2)
 - DensMAP flag
 - Pairs mode flag
 - Regional mapping flag
