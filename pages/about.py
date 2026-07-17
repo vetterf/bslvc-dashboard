@@ -37,7 +37,7 @@ layout = dmc.Container([
                 """The BSLVC project investigates the use of lexical and grammatical structures in varieties of English. Its overarching goal is to identify (supra-)
 regional patterns, globalization trends and sociolinguistic variation through the systematic description, profiling and
 comparison of questionnaire data. The survey elicits
-sociodemographic data, informant ratings for lexical preferences and intuition-based usage ratings for a broad range of grammatical structures, including 56 features from the
+sociodemographic data, informant ratings for lexical preferences and intuition-based usage ratings for a broad range of grammatical structures, including over 50 features from the
 electronic World Atlas of Varieties of English (https://ewave-atlas.org/).
 
 For more information, please visit the project homepage.

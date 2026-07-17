@@ -2,6 +2,17 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
+## [0.2.3] - 2026-07-17
+
+### Added
+- **Use perceptual scale**: Added a switch to convert the data from ordinal responses to a psychometrically grounded perceptual scale.
+- **Sorting options for item plots**: Added IQR and epsilon squared as sorting options for item plots.
+
+### Changed/Fixed
+- **Moved and fixed deselect non-twin items button**: Button now works as expected and deselects items, which are only present in the written section.
+- **Added warnings when working with flagged items**: The dashboard now issues a warning to the user if flagged items are included in the analysis.
+- **Added link to BSLVC database on Zenodo**
+- **Added more normalization options for UMAP**
 
 ## [0.2.2] - 2026-06-17
 

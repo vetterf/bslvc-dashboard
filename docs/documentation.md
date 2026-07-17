@@ -158,6 +158,7 @@ All grammar items can be selected in the grammar items tree. They are first grou
 - **Advanced Options**:
 
     - **Use item difference (spoken-written)**: Toggle to use difference between item pairs. Most items feature in the spoken and the written section of the BSLVC. These features are referred to as *twin items*. If this switch is set to true, the interface calculates the difference of the ratings for twin items (spoken - written) for each participant and uses this value for all subsequent plots. Naturally, items that feature only in the written section are excluded.
+    - **Use perceptual scale**: The data are transformed from their ordinal values (0-5) to a perceptual scale: 0 (no-one) => 0%, 1 (few) => 11%, 2 (some) => 27%, 3 (many) => 67%, 4 (most) => 81%, 5 (everyone) => 100%. For a discussion and more information, see Sönning, Lukas. 2024. Ordinal response scales: Psychometric grounding for design and analysis. Research Methods in Applied Linguistics 3(3). 100156. https://doi.org/10.1016/j.rmal.2024.100156.
     - **Use imputed data**: Toggle between imputed and raw data. UMAP always uses imputed data because it cannot handle missing values. In group comparison, **Random Forest** always uses imputed data, while **Kruskal-Wallis ε²** follows the switch and drops missing responses item-wise. See [Data Imputation](#data-imputation) for details on how the imputation is performed.
     - **Toggle Written-Only**: Toggle items which feature only in the written section.
     - **Currency/Unit**: Toggle currency/unit items.

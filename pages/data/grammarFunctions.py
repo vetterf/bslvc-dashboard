@@ -97,6 +97,31 @@ def apply_normalization(df, mode):
 
 
 # ============================================================================
+# PERCEPTUAL SCALE
+
+# Non-linear mapping from 0-5 Likert scale to perceptual percentage values.
+# Source: user-defined perceptual equivalence scale.
+PERCEPTUAL_SCALE = {0: 0, 1: 11, 2: 27, 3: 67, 4: 81, 5: 100}
+PERCEPTUAL_SCALE_TICKS = [0, 11, 27, 67, 81, 100]
+PERCEPTUAL_SCALE_LABELS = ["No-one (0%)", "Few (11%)", "Some (27%)", "Many (67%)", "Most (81%)", "Everyone (100%)"]
+PERCEPTUAL_SCALE_RANGE = [-2, 105]
+
+
+def apply_perceptual_scale(df, item_cols):
+    """Convert 0-5 ratings in *item_cols* to perceptual percentage values (0–100).
+
+    Values that cannot be mapped (NaN or out-of-range) remain NaN.
+    The original DataFrame is not mutated; a copy is returned.
+    """
+    df = df.copy()
+    for col in item_cols:
+        if col in df.columns:
+            numeric = pd.to_numeric(df[col], errors='coerce')
+            df[col] = numeric.map(PERCEPTUAL_SCALE)
+    return df
+
+
+# ============================================================================
 # CENTRALIZED VARIETY ORDERING AND CLASSIFICATION
 # ============================================================================
 
@@ -1720,14 +1745,25 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
         template='simple_white')
     
     if not pairs:
-        fig.update_yaxes(
-            title_text="Average rating",
-            secondary_y=False,
-            fixedrange=True,
-            tickvals=[0, 1, 2, 3, 4, 5],
-            ticktext=[Rating_map[str(i)] for i in range(6)],
-            range=[0, 5.1]
-        )
+        if value_range[1] > 5:
+            # Perceptual scale active
+            fig.update_yaxes(
+                title_text="Average rating (perceptual %)",
+                secondary_y=False,
+                fixedrange=True,
+                tickvals=PERCEPTUAL_SCALE_TICKS,
+                ticktext=PERCEPTUAL_SCALE_LABELS,
+                range=PERCEPTUAL_SCALE_RANGE,
+            )
+        else:
+            fig.update_yaxes(
+                title_text="Average rating",
+                secondary_y=False,
+                fixedrange=True,
+                tickvals=[0, 1, 2, 3, 4, 5],
+                ticktext=[Rating_map[str(i)] for i in range(6)],
+                range=[0, 5.1]
+            )
     else:
         fig.update_yaxes(
             title_text="Average difference in ratings",
@@ -2012,18 +2048,26 @@ def get_balanced_informants(informants, groupby):
     
     return balanced_informants
 
-def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="variety",pairs=False,use_imputed=False,plot_mode="normal",split_by_variety=False,regional_mapping=False,include_ai=False):
+def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="variety",pairs=False,use_imputed=False,plot_mode="normal",split_by_variety=False,regional_mapping=False,include_ai=False,use_perceptual_scale=False):
     # groupby: group by column in the data, possible Values: "variety","vtype","vtype_balanced","gender"
     # sortby: column to sort by, . "mean", "sd","alpha"
     #if True:
     #    return go.Figure()
     # to do
-    
+
+    # When perceptual scale is active the mean_cutoff_range needs to cover 0-100
+    if use_perceptual_scale and not pairs:
+        mean_cutoff_range = [0, 100]
+
     # Apply balanced sampling if needed
     balanced_informants = get_balanced_informants(informants, groupby)
     
     Rating_map={'0':'No-one','1':'Few','2':'Some','3':'Many','4':'Most','5':'Everyone'}
     df = retrieve_data.getGrammarData(imputed=use_imputed, items=items, participants=balanced_informants,pairs=pairs,regional_mapping=regional_mapping,include_ai=include_ai)
+
+    # Convert ratings to perceptual scale if requested (only for raw 0-5 ratings, not item differences)
+    if use_perceptual_scale and not pairs:
+        df = apply_perceptual_scale(df, items)
     #df = df.groupby('item').filter(lambda x: x['mean'].between(value_range[0], value_range[1]).all()).reset_index()
     
     if df.empty:
@@ -2072,8 +2116,26 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
         pl.std('value').alias('std')
     )
     meandf = meanplf.to_pandas()
-    
-    # For multi-mode sorting OR single mode with twins, group twin items and calculate combined statistics
+
+    # Pre-compute IQR and KW ε² per item for sort options
+    if sortby in ('iqr', 'kw'):
+        from scipy.stats import kruskal as _kruskal
+        iqr_vals, kw_vals = [], []
+        for _item in meandf['item']:
+            _vals = df[df['item'] == _item]['value'].dropna()
+            iqr_vals.append(float(_vals.quantile(0.75) - _vals.quantile(0.25)) if len(_vals) >= 4 else 0.0)
+            if sortby == 'kw':
+                _groups = [g['value'].dropna().values for _, g in df[df['item'] == _item].groupby('group')]
+                _groups = [g for g in _groups if len(g) >= 1]
+                try:
+                    _H, _ = _kruskal(*_groups) if len(_groups) >= 2 else (0.0, 1.0)
+                    _n = len(_vals)
+                    kw_vals.append(_H / (_n - 1) if _n > 1 else 0.0)
+                except Exception:
+                    kw_vals.append(0.0)
+        meandf['iqr'] = iqr_vals
+        if sortby == 'kw':
+            meandf['kw'] = kw_vals
     if (len(modes) > 1 or len(modes) == 1) and not pairs:
         # Create twin item pairs
         meta = retrieve_data.getGrammarMeta()
@@ -2169,6 +2231,8 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                 meandf = meandf.sort_values(by='item_sort', ascending=False).drop(columns='item_sort').reset_index(drop=True)
             elif sortby == "sd":
                 meandf = meandf.sort_values(by="std", ascending=False, ignore_index=True)
+            elif sortby in ('iqr', 'kw') and sortby in meandf.columns:
+                meandf = meandf.sort_values(by=sortby, ascending=False, ignore_index=True)
             else:
                 meandf = meandf.sort_values(by=sortby, ascending=True, ignore_index=True)
     else:
@@ -2182,6 +2246,8 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
             meandf = meandf.sort_values(by='item_sort', ascending=False).drop(columns='item_sort').reset_index(drop=True)
         elif sortby == "sd":
             meandf = meandf.sort_values(by="std", ascending=False, ignore_index=True)
+        elif sortby in ('iqr', 'kw') and sortby in meandf.columns:
+            meandf = meandf.sort_values(by=sortby, ascending=False, ignore_index=True)
         else:
             meandf = meandf.sort_values(by=sortby, ascending=True, ignore_index=True)
     
@@ -2204,10 +2270,13 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
     )
     # Calculate 95% confidence intervals
     plf = plf.with_columns((pl.lit(1.96) * (plf['std'] / pl.col('count').sqrt())).alias('ci_margin'))
-    # Clip CI bounds based on mode: [-5, 5] for pairs (item differences), [0, 5] for regular ratings
+    # Clip CI bounds based on mode: [-5, 5] for pairs (item differences), [0, 5] for regular ratings, [0, 100] for perceptual scale
     if pairs:
         plf = plf.with_columns((plf['mean'] - plf['ci_margin']).clip(-5, None).alias('lower_ci_abs'))
         plf = plf.with_columns((plf['mean'] + plf['ci_margin']).clip(None, 5).alias('upper_ci_abs'))
+    elif use_perceptual_scale:
+        plf = plf.with_columns((plf['mean'] - plf['ci_margin']).clip(0, None).alias('lower_ci_abs'))
+        plf = plf.with_columns((plf['mean'] + plf['ci_margin']).clip(None, 100).alias('upper_ci_abs'))
     else:
         plf = plf.with_columns((plf['mean'] - plf['ci_margin']).clip(0, None).alias('lower_ci_abs'))
         plf = plf.with_columns((plf['mean'] + plf['ci_margin']).clip(None, 5).alias('upper_ci_abs'))
@@ -2387,30 +2456,53 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
         
         # Add secondary x-axis at top to repeat rating labels
         if not pairs:
-            Rating_map={'0':'No-one','1':'Few','2':'Some','3':'Many','4':'Most','5':'Everyone'}
-            fig.update_layout(
-                xaxis2=dict(  # Secondary x-axis at top
-                    tickvals=[0, 1, 2, 3, 4, 5],
-                    ticktext=[Rating_map[str(i)] for i in range(6)],
-                    overlaying='x1',
-                    side='top',
-                    showgrid=False,
-                    zeroline=False,
-                    range=[-0.2, 5.2]
-                )
-            )
-            
-            # Add vertical grid lines at tick positions instead of repeated labels
-            if len(unique_items) > 5:
-                for rating_val in [0, 1, 2, 3, 4, 5]:
-                    fig.add_vline(
-                        x=rating_val,
-                        line_width=1,
-                        line_dash="dot",
-                        line_color="lightgray",
-                        opacity=0.5,
-                        layer="below"
+            if use_perceptual_scale:
+                fig.update_layout(
+                    xaxis2=dict(  # Secondary x-axis at top
+                        tickvals=PERCEPTUAL_SCALE_TICKS,
+                        ticktext=PERCEPTUAL_SCALE_LABELS,
+                        overlaying='x1',
+                        side='top',
+                        showgrid=False,
+                        zeroline=False,
+                        range=PERCEPTUAL_SCALE_RANGE
                     )
+                )
+                if len(unique_items) > 5:
+                    for rating_val in PERCEPTUAL_SCALE_TICKS:
+                        fig.add_vline(
+                            x=rating_val,
+                            line_width=1,
+                            line_dash="dot",
+                            line_color="lightgray",
+                            opacity=0.5,
+                            layer="below"
+                        )
+            else:
+                Rating_map={'0':'No-one','1':'Few','2':'Some','3':'Many','4':'Most','5':'Everyone'}
+                fig.update_layout(
+                    xaxis2=dict(  # Secondary x-axis at top
+                        tickvals=[0, 1, 2, 3, 4, 5],
+                        ticktext=[Rating_map[str(i)] for i in range(6)],
+                        overlaying='x1',
+                        side='top',
+                        showgrid=False,
+                        zeroline=False,
+                        range=[-0.2, 5.2]
+                    )
+                )
+                
+                # Add vertical grid lines at tick positions instead of repeated labels
+                if len(unique_items) > 5:
+                    for rating_val in [0, 1, 2, 3, 4, 5]:
+                        fig.add_vline(
+                            x=rating_val,
+                            line_width=1,
+                            line_dash="dot",
+                            line_color="lightgray",
+                            opacity=0.5,
+                            layer="below"
+                        )
         else:
             # Add secondary x-axis at top for pairs as well
             Rating_map = {'-5': 'Written only', '-4':'-4', '-3':'-3', '-2':'-2', '-1':'-1', '0':'Neutral', '1':'1', '2':'2', '3':'3', '4':'4', '5':'Spoken only'}
@@ -2439,14 +2531,23 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
                     )
         # Update primary x-axis with all rating labels (swapped) - always show all labels for split by variety
         if not pairs:
-            Rating_map={'0':'No-one','1':'Few','2':'Some','3':'Many','4':'Most','5':'Everyone'}
-            fig.update_xaxes(  # Primary x-axis
-                title_text="Average rating",
-                fixedrange=True,
-                tickvals=[0, 1, 2, 3, 4, 5],
-                ticktext=[Rating_map[str(i)] for i in range(6)],
-                range=[-0.2, 5.2]  # Ensure all labels are visible
-            )
+            if use_perceptual_scale:
+                fig.update_xaxes(
+                    title_text="Average rating (%)",
+                    fixedrange=True,
+                    tickvals=PERCEPTUAL_SCALE_TICKS,
+                    ticktext=PERCEPTUAL_SCALE_LABELS,
+                    range=PERCEPTUAL_SCALE_RANGE
+                )
+            else:
+                Rating_map={'0':'No-one','1':'Few','2':'Some','3':'Many','4':'Most','5':'Everyone'}
+                fig.update_xaxes(  # Primary x-axis
+                    title_text="Average rating",
+                    fixedrange=True,
+                    tickvals=[0, 1, 2, 3, 4, 5],
+                    ticktext=[Rating_map[str(i)] for i in range(6)],
+                    range=[-0.2, 5.2]  # Ensure all labels are visible
+                )
         else:
             Rating_map = {'-5': 'Written only', '-4':'-4', '-3':'-3', '-2':'-2', '-1':'-1', '0':'Neutral', '1':'1', '2':'2', '3':'3', '4':'4', '5':'Spoken only'}
             fig.update_xaxes(  # Changed from update_yaxes to update_xaxes
@@ -2465,7 +2566,7 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
 
     # Handle diverging stacked bar chart mode
     if plot_mode == "diverging":
-           return create_diverging_stacked_bar_plot(df, items, modes, groupby, variety_color_map, pairs, meta, balanced_informants, sortby, use_imputed, regional_mapping, include_ai=include_ai)
+           return create_diverging_stacked_bar_plot(df, items, modes, groupby, variety_color_map, pairs, meta, balanced_informants, sortby, use_imputed, regional_mapping, include_ai=include_ai, use_perceptual_scale=use_perceptual_scale)
 
     # Handle correlation matrix mode
     if plot_mode == "correlation_matrix":
@@ -2482,11 +2583,11 @@ def getItemPlot(informants,items,sortby="mean",mean_cutoff_range=[0,5],groupby="
     
     # Handle normal mode with axis rotation
     if plot_mode == "normal":
-        return create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pairs, meandf)
+        return create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pairs, meandf, use_perceptual_scale=use_perceptual_scale)
     
     # Handle informant mean boxplot mode
     if plot_mode == "informant_boxplot":
-           return create_informant_mean_boxplot(df, items, modes, groupby, variety_color_map, pairs, meandf, sortby, use_imputed, balanced_informants, regional_mapping, include_ai=include_ai)
+           return create_informant_mean_boxplot(df, items, modes, groupby, variety_color_map, pairs, meandf, sortby, use_imputed, balanced_informants, regional_mapping, include_ai=include_ai, use_perceptual_scale=use_perceptual_scale)
     
     # Legacy code for backward compatibility (will be removed)
     if len(modes) == 1 and not pairs:
@@ -3464,11 +3565,15 @@ def _participants_hash(participants):
     # Convert to tuple for consistent hashing
     return hashlib.md5(str(tuple(sorted(participants))).encode()).hexdigest()
 
-def create_diverging_stacked_bar_plot(df_orig, items, modes, groupby, variety_color_map, pairs, meta, informants, sortby="mean", use_imputed=True, regional_mapping=False, include_ai=False):
+def create_diverging_stacked_bar_plot(df_orig, items, modes, groupby, variety_color_map, pairs, meta, informants, sortby="mean", use_imputed=True, regional_mapping=False, include_ai=False, use_perceptual_scale=False):
     """Create a diverging stacked bar chart for rating distributions"""
     
     # Get raw data with individual ratings (not aggregated)
     raw_df = retrieve_data.getGrammarData(imputed=use_imputed, items=items, pairs=pairs, participants=informants, regional_mapping=regional_mapping, include_ai=include_ai)
+
+    # Apply perceptual scale if requested (only for raw 0-5 ratings, not item differences)
+    if use_perceptual_scale and not pairs:
+        raw_df = apply_perceptual_scale(raw_df, items)
 
     # Apply same grouping logic as main function
     if groupby == "variety":
@@ -3511,6 +3616,17 @@ def create_diverging_stacked_bar_plot(df_orig, items, modes, groupby, variety_co
             3: '#4caf50',   # Green
             4: '#2e7d32',   # Dark Green
             5: '#1b5e20'    # Very Dark Green
+        }
+    elif use_perceptual_scale:
+        # Perceptual scale: 0-5 mapped to 0,11,27,67,81,100
+        rating_range = PERCEPTUAL_SCALE_TICKS  # [0, 11, 27, 67, 81, 100]
+        rating_colors = {
+            0:   '#d32f2f',  # Red
+            11:  '#f57c00',  # Orange
+            27:  '#fbc02d',  # Yellow
+            67:  '#8bc34a',  # Yellowish Green
+            81:  '#4caf50',  # Green
+            100: '#2e7d32',  # Pure Green
         }
     else:
         # Normal scale 0-5
@@ -3824,18 +3940,29 @@ def create_diverging_stacked_bar_plot(df_orig, items, modes, groupby, variety_co
                 ))
         else:
             # For normal ratings: 0-2 on left, 3-5 on right
-            left_ratings = [0, 1, 2]
-            right_ratings = [3, 4, 5]
-            
-            # Define descriptive rating names
-            rating_names = {
-                0: 'No-one',
-                1: 'Few', 
-                2: 'Some',
-                3: 'Many',
-                4: 'Most',
-                5: 'Everyone'
-            }
+            if use_perceptual_scale:
+                left_ratings = [0, 11, 27]
+                right_ratings = [67, 81, 100]
+                rating_names = {
+                    0:   'No-one (0%)',
+                    11:  'Few (11%)',
+                    27:  'Some (27%)',
+                    67:  'Many (67%)',
+                    81:  'Most (81%)',
+                    100: 'Everyone (100%)'
+                }
+            else:
+                left_ratings = [0, 1, 2]
+                right_ratings = [3, 4, 5]
+                # Define descriptive rating names
+                rating_names = {
+                    0: 'No-one',
+                    1: 'Few', 
+                    2: 'Some',
+                    3: 'Many',
+                    4: 'Most',
+                    5: 'Everyone'
+                }
             
             # Plot left side ratings (0-2) - reversed order so 2 is closest to center
             for rating in reversed(left_ratings):  # This makes 2, 1, 0 order
@@ -4282,11 +4409,22 @@ def create_diverging_stacked_bar_plot(df_orig, items, modes, groupby, variety_co
     
     return fig
 
-def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pairs, meandf):
+def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pairs, meandf, use_perceptual_scale=False):
     """Create normal plot with 90-degree rotation (items on Y-axis)"""
     
     Rating_map={'0':'No-one','1':'Few','2':'Some','3':'Many','4':'Most','5':'Everyone'}
-    
+
+    if use_perceptual_scale and not pairs:
+        x_range = PERCEPTUAL_SCALE_RANGE
+        x_tickvals = PERCEPTUAL_SCALE_TICKS
+        x_ticktext = PERCEPTUAL_SCALE_LABELS
+        x_title = 'Rating % (average + 95% CI)'
+    else:
+        x_range = [0, 5.1]
+        x_tickvals = [0, 1, 2, 3, 4, 5]
+        x_ticktext = [Rating_map[str(i)] for i in range(6)]
+        x_title = 'Rating (average + 95% CI)'
+
     if len(modes) == 1 and not pairs:
         # Single mode plot - rotated
         plot_groups = sorted(df['group'].unique())
@@ -4332,15 +4470,15 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
         
         # Update layout for rotated plot
         fig.update_layout(
-            xaxis_title='Rating (average + 95% CI)',
+            xaxis_title=x_title,
             yaxis_title='Grammatical item',
             template='simple_white',
             height=max(400, len(meandf) * 15),  # Adjust height based on number of items
             xaxis2=dict(
                 fixedrange=True,
-                range=[0, 5.1],
-                tickvals=[0, 1, 2, 3, 4, 5],
-                ticktext=[Rating_map[str(i)] for i in range(6)] if not pairs else None,
+                range=x_range,
+                tickvals=x_tickvals,
+                ticktext=x_ticktext if not pairs else None,
                 side='top',
                 overlaying='x',
                 showgrid=False
@@ -4350,9 +4488,9 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
         # Update axes
         fig.update_xaxes(
             fixedrange=True,
-            range=[0, 5.1],
-            tickvals=[0, 1, 2, 3, 4, 5],
-            ticktext=[Rating_map[str(i)] for i in range(6)] if not pairs else None,
+            range=x_range,
+            tickvals=x_tickvals,
+            ticktext=x_ticktext if not pairs else None,
             mirror='ticks',  # Mirror ticks to top
             ticks='outside'
         )
@@ -4608,7 +4746,7 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
                 )
         
         fig.update_layout(
-            xaxis_title='Rating (average + 95% CI)',
+            xaxis_title=x_title,
             yaxis_title='Grammatical item',
             template='simple_white',
             height=max(600, len(y_labels) * 25)
@@ -4617,9 +4755,9 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
         # Update x-axis
         fig.update_xaxes(
             fixedrange=True,
-            range=[0, 5.1],
-            tickvals=[0, 1, 2, 3, 4, 5],
-            ticktext=[Rating_map[str(i)] for i in range(6)] if not pairs else None,
+            range=x_range,
+            tickvals=x_tickvals,
+            ticktext=x_ticktext if not pairs else None,
             mirror='ticks',  # Add ticks on top
             ticks='outside'
         )
@@ -4635,11 +4773,15 @@ def create_normal_plot_rotated(df, items, modes, groupby, variety_color_map, pai
     return fig
 
 
-def create_informant_mean_boxplot(df_orig, items, modes, groupby, variety_color_map, pairs, meandf, sortby="mean", use_imputed=True, informants=None, regional_mapping=False, include_ai=False):
+def create_informant_mean_boxplot(df_orig, items, modes, groupby, variety_color_map, pairs, meandf, sortby="mean", use_imputed=True, informants=None, regional_mapping=False, include_ai=False, use_perceptual_scale=False):
     """Create boxplots showing distribution of individual participant means across all items for each mode"""
     
     # Get raw data with individual ratings (not aggregated)
     raw_df = retrieve_data.getGrammarData(imputed=use_imputed, items=items, pairs=pairs, participants=informants, regional_mapping=regional_mapping, include_ai=include_ai)
+
+    # Apply perceptual scale if requested (only for 0-5 raw ratings)
+    if use_perceptual_scale and not pairs:
+        raw_df = apply_perceptual_scale(raw_df, items)
     
     # Get metadata and merge it to get section information
     if not pairs:
@@ -4766,6 +4908,12 @@ def create_informant_mean_boxplot(df_orig, items, modes, groupby, variety_color_
                 ticktext=['Written', '-4', '-3', '-2', '-1', 'Neutral', '1', '2', '3', '4', 'Spoken'],
                 range=[-5.5, 5.5]
             )
+        elif use_perceptual_scale:
+            fig.update_xaxes(
+                tickvals=PERCEPTUAL_SCALE_TICKS,
+                ticktext=PERCEPTUAL_SCALE_LABELS,
+                range=PERCEPTUAL_SCALE_RANGE
+            )
         else:
             # For regular items, use 0-5 scale
             Rating_map = {'0':'No-one','1':'Few','2':'Some','3':'Many','4':'Most','5':'Everyone'}
@@ -4853,6 +5001,12 @@ def create_informant_mean_boxplot(df_orig, items, modes, groupby, variety_color_
                 tickvals=[-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
                 ticktext=['Written', '-4', '-3', '-2', '-1', 'Neutral', '1', '2', '3', '4', 'Spoken'],
                 range=[-5.5, 5.5]
+            )
+        elif use_perceptual_scale:
+            fig.update_xaxes(
+                tickvals=PERCEPTUAL_SCALE_TICKS,
+                ticktext=PERCEPTUAL_SCALE_LABELS,
+                range=PERCEPTUAL_SCALE_RANGE
             )
         else:
             # For regular items, use 0-5 scale

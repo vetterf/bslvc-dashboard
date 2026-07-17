@@ -127,7 +127,7 @@ def get_cached_umap_plot(participants, items, n_neighbours, min_dist, distance_m
     else:
         grammarData = retrieve_data.getGrammarData(imputed=True, participants=participants, columns=items, pairs=True, regional_mapping=regional_mapping, include_ai=include_ai)
         grammarCols = GrammarItemsColsPairs
-        
+
     plot, quality_metrics = getUMAPplot(
         grammarData=grammarData,
         GrammarItemsCols=grammarCols,
@@ -218,6 +218,10 @@ def get_cached_rf_plot(data, importance_ratings, value_range, pairs, participant
     #plot_cache.set(cache_key, plot, expire=86400)
     plot_cache.set(cache_key, plot)
     return plot
+
+# Flagged items (items with known issues that may affect analysis)
+FLAGGED_ITEMS_SINGLE = {'M19', 'J23', 'C14', 'A4', 'E22', 'D12', 'E6', 'C21', 'H4', 'M23', 'L16'}
+FLAGGED_ITEMS_PAIRS  = {'A4-M19', 'C14-J23', 'C21-H4', 'D12-J25', 'E6-G2', 'E22-N22'}
 
 # Load only essential data at startup - defer heavy computations
 GrammarItemsCols = retrieve_data.getGrammarItemsCols()
@@ -1110,17 +1114,55 @@ itemSelectionAccordion = dmc.AccordionItem(
                     dmc.Stack(gap='md',children=[
                         # Select All / Deselect All buttons at the top
                         dmc.Group(children=[
-                            dmc.Button("Select All", id='select-all-grammar-items', size="xs", variant="outline"),
-                            dmc.Button("Deselect All", id='deselect-all-grammar-items', size="xs", variant="outline"),
-                            dmc.Button([
-                                DashIconify(icon="tabler:filter-x", width=14),
-                                " Flagged"
-                            ],
-                                id="grammar_deselect_problematic",
-                                variant="outline",
-                                size="xs"
-                            )
-                                                    ], mb="xs"),
+                            dmc.Tooltip(
+                                dmc.Button("Select All", id='select-all-grammar-items', size="xs", variant="outline"),
+                                label="Select all grammar items in the current tree",
+                                position="top", withArrow=True, openDelay=400,
+                            ),
+                            dmc.Tooltip(
+                                dmc.Button("Deselect All", id='deselect-all-grammar-items', size="xs", variant="outline"),
+                                label="Deselect all grammar items",
+                                position="top", withArrow=True, openDelay=400,
+                            ),
+                        ], mb="4px"),
+                        dmc.Group(children=[
+                            dmc.Tooltip(
+                                dmc.Button([
+                                    DashIconify(icon="tabler:filter-x", width=14),
+                                    " Flagged"
+                                ],
+                                    id="grammar_deselect_problematic",
+                                    variant="outline",
+                                    size="xs"
+                                ),
+                                label="Deselect items flagged for potential issues (currency variants, deviant renderings). See Documentation for details.",
+                                position="top", withArrow=True, openDelay=400, multiline=True, w=280,
+                            ),
+                            dmc.Tooltip(
+                                dmc.Button([
+                                    DashIconify(icon="tabler:filter-x", width=14),
+                                    " Non-twin items"
+                                ],
+                                    id="grammar_toggle_written_only",
+                                    variant="outline",
+                                    size="xs"
+                                ),
+                                label="Deselect items that only appear in the written section, i.e. items without a counterpart in the spoken section",
+                                position="top", withArrow=True, openDelay=400, multiline=True, w=280,
+                            ),
+                            dmc.Tooltip(
+                                dmc.Button([
+                                    DashIconify(icon="tabler:filter-x", width=14),
+                                    " Currency/Unit"
+                                ],
+                                    id="grammar_toggle_currency",
+                                    variant="outline",
+                                    size="xs"
+                                ),
+                                label="Deselect items involving currency or unit measurements (M19, J23, C21, C14, A4, H4), which vary by region",
+                                position="top", withArrow=True, openDelay=400, multiline=True, w=280,
+                            ),
+                        ], mb="xs"),
                         dmc.Text(
                             "💡 Tip: Use the 'Grammar Items' tab to browse and select items more easily using the interactive table.",
                             size="sm",
@@ -1172,6 +1214,16 @@ itemSelectionAccordion = dmc.AccordionItem(
                                                     size="sm",
                                                 ),
                                                 dmc.Switch(
+                                                    id="use-perceptual-scale-switch",
+                                                    label="Use perceptual scale",
+                                                    description="Convert 0–5 ratings to perceptual percentages: 0→0%, 1→11%, 2→27%, 3→67%, 4→81%, 5→100%",
+                                                    checked=False,
+                                                    disabled=False,
+                                                    persistence=persist_UI,
+                                                    persistence_type=persistence_type,
+                                                    size="sm",
+                                                ),
+                                                dmc.Switch(
                                                     id="use-imputed-data-switch",
                                                     label="Use imputed data",
                                                     description="Toggle between imputed and raw data. UMAP always uses imputed data.",
@@ -1180,21 +1232,7 @@ itemSelectionAccordion = dmc.AccordionItem(
                                                     persistence_type=persistence_type,
                                                     size="sm",
                                                 ),
-                                                dmc.Group(children=[
-                                                    dmc.Button("Toggle Written-Only",
-                                                        id="grammar_toggle_written_only",
-                                                        size="xs",
-                                                        variant="light"
-                                                    ),
-                                                    dmc.Button([
-                                                        DashIconify(icon="tabler:coin-off", width=14),
-                                                        " Currency/Unit"
-                                                    ],
-                                                        id="grammar_toggle_currency",
-                                                        size="xs",
-                                                        variant="light"
-                                                    ),
-                                                ], gap="xs"),
+
                                             ])
                                         ),
                                     ],
@@ -1388,6 +1426,8 @@ itemPlotSettingsAccordion = dmc.AccordionItem([
                 data=[
                     {"value":"mean","label":"Mean"},
                     {"value":"sd","label":"Standard deviation"},
+                    {"value":"iqr","label":"IQR (spread)"},
+                    {"value":"kw","label":"Kruskal-Wallis ε² (group effect)"},
                     {"value":"alpha","label":"Alphabetically"},
                 ],
                 size="xs",
@@ -2088,6 +2128,20 @@ def toggle_twin_correlation_option(pairs_enabled, current_data):
             updated_data.append(item)
     return updated_data
 
+# Disable the perceptual-scale switch when pairs mode is active (values are differences, not 0-5)
+@callback(
+    [Output('use-perceptual-scale-switch', 'disabled'),
+     Output('use-perceptual-scale-switch', 'checked', allow_duplicate=True)],
+    Input('grammar-type-switch', 'checked'),
+    State('use-perceptual-scale-switch', 'checked'),
+    prevent_initial_call=True
+)
+def toggle_perceptual_scale_availability(pairs_enabled, current_checked):
+    """Disable (and uncheck) perceptual scale switch when item-difference mode is on."""
+    if pairs_enabled:
+        return True, False  # disabled, unchecked
+    return False, current_checked  # re-enable, keep current state
+
 # Reset plot mode if twin_correlation is selected but pairs gets disabled
 @callback(
     Output('items-plot-mode', 'value', allow_duplicate=True),
@@ -2629,10 +2683,11 @@ def batch_select_participants(*args):
      State('export-include-sociodemographic-checkbox', 'checked'),
      State('export-include-item-metadata-checkbox', 'checked'),
      State('england-mapping-param', 'data'),
-     State('include-ai-param', 'data')],
+     State('include-ai-param', 'data'),
+     State('use-perceptual-scale-switch', 'checked')],
     prevent_initial_call=True
 )
-def export_data(n_clicks, participants, items, pairs, use_imputed, include_sociodem, include_item_meta, regional_mapping, include_ai):
+def export_data(n_clicks, participants, items, pairs, use_imputed, include_sociodem, include_item_meta, regional_mapping, include_ai, use_perceptual_scale):
     """Export current selection as CSV with optional metadata"""
     if not n_clicks or not participants or not items:
         return no_update
@@ -2649,6 +2704,10 @@ def export_data(n_clicks, participants, items, pairs, use_imputed, include_socio
         regional_mapping=regional_mapping,
         include_ai=include_ai
     )
+
+    # Apply perceptual scale if requested (only for raw 0-5 ratings, not differences)
+    if use_perceptual_scale and not pairs:
+        data = gf.apply_perceptual_scale(data, list(items) if items else [])
     
     # Remove sensitive columns (privacy protection)
     data = gf.remove_sensitive_columns(data)
@@ -3991,10 +4050,12 @@ def manage_umap_groups(BTNaddgroup, BTNcleargroup, selectedData, figure, data, d
     [State('grammar_plots_UMAP', 'data'),
      State("grammar_running","data"),
      State("participantsTree", "checked"),
-     State("grammarItemsTree", "checked")],
+     State("grammarItemsTree", "checked"),
+     State('use-perceptual-scale-switch', 'checked'),
+     State('grammar-type-switch', 'checked')],
     prevent_initial_call=True
 )
-def initiate_umap_rendering(BTNrenderPlot, modal_ok, modal_cancel, figure, running_state, participants, items):
+def initiate_umap_rendering(BTNrenderPlot, modal_ok, modal_cancel, figure, running_state, participants, items, use_perceptual_scale, pairs):
     """Set loading states immediately when render is clicked"""
     button_clicked = ctx.triggered_id
     
@@ -4033,17 +4094,35 @@ def initiate_umap_rendering(BTNrenderPlot, modal_ok, modal_cancel, figure, runni
         if running_state:
             return no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update
         
-        # Validation passed - show rendering notification with imputed data info for UMAP
+        # Flagged items check
+        flagged_set = FLAGGED_ITEMS_PAIRS if pairs else FLAGGED_ITEMS_SINGLE
+        flagged_in_selection = sorted(set(items or []) & flagged_set)
+
+        # Validation passed - show rendering notification
+        note_extra = " Note: perceptual scale is active but does NOT affect UMAP (raw/normalised values are used)." if use_perceptual_scale else ""
         notification = dmc.Notification(
             id="my-notification",
             title="Info",
-            message="Rendering UMAP plot with imputed data, please wait.",
-            color="blue",
+            message=f"Rendering UMAP plot with imputed data, please wait.{note_extra}",
+            color="blue" if not use_perceptual_scale else "yellow",
             loading=True,
             action="show",
-            autoClose=4000,
+            autoClose=6000 if use_perceptual_scale else 4000,
             position="top-right"
         )
+        if flagged_in_selection:
+            flagged_str = ", ".join(flagged_in_selection)
+            flagged_notification = dmc.Notification(
+                id="flagged-items-notification",
+                title="Flagged Items Included",
+                message=f"The following flagged items are included in the UMAP: {flagged_str}. Please check the documentation for details.",
+                color="yellow",
+                loading=False,
+                action="show",
+                autoClose=False,
+                position="top-right"
+            )
+            notification = [notification, flagged_notification]
         
         # Immediately set loading states (this happens instantly)
         # Modal is disabled, so always proceed with rendering
@@ -4129,10 +4208,6 @@ def compute_umap_background(trigger_data, selected_informants, items, n_neighbou
     )
     groupsCache = getColorGroupingsFromFigure(figure)
     
-    # Store the settings used for this UMAP render
-    # UMAP always uses imputed data, so we hardcode use_imputed=True here.
-    # This ensures the RF group comparison (which inherits these settings) correctly
-    # reports "Imputed data" as the data source.
     render_settings = {
         "pairs": pairs,
         "use_imputed": True  # UMAP always uses imputed data
@@ -4260,16 +4335,18 @@ def clear_rf_plot_loading(figure, notification):
     State('rf-use-zscores','checked'),
     State('use-imputed-data-switch', 'checked'),
     State('include-ai-param', 'data'),
-    State('rf-ordering-method', 'value')],  # Variable ordering method
+    State('rf-ordering-method', 'value'),  # Variable ordering method
+    State('use-perceptual-scale-switch', 'checked')],  # Perceptual scale
     prevent_initial_call=True
 )
-def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants,render_settings,use_zscores,user_imputed_switch,include_ai,ordering_method):
+def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants,render_settings,use_zscores,user_imputed_switch,include_ai,ordering_method,use_perceptual_scale):
     # Set default value for split_by_variety since checkbox was removed
     split_by_variety = False
     
     # Extract settings from the stored UMAP render settings
     pairs = render_settings.get('pairs', False)
     rf_use_imputed = render_settings.get('use_imputed', True)
+    use_perceptual_scale = use_perceptual_scale or False
     
     button_clicked = ctx.triggered_id
     if button_clicked == 'render-rf-plot' and BTN is not None:
@@ -4360,6 +4437,23 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
             autoClose=2000,
             position="top-right"
         )
+
+        # Flagged items check
+        flagged_set = FLAGGED_ITEMS_PAIRS if pairs else FLAGGED_ITEMS_SINGLE
+        flagged_in_selection = sorted(set(items or []) & flagged_set)
+        if flagged_in_selection:
+            flagged_str = ", ".join(flagged_in_selection)
+            flagged_notification = dmc.Notification(
+                id="flagged-items-notification",
+                title="Flagged Items Included",
+                message=f"The following flagged items are included in the comparison: {flagged_str}. Please check the documentation for details.",
+                color="yellow",
+                loading=False,
+                action="show",
+                autoClose=False,
+                position="top-right"
+            )
+            notification = [notification, flagged_notification]
         
         # --- Dispatch to ordering method ---
         use_kw = (ordering_method != 'rf')  # default to KW if unset
@@ -4374,6 +4468,15 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
             pairs=pairs,
             include_ai=include_ai
         )
+
+        # Apply perceptual scale if requested (only for raw 0-5 ratings, not differences)
+        if use_perceptual_scale and not pairs:
+            from pages.data.grammarFunctions import apply_perceptual_scale
+            data = apply_perceptual_scale(data, list(items) if items else [])
+            # Adjust value_range to match the new 0-100 scale
+            effective_value_range = [0, 100]
+        else:
+            effective_value_range = value_range
 
         if use_kw:
             importanceRatings = computeKruskalWallisOrdering(items, data, datacols=items, groupcol=groupcol, pairs=pairs)
@@ -4407,7 +4510,7 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
             for i, cls in enumerate(classes):
                 f1_scores_dict[cls] = f1_per_class[i]
         f1_df = pd.DataFrame(list(f1_scores_dict.items()), columns=['Variety', 'F1 Score'])
-        f1_df['F1 Score'] = f1_df['F1 Score'].round(4)
+        f1_df['F1 Score'] = pd.to_numeric(f1_df['F1 Score'], errors='coerce').round(4)
         f1_df = f1_df.sort_values('F1 Score', ascending=False).reset_index(drop=True)
 
         # Build imputed-data note when user switch is off but RF uses imputed data
@@ -4592,6 +4695,11 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
         # Fetch data for table per-group means based on user switch (may differ from RF training data)
         table_data = retrieve_data.getGrammarData(imputed=user_imputed_switch, participants=groupcol['ids'], columns=items, pairs=pairs, include_ai=include_ai)
 
+        # Apply perceptual scale to table data if requested
+        if use_perceptual_scale and not pairs:
+            from pages.data.grammarFunctions import apply_perceptual_scale
+            table_data = apply_perceptual_scale(table_data, list(items) if items else [])
+
         columns = importanceRatings['item'].to_list()
         table_data[columns] = table_data[columns].apply(pd.to_numeric, errors='coerce')
         table_data = table_data.merge(groupcol, left_on='InformantID', right_on="ids", how="left")
@@ -4717,7 +4825,7 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
         RFPlot = get_cached_rf_plot(
             plotDF,
             importanceRatings,
-            value_range,
+            effective_value_range,
             pairs=pairs,
             split_by_variety=split_by_variety,
             importance_label=importance_trace_label,
@@ -4806,31 +4914,19 @@ def updateGrammarItemsTree(wo_button,curr_button,prob_button,itemTree,pairs):
 
     if (button_clicked == 'grammar_toggle_written_only'):
         if pairs:
-            items = grammarMetaPairs.copy(deep=True)
-            # In pairs mode, there are no written-only items
-            return itemTree
+            return itemTree  # all items are twins in pairs mode
         else:
-            items = grammarMeta.copy(deep=True)
-            wo_items = items.loc[items['also_in_question'] == '','question_code'].to_list()
-            if (len(set(itemTree).intersection(wo_items)) < len(wo_items)):
-                items = wo_items + itemTree
-                items = list(set(items))
-            else:
-                items = list(set(itemTree)-set(wo_items))
+            meta = grammarMeta.copy(deep=True)
+            # Non-twin items: those that do not appear in the other section
+            nontwin_items = set(meta.loc[meta['also_in_item'].fillna('') == '', 'question_code'].to_list())
+            items = list(set(itemTree) - nontwin_items)
             return items
     elif (button_clicked == 'grammar_toggle_currency'):
         if pairs:
-            # In pairs mode, use the pair codes for currency items
-            unit_items = ['C21-H4', 'A4-M19', 'C14-J23']
+            unit_items = {'C21-H4', 'A4-M19', 'C14-J23'}
         else:
-            unit_items = ['C21','H4','A4','C14','J23','M19']
-        # if one of the above is already in list, select all
-        # if all are selected, deselect all
-        if (len(set(itemTree).intersection(unit_items)) < len(unit_items)):
-            items = unit_items + itemTree
-            items = list(set(items))
-        else:
-            items = list(set(itemTree)-set(unit_items))
+            unit_items = {'C21', 'H4', 'A4', 'C14', 'J23', 'M19'}
+        items = list(set(itemTree) - unit_items)
         return items
     elif (button_clicked == 'grammar_deselect_problematic'):
         if pairs:
@@ -4861,10 +4957,10 @@ def updateGrammarItemsTree(wo_button,curr_button,prob_button,itemTree,pairs):
      Output('item-plot-settings-store', 'data'),
      Output('download-item-plot-data-button', 'disabled')],
     Input('render-item-plot','n_clicks'),
-    [State('participantsTree','checked'),State('grammarItemsTree','checked'),State('items-group-by','value'),State('items-sort-by','value'),State('items-plot-mode','value'),State('grammar-type-switch','checked'),State('use-imputed-data-switch', 'checked'),State('england-mapping-param', 'data'),State('include-ai-param', 'data')],
+    [State('participantsTree','checked'),State('grammarItemsTree','checked'),State('items-group-by','value'),State('items-sort-by','value'),State('items-plot-mode','value'),State('grammar-type-switch','checked'),State('use-imputed-data-switch', 'checked'),State('england-mapping-param', 'data'),State('include-ai-param', 'data'),State('use-perceptual-scale-switch', 'checked')],
     prevent_initial_call=True
 )
-def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imputed,regional_mapping,include_ai):
+def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imputed,regional_mapping,include_ai,use_perceptual_scale):
     button_clicked = ctx.triggered_id
     if button_clicked == 'render-item-plot' and BTN is not None:
         # Validation: Check minimum selections (handle None case)
@@ -4921,7 +5017,11 @@ def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imput
                 position="top-right"
             )
             return no_update, False, False, notification, no_update, no_update, no_update
-        
+
+        # Flagged items check
+        flagged_set = FLAGGED_ITEMS_PAIRS if pairs else FLAGGED_ITEMS_SINGLE
+        flagged_in_selection = sorted(set(items or []) & flagged_set)
+
         # Validation passed - show rendering notification with imputed data info if applicable
         if use_imputed:
             notification = dmc.Notification(
@@ -4946,6 +5046,20 @@ def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imput
                 position="top-right"
             )
 
+        if flagged_in_selection:
+            flagged_str = ", ".join(flagged_in_selection)
+            flagged_notification = dmc.Notification(
+                id="flagged-items-notification",
+                title="Flagged Items Included",
+                message=f"The following flagged items are included in the plot: {flagged_str}. Please check the documentation for details.",
+                color="yellow",
+                loading=False,
+                action="show",
+                autoClose=False,
+                position="top-right"
+            )
+            notification = [notification, flagged_notification]
+
         # Use lazy data loading - only get data when needed
         if use_imputed:
             if pairs:
@@ -4961,7 +5075,7 @@ def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imput
         # to do: merge meta info here for hoverinfo in plot
         # Check if split_by_variety mode is selected
         split_by_variety = (plot_mode == "split_by_variety")
-        itemPlot = getItemPlot(informants, items,groupby=groupby,sortby=sortby,pairs=pairs,use_imputed=use_imputed,plot_mode=plot_mode,split_by_variety=split_by_variety,regional_mapping=regional_mapping,include_ai=include_ai)
+        itemPlot = getItemPlot(informants, items,groupby=groupby,sortby=sortby,pairs=pairs,use_imputed=use_imputed,plot_mode=plot_mode,split_by_variety=split_by_variety,regional_mapping=regional_mapping,include_ai=include_ai,use_perceptual_scale=use_perceptual_scale)
         
         # Store settings used to generate this plot for download
         plot_settings = {

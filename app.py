@@ -261,7 +261,7 @@ navbar = dmc.AppShellNavbar(
             dmc.Anchor(
                 dmc.NavLink(
                     label="OSF Repository",
-                    leftSection=get_icon(icon="tabler:database-export"),
+                    leftSection=get_icon(icon="tabler:code"),
                 ),
                 href="https://osf.io/4buef/",
                 target="_blank",
@@ -273,6 +273,15 @@ navbar = dmc.AppShellNavbar(
                     leftSection=get_icon(icon="tabler:book-2"),
                 ),
                 href="https://vetterf.github.io/bslvc-dashboard",
+                target="_blank",
+                underline=False
+            ),
+            dmc.Anchor(
+                dmc.NavLink(
+                    label="Database (Zenodo)",
+                    leftSection=get_icon(icon="tabler:database-export"),
+                ),
+                href="https://zenodo.org/records/20157295",
                 target="_blank",
                 underline=False
             ),
@@ -508,4 +517,4 @@ def handle_cache_invalidation(search, cache_status):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
