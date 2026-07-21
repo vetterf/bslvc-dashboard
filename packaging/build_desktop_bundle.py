@@ -17,6 +17,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -153,19 +154,13 @@ def ensure_database_file(runtime_root: Path, source_override: str | None) -> Pat
         shutil.copy2(source_path, destination)
         return destination
 
-    temp_repo = runtime_root / "_database_repo"
-    if temp_repo.exists():
-        shutil.rmtree(temp_repo)
-
-    try:
+    with tempfile.TemporaryDirectory(prefix="bslvc-database-") as temp_repo_dir:
+        temp_repo = Path(temp_repo_dir)
         run(["git", "clone", "--depth", "1", DATABASE_REPO, str(temp_repo)])
         candidate = temp_repo / DATABASE_FILENAME
         if not candidate.exists():
             raise FileNotFoundError(f"Database file was not found in {DATABASE_REPO}")
         shutil.copy2(candidate, destination)
-    finally:
-        if temp_repo.exists():
-            shutil.rmtree(temp_repo)
 
     return destination
 
