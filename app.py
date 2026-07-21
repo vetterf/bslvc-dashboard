@@ -150,8 +150,7 @@ app = Dash(
     external_stylesheets=dmc.styles.ALL, 
     use_pages=True,
     suppress_callback_exceptions=True,
-    background_callback_manager=background_callback_manager,
-    assets_ignore='.*\\.db$|.*\\.sqlite$|.*\\.sqlite3$|data/.*'  # Ignore database files and data directory
+    background_callback_manager=background_callback_manager,    assets_folder=os.environ.get('ASSETS_FOLDER', 'assets'),    assets_ignore='.*\\.db$|.*\\.sqlite$|.*\\.sqlite3$|data/.*'  # Ignore database files and data directory
 )
 app.title = 'BSLVC Dashboard'
 server = app.server

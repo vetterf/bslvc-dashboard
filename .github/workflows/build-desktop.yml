@@ -1,0 +1,43 @@
+name: Build Desktop Bundles
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            script: bash packaging/build-linux.sh
+          - os: macos-latest
+            script: bash packaging/build-mac.sh
+          - os: windows-latest
+            script: bash packaging/build-win.sh
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Build desktop bundle
+        shell: bash
+        run: ${{ matrix.script }}
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bslvc-dashboard-${{ matrix.os }}
+          path: dist/
+          retention-days: 30

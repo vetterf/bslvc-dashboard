@@ -9,6 +9,11 @@ BSLVC_sqlite.db
 # MkDocs build output
 site/
 .cache/
+
+# Desktop bundle build artifacts
+build/
+dist/
+packaging/.venv_build/
 assets/data/BSLVC_sqlite_.db
 assets/data/BSLVC_sqlite__260318.db
 assets/data/BSLVC_sqlite**.db

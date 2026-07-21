@@ -2,6 +2,11 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
+## [0.2.4] - 2026-07-21
+
+### Added
+- **Standalone version**: Added pyinstaller-based scripts for standalone version of the dashboard plus Github actions for automated builds for Windows & Mac as well. Tested standalone version on Linux so far. 
+
 ## [0.2.3] - 2026-07-17
 
 ### Added

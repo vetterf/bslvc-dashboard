@@ -31,6 +31,14 @@ Krug, Manfred & Fabian Vetter. 2026. _The Bamberg Survey of Language Variation a
 
 The BSLVC Dashboard is written in Python and Dash and is designed to run as a docker container. Please consult the documentation of your systems docker/podman installation on how to create and run docker containers.
 
+To create a local desktop-style version of the app, run the build script on your target OS:
+
+- Linux: `bash packaging/build-linux.sh`
+- macOS: `bash packaging/build-mac.sh`
+- Windows: `packaging\\build-win.bat`
+
+The build script uses PyInstaller for the current platform.
+
 ## Cache Management
 
 - URL-based cache clearing is disabled by default (`ENABLE_URL_CACHE_CLEAR=false`).
