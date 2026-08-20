@@ -20,6 +20,7 @@ import dash_ag_grid as dag
 import dash_mantine_components as dmc
 import plotly.figure_factory as ff
 import os
+import sys
 import hashlib
 # Add these imports for Leiden clustering
 import igraph as ig
@@ -496,12 +497,14 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
     filtered_data = apply_normalization(filtered_data, standardize)
 
     # run umap
+    # Note: it *might* cause a problem with PyInstaller on Windows if UMAP tries to use process-based parallelism (joblib) in a background callback. Setting njobs to 1 would be the safer option. Let's see if the deserialization was the real culprit.
+    umap_n_jobs = -1
     reducer = umap.UMAP(
         n_components=4 if umap_4d else (3 if umap_3d else 2),
         n_neighbors=n_neighbours,
         min_dist=min_dist,
         metric=distance_metric,
-        n_jobs=-1,
+        n_jobs=umap_n_jobs,
         low_memory=False,
         densmap=densemap,
         dens_lambda=dens_lambda
@@ -5152,7 +5155,7 @@ def create_twin_correlation_plot(informants, items, groupby="variety", sortby="m
     use_imputed : bool
         Whether to use imputed data.
     regional_mapping : bool
-        Whether regional mapping (England split) is enabled.
+        Whether regional mapping is enabled.
 
     Returns
     -------
@@ -5582,7 +5585,7 @@ def create_export_log_grammar(participants, items, result, use_imputed, pairs,
     pairs : bool
         Whether item pairs mode is enabled
     regional_mapping : bool
-        Whether regional mapping (England split) is enabled
+        Whether regional mapping is enabled
     include_sociodem : bool
         Whether sociodemographic data is included
     include_item_meta : bool
@@ -6099,7 +6102,7 @@ Number of Participants: {participant_count}
 Number of Items: {len(items)}
 Data Type: {'Imputed' if use_imputed else 'Raw (with missing values)'}
 Item Pairs Mode: {'Yes' if pairs else 'No'}
-Regional Mapping (England split): {'Yes' if regional_mapping else 'No'}
+Regional Mapping: {'Yes' if regional_mapping else 'No'}
 
 Analysis Settings:
 ------------------

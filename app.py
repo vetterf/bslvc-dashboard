@@ -55,7 +55,7 @@ def get_icon(icon):
 
 cache = diskcache.Cache("./cache")
 background_callback_manager = DiskcacheManager(
-    cache, cache_by=[lambda: launch_uid], expire=60
+    cache, cache_by=[lambda: launch_uid], expire=600
 )
 
 def _is_url_cache_clear_enabled():
@@ -81,33 +81,6 @@ def clear_all_caches(source="manual", clear_umap_presets=True):
         print(f"Plot cache not available for clearing via {source}")
     except Exception as e:
         print(f"Error clearing plot cache via {source}: {e}")
-
-    # Try to clear LRU caches from grammar functions
-    try:
-        from pages import grammar
-        lru_functions = [
-            'get_grammar_data_cached',
-            'get_grammar_data_pairs_cached',
-            'get_informants_cached',
-            'get_grammar_data_raw_cached',
-            'get_grammar_data_pairs_raw_cached',
-            'get_grammar_meta_cached',
-            'get_grammar_meta_pairs_cached',
-            'get_grammar_items_cols_cached',
-            'get_grammar_items_cols_pairs_cached'
-        ]
-
-        for func_name in lru_functions:
-            if hasattr(grammar, func_name):
-                func = getattr(grammar, func_name)
-                if hasattr(func, 'cache_clear'):
-                    func.cache_clear()
-
-        print(f"LRU caches cleared via {source}")
-    except ImportError:
-        print(f"Grammar module not available for LRU cache clearing via {source}")
-    except Exception as e:
-        print(f"Error clearing LRU caches via {source}: {e}")
 
     # Optional: clear persisted UMAP presets directory
     if clear_umap_presets:

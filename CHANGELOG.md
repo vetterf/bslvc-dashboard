@@ -2,6 +2,13 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
+## [0.2.5] - 2026-08-20
+
+### Changed/Fixed
+- **Removed lru cache**: No significant speed up. Removed.
+- **Isolated grammar callbacks to its own module**: Ran into deserialization problems when running the windows standalone version of the app. Should fix it.
+- **Fixed column names**: Some functions used the wrong column names for some demographic variables.
+
 ## [0.2.4] - 2026-07-21
 
 ### Added

@@ -337,7 +337,7 @@ Before imputation, participants with more than **50 missing grammar items** or *
 
 ## Caching System
 
-The BSLVC Dashboard implements a multi-layered caching strategy to optimize performance and reduce computation time for expensive operations. The caching system consists of three levels: server-side disk cache, in-memory Python cache, and browser-side storage.
+The BSLVC Dashboard implements a multi-layered caching strategy to optimize performance and reduce computation time for expensive operations. The caching system consists of two levels: server-side disk cache and browser-side storage.
 
 ### Server-Side Disk Cache
 
@@ -360,17 +360,7 @@ Cache keys are hashed using MD5 to create unique identifiers.
 
 #### Random Forest Plot Caching
 
-Random Forest comparison plots are also cached.
-
-**Cache Invalidation:**
-- Disk cache persists between sessions
-- Cache is stored indefinitely (no expiration)
-- Manual cache clearing requires deleting the cache directory
-
-### In-Memory Python Cache (LRU)
-
-The dashboard uses Python's `functools.lru_cache` decorator for in-memory caching of frequently accessed data.
-LRU (Least Recently Used) cache automatically evicts the least recently accessed items when the cache is full.
+Random Forest comparison plots are also cached in a similar fashion.
 
 ### Browser-Side Storage (Dash dcc.Store)
 
@@ -429,50 +419,6 @@ dcc.Store(id="saved-umap-settings", storage_type="local")
 - User-saved settings
 - Persistent user preferences
 - Long-term storage across sessions
-
-### How Caching Layers Work Together: UMAP Plot Rendering
-
-When a user requests a UMAP plot, the three caching layers work in concert to minimize computation time. Here's the complete workflow:
-
-#### Step 1: User Interaction
-User selects participants, items, and UMAP settings (neighbors, distance metric, etc.), then clicks "Render Plot".
-
-#### Step 2: Data Retrieval (LRU Cache)
-
-**LRU Cache Role:**
-- `get_grammar_data_cached()` checks if full grammar dataset is already in memory
-- If **cache hit**: Returns data from memory
-- If **cache miss**: Queries SQLite database, stores result in LRU cache
-- Subsequent requests with same `regional_mapping` parameter use cached data
-
-#### Step 3: UMAP Computation (DiskCache)
-
-**DiskCache Role:**
-- Checks if this **exact combination** of parameters was computed before
-- If **cache hit**: Loads pre-computed plot from disk
-- If **cache miss**: Computes UMAP, saves to disk
-- Cache persists across application restarts
-
-**Why cache UMAP plots?**
-- UMAP computation is extremely expensive (5-30 seconds)
-- Plot objects are large (serialized Plotly figures with all trace data)
-- Many possible parameter combinations (participants × items × settings)
-- Results are deterministic - same inputs always produce same plot
-- Persistence across sessions is valuable (users often revisit the same views)
-
-#### Step 4: Browser Storage (dcc.Store)
-
-**Browser Storage Role:**
-- Stores the most recent UMAP plot data in browser's sessionStorage
-- When user switches between "Participant Similarity" and "Item Ratings" views, the last rendered plot is restored instantly
-- Survives page refreshes within the same browser session
-
-**Why Browser Storage?**
-- Instant restoration when switching plot types
-- No server round-trip or re-rendering needed
-- Session-specific (different tabs maintain independent state)
-
-**Important Note:** This only restores plots when switching between plot types in the same session, not when switching browser tabs or windows. The plot must be re-rendered if the page is refreshed or the application is reopened.
 
 ---
 

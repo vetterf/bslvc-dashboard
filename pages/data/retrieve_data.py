@@ -447,7 +447,7 @@ def getInformantData(columns = None, informants = None, varieties = None, includ
     data = data.drop(columns=["Gender","PrimarySchool","SecondarySchool","Qualifications","LanguageHome","LanguageFather","LanguageMother","QualiMother","QualiFather","QualiPartner"], errors="ignore")
 
 
-    data = data.rename(columns={"gender_normalized": "Gender","primary_school_normalized": "PrimarySchool", "secondary_school_normalized": "SecondarySchool", "highest_qualification": "Qualifications", "LanguageHome_normalized": "LanguageHome", "LanguageFather_normalized": "LanguageFather", "LanguageMother_normalized": "LanguageMother", "QualiMother_normalized": "QualiMother", "QualiFather_normalized": "QualiFather", "QualiPartner_normalized": "QualiPartner"})
+    data = data.rename(columns={"gender_normalized": "Gender","primary_school_normalized": "PrimarySchool", "secondary_school_normalized": "SecondarySchool", "Qualifications_normalized": "Qualifications", "LanguageHome_normalized": "LanguageHome", "LanguageFather_normalized": "LanguageFather", "LanguageMother_normalized": "LanguageMother", "QualiMother_normalized": "QualiMother", "QualiFather_normalized": "QualiFather", "QualiPartner_normalized": "QualiPartner"})
     
     if columns is not None:
         data = data[columns]
