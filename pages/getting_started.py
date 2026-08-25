@@ -415,10 +415,9 @@ layout = dmc.Container([
 ## Getting Started with the BSLVC Dashboard
 
 The BSLVC Dashboard allows you to interactively explore the data of the Bamberg Survey of Language Variation and Change.
-Currently, only the grammar data are available for exploration. The lexical data will be added in future updates.
+The functions for exploring the lexical data are still rudimentary and will be expanded in future updates.
 
 This section provides an overview of the interface, describes the basic workflow for utilizing the Dashboard to analyse the grammar data, and describes two case studies in which we illustrate how you can approach more specific research questions. 
-A comprehensive documentation of the Dashboard's features and functionalities will be available soon.
         """),
         
         # UI Structure Overview

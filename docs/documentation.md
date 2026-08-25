@@ -11,7 +11,7 @@ The user interface of the BSLVC Dashboard is structure into two or three parts, 
 
 ![Overview of the interface](img/UI_overview.png)
 
-The heart of the dashboard are the analysis modules for the grammar and the lexical data. These can be found in the section "Data & Analysis" in the navigation bar. Currently, only the grammar analysis module is finished. In what follows, you will find a description of all available options in the Dashboard.
+The heart of the dashboard are the analysis modules for the grammar and the lexical data. These can be found in the section "Data & Analysis" in the navigation bar. In what follows, you will find a description of all available options in the Dashboard.
 
 ![Data and Analysis Navigation](img/UI_data_and_analysis.png)
 
@@ -308,9 +308,111 @@ L16: *The country must better integrate into the EU*. In most older questionnair
 
 The "Flagged" button in the Grammar Item Selection section automatically deselects these items. Users should be aware of these issues when interpreting results that include these items.
 
-### Lexicon Analysis Module
+### Lexical Analysis Module
 
-The Lexicon Analysis Module is currently under development. This module will provide tools for exploring lexical variation across English varieties.
+The Lexical Analysis Module allows users to explore lexical variation (British vs. American vocabulary preferences) across different varieties of English, age groups, and birth cohorts. You can access it by clicking "Lexical Sets" in the navigation.
+
+![Lexical Analysis Module](img/UI_lexical_overview.png)
+
+#### Data Background
+
+Each lexical item asks participants to choose between an American and a British variant (e.g. *pacifier* vs. *dummy*). Ratings are recorded on a 5-point Likert scale from **-2 (American)** to **+2 (British)**. Two additional response codes exist:
+
+- **NX / NXC** ("uses neither expression"): A valid response indicating the participant does not use either variant. NX/NXC responses are excluded from the mean rating but are counted separately (see [Facet Plot](#facet-plot) below).
+- **ND** ("no data"): Indicates that the participant never had the opportunity to answer this item (e.g. because of questionnaire version differences), as opposed to a genuine missing response. **Participants with an ND response on any of the currently selected lexical items are dropped entirely** from the analysis, so that every facet in the plot is based on the same set of participants. Participants who left an item unanswered (a genuine missing/`NULL` value, as opposed to ND) are still included in the analysis; the missing value is simply excluded from the mean and counted as "NA" in the hover information.
+
+#### Available Functions
+
+Below is a description of all major buttons and UI elements in the Lexical Analysis module.
+
+#### Main Tabs
+
+- **Plot View**: Shows the faceted lexical item plot together with its download and export controls.
+- **Sociodemographic Details**: Displays participant information and summary plots for the currently selected participants, mirroring the equivalent tab in the Grammar Analysis module.
+
+![Tabs in main content](img/UI_lexical_tabs.png)
+
+The [Interactive Plot Controls](#interactive-plot-controls) described for the Grammar Analysis module (zoom, pan, lasso/box select, legend clicks, hover information, SVG export via the Plotly mode bar) apply identically to the lexical facet plot.
+
+#### Sidebar Collapse
+
+The sidebar (options panel) can be collapsed via the arrow icon in the top-right corner of the main content area, giving the plot more horizontal space. Clicking the icon again restores the sidebar. This mirrors the equivalent control in the Grammar Analysis module.
+
+#### Selection Overview
+
+A collapsible panel at the top of the sidebar summarizes the current selection: number of participants and items selected, a breakdown of participants by main variety, and a breakdown by gender and age range. This mirrors the "Selection Overview" panel in the Grammar Analysis module.
+
+![Selection overview](img/UI_lexical_selection_overview.png)
+
+#### Render Plot
+
+Generates the facet plot based on the current participant selection, item selection, and plot settings described below. While the plot is being computed, the button shows a loading spinner and is disabled to prevent duplicate submissions.
+
+#### Participant Selection
+
+Unlike the Grammar Analysis module, the participant tree for the Lexical module only goes down to **Main Variety → Gender → Year of data collection** — individual participants are not listed, since there are too many (>6000) for a fully nested tree to remain usable in the browser.
+
+![Participant tree](img/UI_lexical_participant_selection.png)
+
+- **Select All**: Select all participants.
+- **Deselect All**: Deselect all participants.
+
+#### Lexical Item Selection
+
+Lexical items are listed in a flat, alphabetically sorted tree (by the British/American label shown).
+
+![Lexical items tree](img/UI_lexical_item_selection.png)
+
+- **Select All**: Select all lexical items.
+- **Deselect All**: Deselect all lexical items.
+
+#### Plot Settings
+
+![Plot settings](img/UI_lexical_plot_settings.png)
+
+- **Time axis mode**: Segmented control choosing what the x-axis of each facet represents:
+    - **Apparent time (age)**: Groups participants into fixed age bins (`<20`, `20-29`, `30-39`, `40-49`, `50-59`, `60-69`, `>69`), displayed **oldest (left) to youngest (right)**.
+    - **Birth year cohorts**: Computes each participant's approximate birth year as `Year of data collection − Age`, then groups participants into 10-year cohorts (e.g. `1980-1989`). Cohorts are derived dynamically from the data actually present in the current selection and are displayed in chronological order (earliest cohort left).
+- **Exclude birth-year cohorts with fewer than 5 datapoints**: Only enabled when "Birth year cohorts" is selected. When checked, any birth-year cohort with fewer than 5 participants (in the current selection) is dropped from the x-axis entirely, for every item and every group, to avoid displaying unreliable single-participant cohorts.
+- **Sort facets by**: Controls the order in which item facets are arranged (left-to-right, top-to-bottom):
+    - **Globalization Trend**: Fits a locally-weighted regression (LOESS) smoother of the mean rating against age/cohort (combining all genders and varieties, weighted by N), and sorts facets so the item with the steepest "oldest lowest, youngest highest" trend appears top-left.
+    - **Average rating (weighted across groups)**: Sorts facets by each item's overall mean rating, pooling every selected participant's numeric rating regardless of age group, gender, or variety (larger subgroups naturally count proportionally more, since every participant contributes one value).
+    - **Alphabetically**: Sorts facets alphabetically by the item's British/American label.
+- **Group data by**: Controls whether/how each facet is split into multiple lines:
+    - **No grouping**: A single line per facet, combining all selected participants.
+    - **Gender**: Two lines per facet (Female / Male). The category "Non-Binary" is dropped as there's too little data.
+    - **Main Variety**: One line per main variety. Colors reuse the app-wide fixed variety color map where available; any variety without a fixed color is assigned a color from a large combined palette so that all varieties in the current selection remain visually distinct.
+- **Show 95% confidence bands**: Adds a semi-transparent shaded band around each line showing the normal-approximation 95% confidence interval of the mean (only the band is shown — no markers are drawn at its edges).
+- **Fade markers by share of 'neither' (NX) responses**: When enabled, marker opacity is scaled down as the share of NX/NXC ("uses neither") responses at that data point increases, following `opacity = max(20%, 100% − 2 × NX share)`. This visually de-emphasizes points where a large proportion of participants answered that they prefer neither variant.
+- **Facet columns**: Number of facet columns per row (1–8). Each facet has a fixed maximum width of 350px, so the resulting plot may need to be scrolled horizontally if many columns are selected.
+
+#### Facet Plot
+
+Each facet represents one lexical item. The y-axis is fixed to the -2 (American) to +2 (British) rating scale. The x-axis represents either age groups or birth-year cohorts, depending on the selected time axis mode (see [Plot Settings](#plot-settings)). Marker size at each point reflects the number of participants the mean rating is based on (log scale, relative to the largest count in the current selection).
+
+**Hover information** for each point includes:
+
+- The item's American and British variant labels
+- The x-axis group (age group or birth cohort)
+- The mean rating
+- N (number of numeric ratings the mean is based on)
+- Number and percentage of "uses neither" (NX/NXC) responses
+- Number of missing ("NA") responses
+
+![Facet plot example](img/UI_lexical_sample_facet_plot.png)
+
+#### Advanced Actions
+
+- **Download plot data**: Downloads the underlying long-format (one row per participant × item) data used to generate the current facet plot, as a ZIP archive containing the CSV and a log file with export metadata.
+- **Include sociodemographic data**: When checked, exports below include the full set of sociodemographic columns (Age, Gender, MainVariety, Nationality, languages, education, etc.), mirroring the equivalent option in the Grammar Analysis module. When unchecked, only the lexical item ratings (and InformantID) are exported.
+- **Export Raw Data**: Downloads the raw, unaggregated lexical item values exactly as stored in the database (e.g. `2`, `ND`, `NX`) for the selected participants and items, as a ZIP archive with a log file.
+- **Download aggregated data**: Downloads the aggregated statistics (mean, 95% CI, N, NX count/share, missing count) per item × x-axis group × series, as a ZIP archive with a log file.
+
+#### Sociodemographic Details
+
+Displays participant information for the currently selected participants, in a **Table** and **Plot** view, analogous to the Grammar Analysis module's Sociodemographic Details tab (Age/Gender distribution, main varieties, languages, education profile, etc.).
+
+![Sociodemographic details](img/UI_lexical_sociodemographic_details.png)
 
 ## Imputed vs. Raw Data Usage
 
@@ -422,5 +524,5 @@ dcc.Store(id="saved-umap-settings", storage_type="local")
 
 ---
 
-**Last Updated**: February 2026  
-**Version**: 0.1.5
+**Last Updated**: August 2026  
+**Version**: 0.2.6

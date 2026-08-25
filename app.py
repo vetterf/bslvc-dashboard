@@ -216,9 +216,9 @@ navbar = dmc.AppShellNavbar(
             ),
             dmc.NavLink(
                 label="Lexical Sets",
+                href="/lexical",
                 leftSection=get_icon(icon="tabler:book-2"),
-                disabled=True,
-                style={"color": "gray", "cursor": "not-allowed"},
+                active="partial",
             ),
             dmc.Divider(label="External resources", labelPosition="left", mt="md", mb="xs"),
             dmc.Anchor(
@@ -351,6 +351,12 @@ app_shell = dmc.AppShell(
                             "DFG Grant: 548274092",
                             href="https://www.dfg.de/en",
                             target="_blank",
+                            c="blue"
+                        ),
+                        " | ",
+                        dmc.Anchor(
+                            "Privacy",
+                            href="/privacy",
                             c="blue"
                         ),
                         f" | v{__version__} (DB: {DB_VERSION})"

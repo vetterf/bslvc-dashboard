@@ -356,6 +356,79 @@ def getLexicalItemsCols():
     ]
     return columns
 
+# LexicalItems column names whose "Item offline" label uses a different word
+# than the column name (British term differs lexically from the American-based
+# column name), so normalized-string matching alone can't find them.
+_LEXICAL_ITEM_OFFLINE_OVERRIDES = {
+    "Pacifier": "dummy",
+}
+
+
+def _normalize_lexical_key(s):
+    import re
+    return re.sub(r'[^a-z0-9]', '', str(s).lower())
+
+
+def getLexicalMeta():
+    """
+    Returns a DataFrame mapping LexicalItems columns to their British/American
+    variant labels, based on the LexicalColumns table. LexicalColumns has no
+    explicit key column linking rows to LexicalItems columns, and its row
+    order does NOT reliably line up positionally with getLexicalItemsCols()
+    (there's a one-row gap partway through), so rows are matched by
+    normalizing "Item offline" and the column name to a comparable key
+    (lowercased, alphanumeric-only).
+    """
+    columns = getLexicalItemsCols()
+
+    if Conf.source == 'sqlite':
+        db_connection = sqlite3.connect(Conf.sqliteFile)
+    lexical_columns = pd.read_sql(
+        'SELECT "Item offline", "British", "American" FROM LexicalColumns',
+        con=db_connection,
+    )
+    if Conf.source == 'sqlite':
+        db_connection.close()
+
+    lookup = {
+        _normalize_lexical_key(row["Item offline"]): row
+        for _, row in lexical_columns.iterrows()
+    }
+
+    rows = []
+    for col in columns:
+        key_source = _LEXICAL_ITEM_OFFLINE_OVERRIDES.get(col, col)
+        match = lookup.get(_normalize_lexical_key(key_source))
+
+        if match is not None:
+            item_offline = str(match["Item offline"]).strip()
+            british = str(match["British"]).strip()
+            american = str(match["American"]).strip()
+        else:
+            item_offline, british, american = col, col, col
+
+        british = "" if british.lower() == "nan" else british
+        american = "" if american.lower() == "nan" else american
+
+        if british and american:
+            axis_label = f"{american} / {british}"
+        elif american or british:
+            axis_label = american or british
+        else:
+            axis_label = col
+            british = british or col
+            american = american or col
+
+        rows.append({
+            "column": col,
+            "item_offline": item_offline,
+            "british": british or col,
+            "american": american or col,
+            "axis_label": axis_label,
+        })
+
+    return pd.DataFrame(rows)
+
 def getGrammarItemsCols(type="all"):
     # returns a list with the column names of the GrammarItems table
     if type=="all":

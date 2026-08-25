@@ -653,7 +653,7 @@ ItemPlotContainer = dmc.Container([dmc.Grid(children=[
                         leftSection=DashIconify(icon="tabler:download", width=14),
                         disabled=True,
                     ),
-                ], justify="flex-end", mb="xs"),
+                ], justify="flex-end", mt="xs", mb="xs"),
                 dcc.Graph(id="ItemFig", figure=itemPlot_Grammar_initialPlot, style={'height': 'calc(100vh - 250px)'}, config={
                     'responsive': True,
                     'toImageButtonOptions': {
@@ -1442,17 +1442,11 @@ SettingsGrammarAnalysis = dmc.Card([
         )
     ], gap="xs", mb="md"),
     
-    # Primary Action Button with Loading State
+    # Primary Action Button with Loading State (native Button loader, same as the lexical module)
     dmc.Box(
         pos="relative",
         mb="xs",
         children=[
-            dmc.LoadingOverlay(
-                id="render-loading-overlay",
-                visible=False,
-                overlayProps={"radius": "md", "blur": 2},
-                loaderProps={"color": "blue", "type": "dots", "size": "xl"},
-            ),
             dmc.Button(
                 'Render Plot',
                 id='render-grammar-plot',
@@ -1460,6 +1454,7 @@ SettingsGrammarAnalysis = dmc.Card([
                 leftSection=DashIconify(icon="tabler:chart-line", width=20),
                 color="blue",
                 fullWidth=True,
+                loading=False,
                 disabled=False,
             ),
         ]
@@ -2353,7 +2348,7 @@ def manage_imputed_data_switch(plot_type, current_checked):
 
 # Callback to manage loading state during rendering
 @callback(
-    [Output('render-loading-overlay', 'visible'),
+    [Output('render-grammar-plot', 'loading'),
      Output('render-grammar-plot', 'disabled')],
     [Input('render-grammar-plot', 'n_clicks'),
      Input('ItemFig', 'figure'),
@@ -2362,7 +2357,7 @@ def manage_imputed_data_switch(plot_type, current_checked):
     prevent_initial_call=True
 )
 def manage_loading_state(n_clicks, item_fig, umap_fig, plot_type):
-    """Show loading overlay and disable button while rendering"""
+    """Show the button's own loading spinner (and disable it) while rendering"""
     triggered_id = ctx.triggered_id
     
     if triggered_id == 'render-grammar-plot':
@@ -3926,7 +3921,7 @@ def manage_umap_groups(BTNaddgroup, BTNcleargroup, selectedData, figure, data, d
      Output('umap-render-trigger', 'data'),
      Output("confirm-custom-modal", "opened"),
      Output('umap-view-toggle', 'value', allow_duplicate=True),
-     Output('render-loading-overlay', 'visible', allow_duplicate=True),
+     Output('render-grammar-plot', 'loading', allow_duplicate=True),
      Output('render-grammar-plot', 'disabled', allow_duplicate=True),
      Output("notify-container", "children", allow_duplicate=True)],  # Add notification output
     [Input('render-UMAP-plot','n_clicks'),
@@ -4756,7 +4751,7 @@ def updateGrammarItemsTree(wo_button,curr_button,prob_button,itemTree,pairs):
 
 @callback(
     [Output('ItemFig','figure'),
-     Output('render-loading-overlay', 'visible', allow_duplicate=True),
+     Output('render-grammar-plot', 'loading', allow_duplicate=True),
      Output('render-grammar-plot', 'disabled', allow_duplicate=True),
      Output("notify-container", "children",allow_duplicate=True),
      Output('grammar-analysis-tabs', 'value', allow_duplicate=True),

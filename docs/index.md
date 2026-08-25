@@ -2,16 +2,16 @@
 
 ## Overview
 
-The BSLVC Dashboard provides an interactive interface for exploring the Bamberg Survey of Language Variation and Change (BSLVC) data. The dashboard is still in demo mode and access to the live version is password protected until the release of the BSLVC database. Please contact Fabian Vetter if you want access to the demo version.
+The BSLVC Dashboard provides an interactive interface for exploring the Bamberg Survey of Language Variation and Change (BSLVC) data.
 
 ### Key Features
 
 - **Interactive Visualizations**: All plots are interactive - you can zoom, make custom selections, show/hide groups
-- **Flexible Data Selection**: Choose participants by variety, age, gender, and completeness
+- **Flexible Data Selection**: Choose participants by variety, age, gender, and data completeness
 - **Multiple Analysis Modes**: 
   - Participant similarity analysis using dimensionality reduction
   - Item rating distributions and comparisons
-  - Identify most discrimanitve features between groups
+  - Identify most discriminative features between groups
 - **Advanced Filtering**: Quick selection presets and custom filters
 - **Data Export**: Download filtered datasets, UMAP coordinate ZIP exports (CSV + log), and high-quality SVG plots
 
@@ -23,7 +23,7 @@ For details on all available functions, see the [Documentation](documentation.md
 
 ## Quick Links
 
-- **[Live Dashboard](https://bslvc.eng-ling.uni-bamberg.de)**: Access the application. As the BSLVC data is yet unpublished, the dashboard is in demo mode (i.e., access is password protected). If you require access to the dashboard, please contact Fabian Vetter.
+- **[Live Dashboard](https://bslvc.eng-ling.uni-bamberg.de)**: Access the application.
 - **[Project Homepage](https://www.uni-bamberg.de/en/eng-ling/forschung/the-bslvc-project-dfg-funded/)**
 - **[Chair of English Linguistics @ University of Bamberg](https://uni-bamberg.de/en/eng-ling/)**
 
