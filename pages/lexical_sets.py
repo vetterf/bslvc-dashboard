@@ -325,7 +325,7 @@ LexicalPlotContainer = dmc.Container([
                 }),
                 # Figure has a fixed intrinsic width (facets capped at 350px each), so this
                 # wrapper scrolls both ways instead of squeezing/stretching facets.
-                style={'maxHeight': 'calc(100vh - 340px)', 'overflowY': 'auto', 'overflowX': 'auto'},
+                style={'maxHeight': 'calc(100vh - 340px)', 'overflowY': 'auto', 'maxWidth': "100%"},
             ),
         ], span=12),
     ])

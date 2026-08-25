@@ -645,8 +645,8 @@ def build_lexical_facet_plot(agg_df, items_ordered, item_meta_map, x_axis_config
     fig.update_layout(
         template="simple_white",
         height=max(FACET_MIN_ROW_HEIGHT, FACET_MIN_ROW_HEIGHT * nrows),
-        width=ncols * FACET_MAX_WIDTH,
-        autosize=False,
+        #width=ncols * FACET_MAX_WIDTH,
+        autosize=True,
         margin=dict(t=60, b=20, l=40, r=20),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
