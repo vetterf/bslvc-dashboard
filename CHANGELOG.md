@@ -2,6 +2,19 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
+## [0.2.7] - 2026-09-03
+
+### Added
+- **Three new lexical plot types**: 
+  - "Averaged across items": Single line plot showing item-weighted average ratings across all lexical items
+  - "Heatmap": Items (Y-axis) × Varieties (X-axis) with two display modes
+    - **Mean value mode**: Aggregates across all age groups, colors cells by absolute mean rating
+    - **Trend mode**: Computes linear regression slopes for each item×variety across age groups, colors by trend direction (red=Americanization, blue=Britishization)
+    - **Sorting options**: Alphabetically, Average (default, ascending), Slope (only in trend mode)
+
+### Changed/Fixed
+- **Minor UI Fixes**: Better color distinction between Sweden and England, UMAP plot resizing behavior on small screens, reduced overall padding, count of participants in lexical selection tree and data overview
+
 ## [0.2.5] - 2026-08-20
 
 ### Changed/Fixed

@@ -258,8 +258,8 @@ navbar = dmc.AppShellNavbar(
                 underline=False
             ),
             ],
-            p="md",
-            style={"overflowY": "auto", "overflowX": "hidden"}
+            p="xs",
+            style={"overflowY": "auto", "overflowX": "hidden", "z-index": "auto", "padding-bottom": "60px"}
         )
 
 
@@ -300,10 +300,10 @@ header = dmc.Group(children=[
                                   align="flex-end",
                                   style={"paddingLeft": "20px"}
                               ),
-                              ],align="center",justify="flex-start", gap="md")
+                              ],align="center",justify="flex-start", gap="sm")
                 ],
                 h="100%",
-                px="md",
+                px="sm",
                 align="center",
                 justify="flex-start",
             )
@@ -360,28 +360,27 @@ app_shell = dmc.AppShell(
                             c="blue"
                         ),
                         f" | v{__version__} (DB: {DB_VERSION})"
-                    ], size="sm", c="dimmed", style={"paddingLeft": "200px"}),
+                    ], size="xs", c="dimmed"),
                 ],
                 justify="center",
                 align="center",
                 h="100%"
             ),
             h=40,
-            px="md"
+            px="sm"
         )
     ],
     header={"height": 50},
-    padding="xl",
     navbar={
         "width": 200,
         "breakpoint": "sm",
         "collapsed": {"mobile": True},
     },
     footer={
-        "breakpoint": "md",
+        "breakpoint": "sm",
         "collapsed": {"desktop": False, "mobile": True},
     },
-    id="appshell",
+    id="appshell", padding="xs"
 )
 
 
@@ -445,7 +444,7 @@ app.layout = dmc.MantineProvider(
                      "highlightOnHover": True,
                      "withTableBorder": True,
                      "verticalSpacing": "sm",
-                     "horizontalSpacing": "md",
+                     "horizontalSpacing": "sm",
                  }
              },
          },

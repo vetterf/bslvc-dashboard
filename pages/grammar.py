@@ -201,7 +201,7 @@ UmapPlotContainer = dmc.Container([
                 html.Div(
                     id="umap-plot-container",
                     children=[
-                        dcc.Graph(id="UMAPfig", figure=UMAP_Grammar_initialPlot, style={'height': '70vh'}, config={
+                        dcc.Graph(id="UMAPfig", figure=UMAP_Grammar_initialPlot, style={'height': 'calc(-245px + 100vh)'}, config={
                             'toImageButtonOptions': {
                                 'format': 'svg',
                                 'filename': 'umap_plot',
@@ -211,10 +211,9 @@ UmapPlotContainer = dmc.Container([
                         # Quality metrics bar shown below the plot after rendering
                         html.Div(id="umap-quality-metrics-display", style={"display": "none"},
                             children=[
-                                dmc.Divider(my="xs"),
                                 dmc.Group(
                                     id="umap-quality-metrics-badges",
-                                    gap="md",
+                                    gap="sm",
                                     justify="center",
                                     children=[]
                                 ),
@@ -281,7 +280,7 @@ UmapPlotContainer = dmc.Container([
                                                         html.Div(id="rf-f1-scores-display", children=[
                                                             dmc.Text("F1 scores: N/A", size="sm", c="dimmed")
                                                         ]),
-                                                    ], gap="md")
+                                                    ], gap="sm")
                                                 ),
                                                 dmc.TabsPanel(
                                                     value="confusion",
@@ -301,7 +300,7 @@ UmapPlotContainer = dmc.Container([
                                     withBorder=True,
                                     shadow="sm",
                                     radius="md",
-                                    p="md",
+                                    p="sm",
                                 ),
                             ],
                             style={"display": "none", "overflowY": "auto", "maxHeight": "75vh"}
@@ -630,7 +629,7 @@ InformantsGrid = html.Div(children = [
                     ])
                 ],styles={"section":{"margin-left":"20px","margin-right":"20px","margin-bottom":"20px"}}),
             ],withBorder=True,shadow="sm",radius="md",style={
-                "maxHeight": "calc(100vh - 230px)",
+                "maxHeight": "calc(100vh - 190px)",
                 "overflowY": "auto",
                 "overflowX": "hidden"
             })
@@ -1691,7 +1690,7 @@ SettingsGrammarAnalysis = dmc.Card([
     
 
     
-], withBorder=True, shadow="sm", radius="md", p="md", style={"height": "calc(100vh - 160px)", "overflowY": "auto"})
+], withBorder=True, shadow="sm", radius="md", p="sm", style={"height": "calc(100vh - 110px)", "overflowY": "auto"})
 
 # Deleted: SettingsInformants (deprecated - merged into Grammar Analysis)
 
@@ -1759,9 +1758,9 @@ grammarAnalysisC = dmc.Grid([
                 orientation="horizontal",
                 variant="default",
                 value="plot-view",
-                style={"height": "calc(100vh - 180px)"}  # Full height minus header/footer
+                style={"height": "calc(100vh - 140px)"}  # Full height minus header/footer
             )
-        ], withBorder=True, shadow="sm", radius="md", style={"height": "calc(100vh - 160px)"})],
+        ], withBorder=True, shadow="sm", radius="md", style={"height": "calc(100vh - 110px)"})],
         id="grammar-analysis-tab-content",
         style={"height": "calc(100vh - 150px)"}),
         id="main-content-col",
@@ -1774,7 +1773,7 @@ grammarAnalysisC = dmc.Grid([
     ),
 ], gutter="xl", id="grammar-analysis-grid")
 
-# Deleted: informantsC container (deprecated - merged into grammarAnalysisC)
+
 
 # tab container for Leiden clustering
 leidenC = dmc.Grid([
@@ -1795,7 +1794,8 @@ GrammaticalItems = dmc.Container([dmc.Grid(children=[
 
 
 
-layout = html.Div([
+
+layout = dmc.Container([
 
     customSetWarningModal,
     dcc.Location(id='url', refresh=False),  # URL location component for parsing URL parameters
@@ -1829,7 +1829,7 @@ layout = html.Div([
             html.Div(id="notify-container"),
         ],
     )
-    ])
+    ], fluid=True)
 
 
 
@@ -3732,8 +3732,6 @@ def unified_render_button(btn_clicks, plot_type, item_clicks, umap_clicks):
         # Trigger UMAP plot render by incrementing its n_clicks
         return no_update, (umap_clicks or 0) + 1
 
-# Deleted: Callback to show/hide deselect button based on tab - outer tabs removed, always show button
-# The button is now always available since grammarAnalysisC is directly visible
 
 # Callback to enable/disable the lasso selection buttons based on UMAP selection
 @callback(
@@ -4051,7 +4049,7 @@ def toggle_umap_rf_view(selected_view):
     if selected_view == 'umap-plot':
         return {"display": "block"}, {"display": "none"}
     else:  # rf-plot
-        return {"display": "none"}, {"display": "block", "height": "calc(100vh - 260px)", "overflow-y": "auto"}
+        return {"display": "none"}, {"display": "block", "height": "calc(100vh - 220px)", "overflow-y": "auto"}
 
 
 # Callback to toggle between Plot and Table sub-views within the Group Comparison view
@@ -4066,7 +4064,7 @@ def toggle_rf_table_plot_view(selected_view):
     if selected_view == 'plot-view':
         return {"display": "block"}, {"display": "none"}
     else:  # table-view
-        return {"display": "none"}, {"display": "block", "height": "calc(100vh - 320px)", "overflow-y": "auto"}
+        return {"display": "none"}, {"display": "block", "height": "calc(100vh - 260px)", "overflow-y": "auto"}
 
 
 @callback(
@@ -4451,7 +4449,7 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
                     columnDefs=cm_col_defs,
                     defaultColDef={"sortable": False, "resizable": True},
                     className="ag-theme-quartz compact",
-                    style={"height": "calc(100vh - 460px)", "width": "100%"},
+                    style={"height": "calc(100vh - 370px)", "width": "100%"},
                     dashGridOptions={"domLayout": "autoHeight", "suppressMenuHide": True},
                 ),
             ])
@@ -4615,7 +4613,7 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
                 columnDefs=top_col_defs,
                 defaultColDef={"sortable": True, "resizable": True, "filter": True},
                 className="ag-theme-quartz compact",
-                style={"height": "calc(100vh - 460px)", "width": "100%"},
+                style={"height": "calc(100vh - 370px)", "width": "100%"},
                 dashGridOptions={"suppressMenuHide": True, "animateRows": True, "pagination": False,
                                  "enableBrowserTooltips": True, "tooltipShowDelay": 500},
             )
@@ -5473,9 +5471,9 @@ def auto_update_sociodemographic_plots(active_tab, selected_participants, last_s
 def toggle_informants_view(view_mode):
     """Toggle between table and plot views"""
     if view_mode == "table":
-        return {"display": "flex", "flex-direction": "column", "height" : "calc(-285px + 100vh)"}, {"display": "none"}
+        return {"display": "flex", "flex-direction": "column", "height" : "calc(-235px + 100vh)"}, {"display": "none"}
     else:
-        return {"display": "none"}, {"display": "flex", "flex-direction": "column", "height": "calc(-285px + 100vh)"}
+        return {"display": "none"}, {"display": "flex", "flex-direction": "column", "height": "calc(-235px + 100vh)"}
 
 # Callback to update table columns based on checkbox selection
 @callback(

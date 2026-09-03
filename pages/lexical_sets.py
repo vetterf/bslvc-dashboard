@@ -12,6 +12,11 @@ from pages.data.lexicalFunctions import (
     normalize_lexical_tree_selection,
     compute_lexical_data,
     build_lexical_facet_plot,
+    compute_average_lexical_data,
+    build_average_lexical_plot,
+    compute_lexical_heatmap_by_item,
+    prepare_lexical_long_data,
+    get_x_axis_config,
     build_lexical_raw_export,
     create_export_log_lexical,
 )
@@ -125,7 +130,9 @@ plotSettingsAccordion = dmc.AccordionItem(
                     id="lexical-plot-type",
                     value="facets",
                     data=[
-                        {"value": "facets", "label": "Faceted mean rating by age group"},
+                        {"value": "facets", "label": "Faceted by age group"},
+                        {"value": "average", "label": "Averaged across items"},
+                        {"value": "heatmap", "label": "Heatmap"},
                     ],
                     size="xs",
                     allowDeselect=False,
@@ -153,54 +160,102 @@ plotSettingsAccordion = dmc.AccordionItem(
                     disabled=True,
                     persistence=persist_UI, persistence_type=persistence_type,
                 ),
-                dmc.Select(
-                    label="Sort facets by:",
-                    id="lexical-sort-by",
-                    value="trend",
-                    data=[
-                        {"value": "trend", "label": "Globalization Trend"},
-                        {"value": "average", "label": "Average rating (weighted across gender/variety)"},
-                        {"value": "alphabetical", "label": "Alphabetically"},
+                # Facets-only controls
+                html.Div(
+                    id='lexical-facets-only-controls',
+                    children=[
+                        dmc.Select(
+                            label="Sort facets by:",
+                            id="lexical-sort-by",
+                            value="trend",
+                            data=[
+                                {"value": "trend", "label": "Globalization Trend"},
+                                {"value": "average", "label": "Average rating (weighted across gender/variety)"},
+                                {"value": "alphabetical", "label": "Alphabetically"},
+                            ],
+                            size="xs",
+                            allowDeselect=False,
+                            persistence=persist_UI, persistence_type=persistence_type,
+                        ),
+                        dmc.NumberInput(
+                            label="Facet columns",
+                            id="lexical-facet-cols",
+                            value=4,
+                            min=1,
+                            max=8,
+                            step=1,
+                            size="xs",
+                            persistence=persist_UI, persistence_type=persistence_type,
+                        ),
                     ],
-                    size="xs",
-                    allowDeselect=False,
-                    persistence=persist_UI, persistence_type=persistence_type,
+                    style={"display": "block"}
                 ),
-                dmc.Select(
-                    label="Group data by:",
-                    id="lexical-series-by",
-                    value="variety",
-                    data=[
-                        {"value": "none", "label": "No grouping"},
-                        {"value": "gender", "label": "Gender"},
-                        {"value": "variety", "label": "Variety"},
+                # Facets and averaged common controls
+                html.Div(
+                    id='lexical-series-controls',
+                    children=[
+                        dmc.Select(
+                            label="Group data by:",
+                            id="lexical-series-by",
+                            value="variety",
+                            data=[
+                                {"value": "none", "label": "No grouping"},
+                                {"value": "gender", "label": "Gender"},
+                                {"value": "variety", "label": "Variety"},
+                            ],
+                            size="xs",
+                            allowDeselect=False,
+                            persistence=persist_UI, persistence_type=persistence_type,
+                        ),
                     ],
-                    size="xs",
-                    allowDeselect=False,
-                    persistence=persist_UI, persistence_type=persistence_type,
+                    style={"display": "block"}
                 ),
-                dmc.Switch(
-                    id='lexical-show-ci-switch',
-                    label="Show 95% confidence bands",
-                    checked=True,
-                    persistence=persist_UI, persistence_type=persistence_type,
+                # Facets-only CI and opacity
+                html.Div(
+                    id='lexical-facets-ci-controls',
+                    children=[
+                        dmc.Switch(
+                            id='lexical-show-ci-switch',
+                            label="Show 95% confidence bands",
+                            checked=True,
+                            persistence=persist_UI, persistence_type=persistence_type,
+                        ),
+                        dmc.Switch(
+                            id='lexical-nx-opacity-switch',
+                            label="Fade markers by share of 'neither' (NX) responses",
+                            description="Higher NX share \u2192 more transparent marker",
+                            checked=True,
+                            persistence=persist_UI, persistence_type=persistence_type,
+                        ),
+                    ],
+                    style={"display": "block"}
                 ),
-                dmc.Switch(
-                    id='lexical-nx-opacity-switch',
-                    label="Fade markers by share of 'neither' (NX) responses",
-                    description="Higher NX share \u2192 more transparent marker",
-                    checked=True,
-                    persistence=persist_UI, persistence_type=persistence_type,
-                ),
-                dmc.NumberInput(
-                    label="Facet columns",
-                    id="lexical-facet-cols",
-                    value=4,
-                    min=1,
-                    max=8,
-                    step=1,
-                    size="xs",
-                    persistence=persist_UI, persistence_type=persistence_type,
+                # Heatmap-specific controls
+                html.Div(
+                    id='lexical-heatmap-controls',
+                    children=[
+                        dmc.Switch(
+                            id='lexical-heatmap-color-by-trend-switch',
+                            label="Color cells by trend (slope) instead of mean value",
+                            description="Red = downward trend, Blue = upward trend",
+                            checked=False,
+                            persistence=persist_UI, persistence_type=persistence_type,
+                        ),
+                        dmc.Select(
+                            label="Sort items by:",
+                            id="lexical-heatmap-sort-items",
+                            value="average",
+                            data=[
+                                {"value": "alphabetically", "label": "Alphabetically"},
+                                {"value": "average", "label": "Average (default)"},
+                                {"value": "slope", "label": "Slope", "disabled": True},
+                            ],
+                            size="xs",
+                            allowDeselect=False,
+                            persistence=persist_UI, persistence_type=persistence_type,
+                        ),
+                    ],
+                    style={"display": "none"}
                 ),
             ])
         ),
@@ -297,7 +352,7 @@ SettingsLexicalAnalysis = dmc.Card([
     mb="md",
     value=["LoadDataLexical", "LoadItemsLexical"]),
 
-], withBorder=True, shadow="sm", radius="md", p="md", style={"height": "calc(100vh - 160px)", "overflowY": "auto"})
+], withBorder=True, shadow="sm", radius="md", p="sm", style={"height": "calc(100vh - 110px)", "overflowY": "auto"})
 
 
 LexicalPlotContainer = dmc.Container([
@@ -325,7 +380,7 @@ LexicalPlotContainer = dmc.Container([
                 }),
                 # Figure has a fixed intrinsic width (facets capped at 350px each), so this
                 # wrapper scrolls both ways instead of squeezing/stretching facets.
-                style={'maxHeight': 'calc(100vh - 340px)', 'overflowY': 'auto', 'maxWidth': "100%"},
+                style={'maxHeight': 'calc(100vh - 220px)', 'overflowY': 'auto', 'maxWidth': "100%"},
             ),
         ], span=12),
     ])
@@ -478,9 +533,10 @@ LexicalInformantsGrid = html.Div(children=[
                 className="ag-theme-quartz compact",
                 columnSize="autoSize",
                 dashGridOptions={"pagination": True, "paginationPageSize": 30, "animateRows": True},
+                style={"height": "calc(100vh - 300px)", "width": "100%"}
             )
         ],
-        style={"display": "block"}
+        style={"display": "block", "height": "calc(100vh - 300px)", "overflowY": "auto"}
     ),
     html.Div(
         id="lexical-informants-plot-view",
@@ -539,9 +595,9 @@ lexicalAnalysisC = dmc.Grid([
                 color="blue",
                 value="plot-view",
             ),
-        ], withBorder=True, shadow="sm", radius="md", style={"height": "calc(100vh - 160px)", "overflowY": "auto"})],
+        ], withBorder=True, shadow="sm", radius="md", style={"height": "calc(100vh - 110px)", "overflowY": "auto"})],
         id="lexical-analysis-tab-content",
-        style={"height": "calc(100vh - 150px)"}),
+        style={"height": "calc(100vh - 100px)"}),
         id="lexical-main-content-col",
         span=8,
     ),
@@ -553,11 +609,11 @@ lexicalAnalysisC = dmc.Grid([
     ),
 ], gutter="xl", id="lexical-analysis-grid")
 
-layout = html.Div([
+layout = dmc.Container([
     dcc.Store(id="lexical-informants-store", data=Informants.to_dict("records")),
     dcc.Store(id="lexical-render-trigger", storage_type="memory"),  # Trigger for background plot computation
     lexicalAnalysisC,
-])
+], fluid=True)
 
 
 ##############
@@ -688,6 +744,79 @@ def handle_lexical_render_completion(figure):
 def toggle_exclude_small_cohorts_switch(time_axis_mode):
     """Only usable when the x-axis is birth-year cohorts (cohort sizes are irrelevant for fixed age bins)."""
     return time_axis_mode != 'birth_year'
+
+
+@callback(
+    [Output('lexical-facets-only-controls', 'style'),
+     Output('lexical-series-controls', 'style'),
+     Output('lexical-facets-ci-controls', 'style'),
+     Output('lexical-heatmap-controls', 'style')],
+    Input('lexical-plot-type', 'value'),
+)
+def toggle_plot_type_controls(plot_type):
+    """Show/hide control groups based on selected plot type."""
+    # facets-only: Sort facets, Facet columns
+    facets_only_show = "block" if plot_type == "facets" else "none"
+    
+    # series controls: Group data by (shown for facets and average)
+    series_show = "block" if plot_type in ["facets", "average"] else "none"
+    
+    # CI and opacity: shown for facets and average
+    ci_show = "block" if plot_type in ["facets", "average"] else "none"
+    
+    # heatmap-specific: Color by trend
+    heatmap_show = "block" if plot_type == "heatmap" else "none"
+    
+    return (
+        {"display": facets_only_show},
+        {"display": series_show},
+        {"display": ci_show},
+        {"display": heatmap_show},
+    )
+
+
+@callback(
+    Output('lexical-time-axis-mode', 'disabled'),
+    [Input('lexical-plot-type', 'value'),
+     Input('lexical-heatmap-color-by-trend-switch', 'checked')],
+)
+def toggle_time_axis_mode_availability(plot_type, color_by_trend):
+    """
+    Enable/disable time axis mode selection based on plot type and heatmap coloring mode.
+    
+    - Facets & Average: always enabled (time mode affects all plots)
+    - Heatmap without trend: disabled (we aggregate across all ages)
+    - Heatmap with trend: enabled (trend is computed across age groups)
+    """
+    if plot_type != "heatmap":
+        # Facets and average plots always use time axis
+        return False
+    
+    # For heatmap: only enabled when computing trends
+    return not color_by_trend
+
+
+@callback(
+    Output('lexical-heatmap-sort-items', 'data'),
+    Input('lexical-heatmap-color-by-trend-switch', 'checked'),
+)
+def update_heatmap_sort_options(color_by_trend):
+    """Enable/disable the 'Slope' sort option based on whether trend coloring is enabled."""
+    base_options = [
+        {"value": "alphabetically", "label": "Alphabetically"},
+        {"value": "average", "label": "Average (default)"},
+    ]
+    
+    if color_by_trend:
+        # Trend mode: enable slope sorting
+        base_options.append({"value": "slope", "label": "Slope"})
+    else:
+        # No trend mode: keep slope disabled
+        base_options.append({"value": "slope", "label": "Slope", "disabled": True})
+    
+    return base_options
+
+
 
 
 @callback(
@@ -877,7 +1006,7 @@ def toggle_lexical_sidebar(n_clicks, current_span):
         )
     return (
         4,
-        {"height": "calc(100vh - 150px)"},
+        {"height": "calc(100vh - 100px)"},
         8,
         DashIconify(icon="tabler:layout-sidebar-right-collapse", width=20)
     )
@@ -893,7 +1022,16 @@ def update_lexical_informants_table_columns(selected_columns):
     columns_to_show = ['InformantID'] + [col for col in selected_columns if col != 'InformantID']
     available_columns = [col for col in columns_to_show if col in Informants.columns]
     return [
-        {"field": col, "headerName": col.replace("ID", " ID").replace("_", " "),
-         "filter": "agTextColumnFilter", "sortable": True, "resizable": True, "flex": 1}
+        {
+            "field": col,
+            "headerName": col.replace("ID", " ID").replace("_", " ").replace("Occup", "Occupation").replace("Quali", "Qualification").replace("Ethnic", "Ethnic "),
+            "filter": "agTextColumnFilter",
+            "sortable": True,
+            "resizable": True,
+            "minWidth": 120 if "Language" in col or "Variety" in col else 100,
+            "flex": 1,
+            "cellStyle": {"textAlign": "left"},
+            "headerTooltip": f"Click to sort by {col}. Use filter below to search."
+        }
         for col in available_columns
     ]

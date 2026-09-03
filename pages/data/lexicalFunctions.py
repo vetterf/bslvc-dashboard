@@ -133,22 +133,27 @@ def get_participants_from_tree_selection(checked_values, informants):
     if not checked_values:
         return []
 
-    mask = pd.Series(False, index=informants.index)
+    selection_data = informants.loc[:, ['InformantID', 'MainVariety', 'Gender', 'Year']].copy()
+    selection_data['MainVariety'] = selection_data['MainVariety'].fillna('Unknown')
+    selection_data['Gender'] = selection_data['Gender'].fillna('Unknown')
+    selection_data['Year'] = selection_data['Year'].fillna('Unknown').astype(str)
+
+    mask = pd.Series(False, index=selection_data.index)
     for val in checked_values:
         if val == 'participantslexical':
             continue
         parts = val.split(TREE_SEP)
         if len(parts) == 1:
-            mask |= (informants['MainVariety'] == parts[0])
+            mask |= (selection_data['MainVariety'] == parts[0])
         elif len(parts) == 2:
-            mask |= (informants['MainVariety'] == parts[0]) & (informants['Gender'] == parts[1])
+            mask |= (selection_data['MainVariety'] == parts[0]) & (selection_data['Gender'] == parts[1])
         elif len(parts) == 3:
             mask |= (
-                (informants['MainVariety'] == parts[0])
-                & (informants['Gender'] == parts[1])
-                & (informants['Year'].astype(str) == parts[2])
+                (selection_data['MainVariety'] == parts[0])
+                & (selection_data['Gender'] == parts[1])
+                & (selection_data['Year'] == parts[2])
             )
-    return informants.loc[mask, 'InformantID'].tolist()
+    return selection_data.loc[mask, 'InformantID'].tolist()
 
 
 def drawLexicalItemsTree(lexicalMeta):
@@ -687,6 +692,484 @@ def compute_lexical_plot(lexical_raw, informants, participant_ids, items, item_m
     return build_lexical_facet_plot(agg_df, ordered_items, item_meta_map, x_config,
                                      series_by=series_by, facet_cols=facet_cols,
                                      show_ci=show_ci, encode_nx_opacity=encode_nx_opacity)
+
+
+##############
+## Averaged across items plot
+##############
+
+def compute_average_lexical_data(long_df, series_by='gender'):
+    """
+    Aggregate mean rating (item-weighted average: equal weight per item regardless of N)
+    per XGroup x Series, averaging across all lexical items.
+    
+    For each item x XGroup x Series combination, compute the mean. Then average these
+    means across all items, giving equal weight to each item regardless of data point count.
+    """
+    out_cols = ['XGroup', 'Series', 'Mean', 'CILower', 'CIUpper', 'N', 'NXCount', 'NACount', 'NXShare']
+    if long_df.empty:
+        return pd.DataFrame(columns=out_cols)
+
+    df = long_df.copy()
+    if series_by == 'gender':
+        df = df[df['Gender'].isin(['Female', 'Male'])]
+        df['Series'] = df['Gender']
+    elif series_by == 'variety':
+        df['Series'] = df['MainVariety']
+    else:
+        df['Series'] = 'All'
+    
+    # First aggregate by Item x XGroup x Series
+    item_agg_cols = ['Item', 'XGroup', 'Series']
+    item_rows = []
+    for keys, g in df.groupby(item_agg_cols, observed=True):
+        item, x_group, series = keys
+        numeric_vals = g.loc[g['ValueType'] == 'numeric', 'NumericValue']
+        n = int(numeric_vals.count())
+        mean = numeric_vals.mean() if n > 0 else np.nan
+        nx_count = int((g['ValueType'] == 'nx').sum())
+        na_count = int((g['ValueType'] == 'missing').sum())
+        item_rows.append({
+            'Item': item, 'XGroup': x_group, 'Series': series,
+            'Mean': mean, 'N': n, 'NXCount': nx_count, 'NACount': na_count,
+        })
+    
+    item_agg_df = pd.DataFrame(item_rows)
+    if item_agg_df.empty:
+        return pd.DataFrame(columns=out_cols)
+    
+    # Now average across items for each XGroup x Series (item-level weighting)
+    rows = []
+    for keys, g in item_agg_df.groupby(['XGroup', 'Series'], observed=True):
+        x_group, series = keys
+        # Equal weight per item: only use items with valid means
+        valid_means = g[g['Mean'].notna()]['Mean'].values
+        if len(valid_means) == 0:
+            continue
+        
+        mean = float(np.mean(valid_means))
+        # For CI: use standard error across item means
+        if len(valid_means) > 1:
+            se = np.std(valid_means, ddof=1) / np.sqrt(len(valid_means))
+            ci_lower, ci_upper = mean - 1.96 * se, mean + 1.96 * se
+        else:
+            ci_lower, ci_upper = np.nan, np.nan
+        
+        # Aggregate counts from the items
+        n = int(g['N'].sum())
+        nx_count = int(g['NXCount'].sum())
+        na_count = int(g['NACount'].sum())
+        nx_share = nx_count / (n + nx_count) if (n + nx_count) > 0 else np.nan
+        
+        rows.append({
+            'XGroup': x_group, 'Series': series,
+            'Mean': mean, 'CILower': ci_lower, 'CIUpper': ci_upper,
+            'N': n, 'NXCount': nx_count, 'NACount': na_count, 'NXShare': nx_share,
+        })
+    return pd.DataFrame(rows)
+
+
+def build_average_lexical_plot(agg_df, x_axis_config, series_by='gender', show_ci=False, encode_nx_opacity=False):
+    """Build a single line plot of averaged lexical ratings across all items."""
+    group_order = x_axis_config['group_order']
+    hover_label = x_axis_config['hover_label']
+    
+    if agg_df.empty:
+        fig = go.Figure()
+        fig.update_layout(template="simple_white", annotations=[{
+            "text": "No data available for the current selection.",
+            "xref": "paper", "yref": "paper", "showarrow": False, "font": {"size": 16},
+        }])
+        return fig
+    
+    if series_by == 'gender':
+        series_list = ['Female', 'Male']
+        series_color_map = GENDER_COLORS
+    elif series_by == 'variety':
+        series_list = sorted(agg_df['Series'].dropna().unique())
+        series_color_map = get_variety_color_map(series_list)
+    else:
+        series_list = ['All']
+        series_color_map = {'All': '#1f77b4'}
+    
+    fig = go.Figure()
+    legend_shown = set()
+    
+    for series in series_list:
+        s_df = agg_df[agg_df['Series'] == series].set_index('XGroup').reindex(group_order)
+        y = s_df['Mean'].values
+        n = s_df['N'].fillna(0).values
+        nx = s_df['NXCount'].fillna(0).values
+        nx_share = s_df['NXShare'].values
+        color = series_color_map.get(series, '#555555')
+        
+        if show_ci:
+            valid = s_df['Mean'].notna() & s_df['CILower'].notna() & s_df['CIUpper'].notna()
+            if valid.any():
+                x_valid = [grp for grp, ok in zip(group_order, valid) if ok]
+                lower_valid = s_df.loc[valid, 'CILower'].values
+                upper_valid = s_df.loc[valid, 'CIUpper'].values
+                fig.add_trace(go.Scatter(
+                    x=x_valid + x_valid[::-1],
+                    y=np.concatenate([upper_valid, lower_valid[::-1]]),
+                    mode='lines', fill='toself',
+                    fillcolor=_hex_to_rgba(color, 0.08),
+                    line=dict(width=0),
+                    hoverinfo='skip', showlegend=False, legendgroup=series,
+                ))
+        
+        marker_opacity = _scale_nx_opacity(nx_share) if encode_nx_opacity else 0.9
+        customdata = np.stack([n, nx, np.nan_to_num(nx_share, nan=0.0) * 100], axis=-1)
+        
+        fig.add_trace(go.Scatter(
+            x=group_order, y=y, mode='lines+markers',
+            name=series, legendgroup=series,
+            showlegend=series not in legend_shown,
+            line=dict(color=color),
+            marker=dict(size=_scale_marker_sizes(n), color=color, opacity=marker_opacity),
+            customdata=customdata,
+            hovertemplate=(
+                f"<b>Average across all items</b><br>"
+                f"{hover_label}: %{{x}}<br>"
+                "Mean rating: %{y:.2f}<br>"
+                "N (mean based on): %{customdata[0]:.0f}<br>"
+                "Uses neither (NX): %{customdata[1]:.0f} (%{customdata[2]:.0f}%)"
+                "<extra></extra>"
+            ),
+        ))
+        legend_shown.add(series)
+    
+    fig.update_yaxes(
+        range=[-2 - Y_AXIS_PADDING, 2 + Y_AXIS_PADDING],
+        tickvals=[-2, -1, 0, 1, 2],
+        zeroline=True, zerolinewidth=1, zerolinecolor='#cccccc',
+    )
+    fig.update_xaxes(tickangle=45, categoryorder='array', categoryarray=group_order)
+    fig.update_layout(
+        template="simple_white", height=400, autosize=True,
+        margin=dict(t=40, b=40, l=40, r=20),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        xaxis_title=x_axis_config.get('axis_title', 'Age group'),
+        yaxis_title='Mean rating (averaged across items)',
+    )
+    return fig
+
+
+##############
+## Heatmap by item and variety
+##############
+
+def _linear_regression_slope(x, y):
+    """
+    Compute linear regression slope (trend). x and y should be arrays/lists.
+    Returns slope, or NaN if insufficient valid data.
+    """
+    x_arr = np.asarray(x, dtype=float)
+    y_arr = np.asarray(y, dtype=float)
+    valid = ~(np.isnan(x_arr) | np.isnan(y_arr))
+    
+    if valid.sum() < 2:
+        return np.nan
+    
+    x_valid = x_arr[valid]
+    y_valid = y_arr[valid]
+    
+    # Fit y = a + b*x
+    coeffs = np.polyfit(x_valid, y_valid, 1)
+    return float(coeffs[0])  # slope
+
+
+def _normalize_lexical_rating_for_dist(value):
+    """Normalize lexical responses into rating buckets for distribution counting."""
+    if pd.isna(value):
+        return "Null"
+    
+    value_str = str(value).strip()
+    if not value_str:
+        return "Null"
+    
+    if value_str.upper() == "NX":
+        return "NX"
+    
+    try:
+        numeric_value = float(value_str)
+        if numeric_value in {-2.0, -1.0, 0.0, 1.0, 2.0}:
+            return str(int(numeric_value))
+    except (TypeError, ValueError):
+        pass
+    
+    return "Null"
+
+
+def _get_rating_distribution_for_cell(series):
+    """Count occurrences of each rating value in a series."""
+    distribution = {"-2": 0, "-1": 0, "0": 0, "1": 0, "2": 0, "NX": 0, "Null": 0}
+    for value in series:
+        bucket = _normalize_lexical_rating_for_dist(value)
+        distribution[bucket] += 1
+    return distribution
+
+
+def compute_lexical_heatmap_by_item(long_df, x_axis_config, color_by_trend=False, item_meta_map=None, sort_items='average'):
+    """
+    Build a heatmap with items on Y-axis and varieties on X-axis.
+    
+    If color_by_trend=False:
+      - Aggregates across ALL age groups (pools them)
+      - Colors cells by mean rating value
+      - X-axis: varieties (sorted by global average)
+      - Y-axis: items (sorted by average across varieties)
+    
+    If color_by_trend=True:
+      - Computes trend (slope) for each item within each variety across age groups
+      - Colors cells by trend value (red=downward, blue=upward)
+      - X-axis: varieties
+      - Requires the x_axis_config to specify age groups for trend calculation
+    
+    sort_items: 'alphabetically', 'average' (default), or 'slope' (for trend mode only)
+    
+    Returns a figure.
+    """
+    if long_df.empty:
+        fig = go.Figure()
+        fig.update_layout(template="simple_white", annotations=[{
+            "text": "No data available for the current selection.",
+            "xref": "paper", "yref": "paper", "showarrow": False, "font": {"size": 16},
+        }])
+        return fig
+    
+    if item_meta_map is None:
+        item_meta_map = {}
+    
+    df = long_df.copy()
+    group_order = x_axis_config.get('group_order', [])
+    
+    if color_by_trend:
+        # Mode 1: Trend across age groups, by variety x item
+        # Aggregate by item x variety x age_group
+        item_variety_group_rows = []
+        for keys, g in df.groupby(['Item', 'MainVariety', 'XGroup'], observed=True):
+            item, variety, x_group = keys
+            numeric_vals = g.loc[g['ValueType'] == 'numeric', 'NumericValue']
+            n = int(numeric_vals.count())
+            mean = numeric_vals.mean() if n > 0 else np.nan
+            item_variety_group_rows.append({
+                'Item': item, 'Variety': variety, 'XGroup': x_group, 'Mean': mean, 'N': n,
+            })
+        
+        item_variety_group_df = pd.DataFrame(item_variety_group_rows)
+        if item_variety_group_df.empty:
+            fig = go.Figure()
+            fig.update_layout(template="simple_white", annotations=[{
+                "text": "No data available for the current selection.",
+                "xref": "paper", "yref": "paper", "showarrow": False, "font": {"size": 16},
+            }])
+            return fig
+        
+        # Compute trend for each item x variety
+        # First get all unique items and varieties
+        unique_items = sorted(item_variety_group_df['Item'].unique())
+        unique_varieties = sorted(item_variety_group_df['Variety'].unique())
+        
+        z_trends = np.full((len(unique_items), len(unique_varieties)), np.nan)
+        z_means = np.full((len(unique_items), len(unique_varieties)), np.nan)
+        
+        for i, item in enumerate(unique_items):
+            for j, variety in enumerate(unique_varieties):
+                item_variety_data = item_variety_group_df[
+                    (item_variety_group_df['Item'] == item) & 
+                    (item_variety_group_df['Variety'] == variety)
+                ]
+                
+                if not item_variety_data.empty:
+                    # Map group labels to positions
+                    group_positions = {g: idx for idx, g in enumerate(group_order)}
+                    available_groups = [g for g in group_order if g in item_variety_data['XGroup'].values]
+                    
+                    if len(available_groups) >= 2:
+                        x_vals = [group_positions[g] for g in available_groups]
+                        means = []
+                        for g in available_groups:
+                            m = item_variety_data[item_variety_data['XGroup'] == g]['Mean'].values
+                            if len(m) > 0:
+                                means.append(float(m[0]))
+                        
+                        if len(means) >= 2:
+                            slope = _linear_regression_slope(x_vals, means)
+                            z_trends[i, j] = slope
+                            # Also store mean for display
+                            z_means[i, j] = np.mean(means)
+        
+        # Sort items based on sort_items parameter
+        if sort_items == 'alphabetically':
+            sorted_items = sorted(unique_items)
+        elif sort_items == 'slope':
+            # Sort by signed trend (descending), so upward and downward trends differ
+            item_avg_trends = np.nanmean(z_trends, axis=1)
+            item_indices = np.argsort(-item_avg_trends)
+            sorted_items = [unique_items[idx] for idx in item_indices if not np.isnan(item_avg_trends[idx])]
+            sorted_items.extend([unique_items[idx] for idx in item_indices if np.isnan(item_avg_trends[idx])])
+        else:  # default: 'average'
+            # Sort by average trend/mean (descending)
+            item_avg_trends = np.nanmean(z_trends, axis=1)
+            item_indices = np.argsort(-np.abs(item_avg_trends))  # Sort by abs magnitude, descending
+            sorted_items = [unique_items[idx] for idx in item_indices if not np.isnan(item_avg_trends[idx])]
+            sorted_items.extend([unique_items[idx] for idx in item_indices if np.isnan(item_avg_trends[idx])])
+        
+        # Sort varieties by average trend across items
+        variety_avg_trends = np.nanmean(z_trends, axis=0)
+        variety_indices = np.argsort(-np.abs(variety_avg_trends))
+        sorted_varieties = [unique_varieties[idx] for idx in variety_indices if not np.isnan(variety_avg_trends[idx])]
+        sorted_varieties.extend([unique_varieties[idx] for idx in variety_indices if np.isnan(variety_avg_trends[idx])])
+        
+        # Reorder arrays using fancy indexing
+        item_idx_map = {item: i for i, item in enumerate(unique_items)}
+        variety_idx_map = {var: j for j, var in enumerate(unique_varieties)}
+        item_indices = np.array([item_idx_map[it] for it in sorted_items])
+        variety_indices = np.array([variety_idx_map[v] for v in sorted_varieties])
+        z_trends_sorted = z_trends[np.ix_(item_indices, variety_indices)]
+        z_means_sorted = z_means[np.ix_(item_indices, variety_indices)]
+        
+        # Create heatmap colored by trend
+        fig = go.Figure(data=go.Heatmap(
+            z=z_trends_sorted,
+            x=sorted_varieties,
+            y=sorted_items,
+            colorscale='RdBu_r',
+            zmid=0,
+            colorbar=dict(title="Trend<br>(slope across<br>age groups)"),
+            hovertemplate='<b>Item: %{y}</b><br><b>Variety: %{x}</b><br>Trend (slope): %{z:.3f}<extra></extra>',
+        ))
+        
+    else:
+        # Mode 2: Aggregate across all age groups, color by mean value
+        # Aggregate by item x variety (pool all age groups)
+        item_variety_rows = []
+        raw_data_cache = {}  # Cache raw values for hover
+        
+        for keys, g in df.groupby(['Item', 'MainVariety'], observed=True):
+            item, variety = keys
+            numeric_vals = g.loc[g['ValueType'] == 'numeric', 'NumericValue']
+            n = int(numeric_vals.count())
+            mean = numeric_vals.mean() if n > 0 else np.nan
+            
+            # Get raw values for distribution
+            raw_vals = g['RawValue'].values
+            nx_count = int((g['ValueType'] == 'nx').sum())
+            na_count = int((g['ValueType'] == 'missing').sum())
+            dist = _get_rating_distribution_for_cell(raw_vals)
+            
+            item_variety_rows.append({
+                'Item': item, 'Variety': variety, 'Mean': mean, 'N': n,
+                'NXCount': nx_count, 'NACount': na_count,
+            })
+            raw_data_cache[(item, variety)] = {
+                'distribution': dist,
+                'n_total': len(raw_vals),
+                'raw_vals': raw_vals,
+            }
+        
+        item_variety_df = pd.DataFrame(item_variety_rows)
+        if item_variety_df.empty:
+            fig = go.Figure()
+            fig.update_layout(template="simple_white", annotations=[{
+                "text": "No data available for the current selection.",
+                "xref": "paper", "yref": "paper", "showarrow": False, "font": {"size": 16},
+            }])
+            return fig
+        
+        # Get unique items and varieties
+        unique_items = sorted(item_variety_df['Item'].unique())
+        unique_varieties = sorted(item_variety_df['Variety'].unique())
+        
+        # Compute global means for sorting
+        item_global_means = item_variety_df.groupby('Item')['Mean'].mean()
+        variety_global_means = item_variety_df.groupby('Variety')['Mean'].mean()
+        
+        # Sort items based on sort_items parameter
+        if sort_items == 'alphabetically':
+            sorted_items = sorted(unique_items)
+        else:  # default: 'average' (ascending - lowest average first, reversed from before)
+            sorted_items = item_global_means.sort_values(ascending=True).index.tolist()
+        
+        # Sort varieties by average across items (ascending, like data_overview)
+        sorted_varieties = variety_global_means.sort_values(ascending=True).index.tolist()
+        
+        # Pivot to item x variety table
+        df_pivot = item_variety_df.pivot_table(
+            index='Item', columns='Variety', values='Mean', aggfunc='first'
+        )
+        # Reorder
+        df_pivot = df_pivot.loc[sorted_items, sorted_varieties]
+        
+        # Build customdata for hover with distribution info
+        customdata = np.empty((len(sorted_items), len(sorted_varieties), 12), dtype=object)
+        for i, item in enumerate(sorted_items):
+            for j, variety in enumerate(sorted_varieties):
+                cell_mean = df_pivot.iloc[i, j]
+                metadata = raw_data_cache.get((item, variety), {
+                    'distribution': {"-2": 0, "-1": 0, "0": 0, "1": 0, "2": 0, "NX": 0, "Null": 0},
+                    'n_total': 0,
+                    'raw_vals': [],
+                })
+                dist = metadata['distribution']
+                
+                item_meta = item_meta_map.get(item, {})
+                american = item_meta.get('american', item)
+                british = item_meta.get('british', item)
+                
+                customdata[i, j, 0] = item
+                customdata[i, j, 1] = variety
+                customdata[i, j, 2] = f'{cell_mean:.2f}' if pd.notna(cell_mean) else 'N/A'
+                customdata[i, j, 3] = american
+                customdata[i, j, 4] = british
+                customdata[i, j, 5] = dist.get('-2', 0)
+                customdata[i, j, 6] = dist.get('-1', 0)
+                customdata[i, j, 7] = dist.get('0', 0)
+                customdata[i, j, 8] = dist.get('1', 0)
+                customdata[i, j, 9] = dist.get('2', 0)
+                customdata[i, j, 10] = dist.get('NX', 0)
+                customdata[i, j, 11] = dist.get('Null', 0)
+        
+        fig = go.Figure(data=go.Heatmap(
+            z=df_pivot.values,
+            x=sorted_varieties,
+            y=sorted_items,
+            colorscale='ylgnbu',
+            zmid=0,
+            colorbar=dict(title="Mean<br>rating"),
+            customdata=customdata,
+            hovertemplate=(
+                '<b>%{customdata[0]}</b><br>'
+                '<b>Variety: %{customdata[1]}</b><br>'
+                '<b>Mean: %{customdata[2]}</b><br>'
+                'Distribution -2/-1/0/1/2: %{customdata[5]} / %{customdata[6]} / %{customdata[7]} / %{customdata[8]} / %{customdata[9]}<br>'
+                'NX: %{customdata[10]} | Null: %{customdata[11]}<br>'
+                'American: %{customdata[3]}<br>'
+                'British: %{customdata[4]}<extra></extra>'
+            ),
+        ))
+    
+    fig.update_layout(
+        template="simple_white",
+        height=max(400, len(sorted_items) * 20),
+        xaxis_title='Variety',
+        xaxis2=dict(
+            overlaying='x',
+            side='top',
+            type='category',
+            tickmode='array',
+            tickvals=sorted_varieties,
+            ticktext=sorted_varieties,
+            showgrid=False,
+            showline=True,
+            ticks='outside',
+            showticklabels=True,
+        ),
+        yaxis_title='Lexical Item',
+        margin=dict(t=40, b=40, l=200, r=100),
+    )
+    return fig
 
 
 ##############

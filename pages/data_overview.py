@@ -177,7 +177,7 @@ def create_summary_card():
     
     # Calculate completion rates
     grammar_participants = grammarData['InformantID'].nunique() if not grammarData.empty else 0
-    lexical_participants = lexicalData['InformantID'].nunique() if HAS_LEXICAL and not lexicalData.empty else 0
+    lexical_participants = total_participants if HAS_LEXICAL else 0
     both_sections = len(set(grammarData['InformantID'].unique() if not grammarData.empty else []) & 
                          set(lexicalData['InformantID'].unique() if HAS_LEXICAL and not lexicalData.empty else []))
     
@@ -1487,8 +1487,8 @@ layout = dmc.Container([
             
         ], variant="separated", radius="md", multiple=True, value=["overview"]),
         
-    ], gap="lg")
-], fluid=True, style={"maxWidth": "1600px", "margin": "0 auto", "paddingLeft": "20px", "paddingRight": "20px"})
+    ])
+], fluid=True)
 
 
 # Callback for downloading lexical table

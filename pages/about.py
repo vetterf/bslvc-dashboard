@@ -16,7 +16,7 @@ layout = dmc.Container([
         # Introduction
         dmc.Text(
             "The BSLVC Dashboard is an interactive web application for exploring and analyzing data from the Bamberg Survey of Language Variation and Change. "
-            "It provides researchers with tools for visualizing lexical (coming soon) and grammatical variation across varieties of English.",
+            "It provides researchers with tools for visualizing lexical and grammatical variation across varieties of English.",
             size="md",
             mb="xl"
         ),
@@ -110,5 +110,5 @@ For more information, please visit the project homepage.
             )
         ], p="md", withBorder=True, radius="md", style={"backgroundColor": "#f8f9fa"}),
         
-    ], withBorder=True, shadow="sm", radius="md", p="lg", mb="lg")
-], fluid=True, style={"maxWidth": "1600px", "margin": "0 auto", "paddingLeft": "20px", "paddingRight": "20px"})
+    ], withBorder=True, shadow="sm", radius="md", p="md", mb="lg")
+], fluid=True)

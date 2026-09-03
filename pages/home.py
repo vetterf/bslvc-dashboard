@@ -20,33 +20,17 @@ layout = dmc.Container([
     
         dmc.Text(
             "The BSLVC Dashboard provides interactive tools to explore the Bamberg Survey of Language "
-            "Variation and Change database. Currently, the Grammar Analysis module is available, "
-            "allowing you to visualize participant similarity, explore feature distributions, and identify "
-            "the most discriminative features between groups of informants.",
+            "Variation and Change database. The heart of the dashboard are the two main modules: the Grammar Analysis module and the Lexical Analysis module. "
+            "The Grammar Analysis module allows you to "
+            "visualize participant similarity, explore feature distributions, and identify "
+            "the most discriminative features between groups of informants. "
+            "The Lexical Analysis module allows you to investigate apparent time trends in the lexical part of theBSLVC data.",
             size="md",
             mb="lg"
         ),
 
         dmc.Divider(mb="lg"),
 
-        # What you can do section
-        dmc.Title("What You Can Do with the Grammar Module", order=4, mb="md"),
-        
-        dmc.List(
-            [
-                dmc.ListItem("Filter participants by variety, age, gender, and data completeness"),
-                dmc.ListItem("Visualize participant similarity using dimensionality reduction (UMAP)"),
-                dmc.ListItem("Explore individual feature distributions with interactive plots"),
-                dmc.ListItem("Compare groups and identify the most discriminative features between groups using Random Forests"),
-                dmc.ListItem("Export plots as SVG files and filtered data as CSV"),
-            ],
-            size="md",
-            mb="lg"
-        ),
-
-        dmc.Divider(mb="lg"),
-
-        # Getting started section
         dmc.Group([
             dmc.ThemeIcon(
                 DashIconify(icon="tabler:rocket", width=24),
@@ -60,7 +44,7 @@ layout = dmc.Container([
         
         dmc.Text(
             "New to the dashboard? Visit the Getting Started section for a step-by-step guide and example case studies. "
-            "For detailed information about features and functionality, check the Documentation.",
+            "A more detailed description of the features and functionality can be found in the documentation.",
             size="md",
             mb="md"
         ),
@@ -86,12 +70,12 @@ layout = dmc.Container([
         ], gap="md", mb="md"),
 
         dmc.Text(
-            "Note: This platform is under active development. The lexical analysis module will be added in future updates.",
+            "Note: This platform is under active development. If you encounter any issues or have suggestions, please contact Fabian Vetter.",
             size="sm",
             c="dimmed",
             mt="lg"
         ),
 
-    ], withBorder=True, shadow="sm", radius="md", p="lg", mb="lg"),
+    ], withBorder=True, shadow="sm", radius="md", p="md", mb="lg"),
     
-], fluid=True, style={"maxWidth": "1200px", "margin": "0 auto", "paddingLeft": "20px", "paddingRight": "20px"})
+], fluid=True)

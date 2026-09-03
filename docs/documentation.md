@@ -1,3 +1,51 @@
+#### Averaged Plot
+
+The averaged plot shows a single time-series line representing the **item-weighted average** rating across all selected lexical items. Each item contributes equally to the average regardless of missing data or sample-size differences. This provides a high-level view of overall directional change in lexical preferences without per-item detail.
+
+- **X-axis**: Age groups or birth-year cohorts (controlled by "Time axis mode")
+- **Y-axis**: Item-weighted mean rating on the -2 (American) to +2 (British) scale
+- **Series**: Can be split by Gender or Main Variety (controlled by "Group data by")
+- **Visual options**: Supports 95% confidence bands and NX opacity encoding (same as faceted plots)
+
+**Hover information** for each point includes:
+
+- The x-axis group (age group or birth cohort)
+- The item-weighted mean rating
+- N (number of ratings the mean is based on, counting across all items and participants)
+- Number and percentage of "uses neither" (NX/NXC) responses
+- Number of missing ("NA") responses
+
+This plot type is useful for identifying overall lexical trends across the entire domain (e.g. "Is the language community becoming more British?" ) without needing to examine each item separately.
+
+#### Heatmap Plot
+
+The heatmap visualizes lexical items (Y-axis) and varieties (X-axis) in a color-coded matrix, with two distinct modes:
+
+**Mean Value Mode (default):**
+- Pools all age groups together
+- Each cell is colored by the absolute mean rating across all participants (yellow→green→blue scale)
+- Items are sorted by average rating across varieties (ascending — lowest average first, indicating more American preference)
+- Varieties are sorted by average rating across items (ascending, like the data overview page)
+- **Time axis selector is disabled** (not applicable when pooling all ages)
+
+**Trend Mode (enabled by "Color cells by trend"):**
+- For each item×variety pair, computes a linear regression slope of ratings across age groups/cohorts
+- Each cell is colored by the trend direction (red=downward trend over time, blue=upward trend over time)
+- Items can be sorted alphabetically, by average rating, or by **signed slope** (only available in trend mode; positive slopes appear before negative slopes)
+- Varieties are sorted by average trend across items (ascending by absolute magnitude)
+- **Time axis selector is enabled** (required to specify whether to use age groups or birth-year cohorts for the slope calculation)
+
+**Hover information** for each cell includes:
+
+- Item British/American labels
+- Variety name
+- **Mean value mode**: Mean rating, N (participant count), distribution of -2/−1/0/+1/+2 responses, NX/NXC count, and missing ("NA") count
+- **Trend mode**: Linear regression slope value (rate of change per year or cohort)
+
+The heatmap is particularly useful for identifying:
+- **In mean-value mode**: Which items are most American/British across the varieties (high/low ratings)
+- **In trend mode**: Which items show strongest changes over time, and whether trends are uniform across varieties or variety-specific
+
 # Documentation
 
 This document provides technical details about the BSLVC Dashboard and all available functions.
@@ -370,21 +418,32 @@ Lexical items are listed in a flat, alphabetically sorted tree (by the British/A
 
 ![Plot settings](img/UI_lexical_plot_settings.png)
 
-- **Time axis mode**: Segmented control choosing what the x-axis of each facet represents:
+- **Plot type**: Dropdown selector for choosing the visualization type:
+    - **Faceted by age group** (default): Faceted plot with one subplot per lexical item, showing ratings across age groups or birth cohorts. Use this to examine variation within each item and to compare trends across multiple items simultaneously.
+    - **Averaged across items**: Single time-series line plot showing the overall mean rating **averaged equally across all selected lexical items** (item-level weighted average: each item contributes equally regardless of missing data).
+    - **Heatmap**: Items (Y-axis) × Varieties (X-axis) two-mode heatmap.
+      - **Mean value mode** (default): Pools all age groups together; cells are colored by absolute mean rating. Items sorted by average across varieties (ascending). Varieties sorted by average across items (ascending).
+      - **Trend mode** (enabled by "Color cells by trend"): For each item×variety pair, computes linear regression slope across age groups/cohorts; cells are colored by trend direction (red=downward trend, blue=upward trend). 
+- **Time axis mode**: Segmented control choosing what the x-axis represents (applies to Faceted and Average plots, and to the Heatmap trend computation):
     - **Apparent time (age)**: Groups participants into fixed age bins (`<20`, `20-29`, `30-39`, `40-49`, `50-59`, `60-69`, `>69`), displayed **oldest (left) to youngest (right)**.
     - **Birth year cohorts**: Computes each participant's approximate birth year as `Year of data collection − Age`, then groups participants into 10-year cohorts (e.g. `1980-1989`). Cohorts are derived dynamically from the data actually present in the current selection and are displayed in chronological order (earliest cohort left).
 - **Exclude birth-year cohorts with fewer than 5 datapoints**: Only enabled when "Birth year cohorts" is selected. When checked, any birth-year cohort with fewer than 5 participants (in the current selection) is dropped from the x-axis entirely, for every item and every group, to avoid displaying unreliable single-participant cohorts.
-- **Sort facets by**: Controls the order in which item facets are arranged (left-to-right, top-to-bottom):
+- **Sort facets by** (Faceted plot only): Controls the order in which item facets are arranged (left-to-right, top-to-bottom):
     - **Globalization Trend**: Fits a locally-weighted regression (LOESS) smoother of the mean rating against age/cohort (combining all genders and varieties, weighted by N), and sorts facets so the item with the steepest "oldest lowest, youngest highest" trend appears top-left.
     - **Average rating (weighted across groups)**: Sorts facets by each item's overall mean rating, pooling every selected participant's numeric rating regardless of age group, gender, or variety (larger subgroups naturally count proportionally more, since every participant contributes one value).
     - **Alphabetically**: Sorts facets alphabetically by the item's British/American label.
-- **Group data by**: Controls whether/how each facet is split into multiple lines:
+- **Group data by** (Faceted and Average plots only): Controls whether/how each facet/line is split into multiple series:
     - **No grouping**: A single line per facet, combining all selected participants.
     - **Gender**: Two lines per facet (Female / Male). The category "Non-Binary" is dropped as there's too little data.
     - **Main Variety**: One line per main variety. Colors reuse the app-wide fixed variety color map where available; any variety without a fixed color is assigned a color from a large combined palette so that all varieties in the current selection remain visually distinct.
-- **Show 95% confidence bands**: Adds a semi-transparent shaded band around each line showing the normal-approximation 95% confidence interval of the mean (only the band is shown — no markers are drawn at its edges).
-- **Fade markers by share of 'neither' (NX) responses**: When enabled, marker opacity is scaled down as the share of NX/NXC ("uses neither") responses at that data point increases, following `opacity = max(20%, 100% − 2 × NX share)`. This visually de-emphasizes points where a large proportion of participants answered that they prefer neither variant.
-- **Facet columns**: Number of facet columns per row (1–8). Each facet has a fixed maximum width of 350px, so the resulting plot may need to be scrolled horizontally if many columns are selected.
+- **Show 95% confidence bands** (Faceted and Average plots only): Adds a semi-transparent shaded band around each line showing the normal-approximation 95% confidence interval of the mean (only the band is shown — no markers are drawn at its edges).
+- **Fade markers by share of 'neither' (NX) responses** (Faceted and Average plots only): When enabled, marker opacity is scaled down as the share of NX/NXC ("uses neither") responses at that data point increases, following `opacity = max(20%, 100% − 2 × NX share)`. This visually de-emphasizes points where a large proportion of participants answered that they prefer neither variant.
+- **Facet columns** (Faceted plot only): Number of facet columns per row (1–8). Each facet has a fixed maximum width of 350px, so the resulting plot may need to be scrolled horizontally if many columns are selected.
+- **Color cells by trend** (Heatmap only): Toggle between mean-value mode (off) and trend-mode (on). When on, enables the "Sort items by Slope" option and activates the time axis selector.
+- **Sort items by** (Heatmap only): Controls the row order of lexical items in the heatmap:
+    - **Alphabetically**: Sorts items alphabetically by their British/American label.
+    - **Average** (default): Sorts by average rating across varieties (ascending order — lowest average first).
+    - **Slope** (only in trend mode): Sorts by signed trend (descending — upward trends first, followed by downward trends).
 
 #### Facet Plot
 

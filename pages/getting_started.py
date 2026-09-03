@@ -558,8 +558,8 @@ This section provides an overview of the interface, describes the basic workflow
             ], value="case2")
         ], multiple=True, variant="contained", radius="md")
         
-    ], withBorder=True, shadow="sm", radius="md", p="lg", mb="lg")
-], fluid=True, style={"maxWidth": "1600px", "margin": "0 auto", "paddingLeft": "20px", "paddingRight": "20px"})
+    ], withBorder=True, shadow="sm", radius="md", p="md", mb="lg")
+], fluid=True)
 
 
 # Callback to update basic workflow content based on stepper step

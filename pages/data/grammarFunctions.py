@@ -1825,7 +1825,7 @@ def getAuxiliaryTable(Informants,participants):
 
 def getMetaTable(data, pairs=False, preset_data=None):
     # style for surrounding div
-    style = {"height": "calc(-230px + 100vh)", "display": "flex", "flex-direction": "column"}
+    style = {"height": "calc(-180px + 100vh)", "display": "flex", "flex-direction": "column"}
     if pairs:
         # For item pairs, filter to only show items with twins and format appropriately
         # Filter out rows without a twin item (question_code_written should not be empty)

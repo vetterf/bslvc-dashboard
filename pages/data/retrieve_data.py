@@ -106,10 +106,10 @@ class VarietyColorMap:
     
     def __init__(self):
         self.fixed_map = {
-            "England": "#1f77b4",
-            "England_North": "#4a90c4",
-            "England_South": "#0d5a8f",
-            "England_UNCLEAR": "#7bb3d9",
+            "England": "#2190DB",
+            "England_North": "#509FD9",
+            "England_South": "#005C9C",
+            "England_UNCLEAR": "#2190DB",
             "Scotland": "#7B3394",
             "US": "#B22234",
             "Gibraltar": "#d62728",
@@ -118,7 +118,7 @@ class VarietyColorMap:
             "Puerto Rico": "#00A693",
             "Slovenia": "#7f7f7f",
             "Germany": "#FFCE00",
-            "Sweden": "#006AA7",
+            "Sweden": "#004D7A",
             "Spain (Balearic Islands)": "#393b79",
             "Ireland": "#169B62",
             "Other": "#c49c94",
