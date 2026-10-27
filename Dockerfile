@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /
 
 # Install Python dependencies
 COPY requirements_3.14.txt ./requirements.txt
-RUN pip install --no-cache-dir -r ./requirements.txt
+RUN pip install --upgrade pip certifi && pip install --no-cache-dir -r ./requirements.txt
 COPY . ./
 
 # Pull BSLVC_sqlite.db from the database repo and place it in assets/data
