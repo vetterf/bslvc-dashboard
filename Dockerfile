@@ -1,5 +1,5 @@
 # Use the official Python image
-FROM python:3.14.5-slim-bookworm
+FROM python:3.14.10-slim-trixie
 # Set the database path environment variable
 ENV APP_DIR=/app
 ENV DATA_DIR=/app/assets/data

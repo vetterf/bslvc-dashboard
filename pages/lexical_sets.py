@@ -607,12 +607,13 @@ lexicalAnalysisC = dmc.Grid([
         span=4,
         style={}
     ),
-], gutter="xl", id="lexical-analysis-grid")
+], gap="xl", id="lexical-analysis-grid")
 
 layout = dmc.Container([
     dcc.Store(id="lexical-informants-store", data=Informants.to_dict("records")),
     dcc.Store(id="lexical-render-trigger", storage_type="memory"),  # Trigger for background plot computation
     lexicalAnalysisC,
+    html.Div(id="lexical-notify-container"),
 ], fluid=True)
 
 
@@ -713,18 +714,54 @@ def _resolve_lexical_selection(selected_participants, selected_items, informants
     return current_informants, participants, items
 
 
+MIN_LEXICAL_PARTICIPANTS = 10
+MIN_LEXICAL_ITEMS = 1
+
+
+def _lexical_warning(title, message):
+    return dmc.Notification(
+        id="lexical-my-notification",
+        title=title,
+        message=message,
+        color="orange",
+        loading=False,
+        action="show",
+        autoClose=5000,
+        position="top-right",
+    )
+
+
 @callback(
     [Output('render-lexical-plot', 'loading', allow_duplicate=True),
-     Output('lexical-render-trigger', 'data')],
+     Output('lexical-render-trigger', 'data'),
+     Output('lexical-notify-container', 'children')],
     Input('render-lexical-plot', 'n_clicks'),
+    [State('participantsTreeLexical', 'checked'),
+     State('lexicalItemsTree', 'checked'),
+     State('lexical-informants-store', 'data')],
     prevent_initial_call=True,
 )
-def initiate_lexical_render(n_clicks):
-    """Set the loading state immediately (instant) and hand off the actual
-    computation to the background callback in pages/data/lexical_background.py,
+def initiate_lexical_render(n_clicks, selected_participants, selected_items, informants_data):
+    """Validate the selection, then set the loading state immediately and hand off the
+    actual computation to the background callback in pages/data/lexical_background.py,
     so the UI doesn't hang while a large facet plot is being built."""
     import time
-    return True, {'timestamp': time.time()}
+    _, participants, items = _resolve_lexical_selection(
+        selected_participants, selected_items, informants_data
+    )
+
+    if len(participants) < MIN_LEXICAL_PARTICIPANTS:
+        return False, no_update, _lexical_warning(
+            "Insufficient Participants",
+            f"Please select at least {MIN_LEXICAL_PARTICIPANTS} participants. Currently selected: {len(participants)}",
+        )
+    if len(items) < MIN_LEXICAL_ITEMS:
+        return False, no_update, _lexical_warning(
+            "Insufficient Lexical Items",
+            f"Please select at least {MIN_LEXICAL_ITEMS} lexical item. Currently selected: {len(items)}",
+        )
+
+    return True, {'timestamp': time.time()}, no_update
 
 
 @callback(

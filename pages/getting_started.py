@@ -207,7 +207,7 @@ def create_ui_location(highlight_section="", highlight_element="", highlight_tab
                 dmc.Stack(options_elements, gap=0, justify="flex-start")
             ], withBorder=True, p="xs", radius="md", style={**right_style, "border": right_border})
         ], span=3)
-    ], gutter="xs", mb="md")
+    ], gap="xs", mb="md")
 
 
 def get_basic_workflow_step_content(step):
@@ -468,7 +468,7 @@ This section provides an overview of the interface, describes the basic workflow
                     ], align="center", gap="xs", justify="center", style={"minHeight": "200px"})
                 ], withBorder=True, p="md", radius="md", style={"backgroundColor": "#f8f9fa"})
             ], span=3)
-        ], gutter="md", mb="xl"),
+        ], gap="md", mb="xl"),
         
         # Working with Grammar Data Section (combines workflow + case studies)
         dmc.Group([
@@ -519,7 +519,7 @@ This section provides an overview of the interface, describes the basic workflow
                         dmc.GridCol([
                             html.Div(id="basic-workflow-content", children=get_basic_workflow_step_content(0))
                         ], span=9)
-                    ], gutter="xl")
+                    ], gap="xl")
                 ])
             ], value="basic_workflow"),
             

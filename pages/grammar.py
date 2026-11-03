@@ -1771,7 +1771,7 @@ grammarAnalysisC = dmc.Grid([
         span=4,
         style={}
     ),
-], gutter="xl", id="grammar-analysis-grid")
+], gap="xl", id="grammar-analysis-grid")
 
 
 
@@ -1779,7 +1779,7 @@ grammarAnalysisC = dmc.Grid([
 leidenC = dmc.Grid([
     dmc.GridCol(html.Div(children = [LeidenClusterContainer],id="leiden-plot-tab-content",style={"paddingTop": 10}),span=8),
     dmc.GridCol(SettingsLeiden,span=4,style={"padding-top":"10px","margin-top": "5px","border-left": "1px solid #f0f0f0","padding-left": "10px"}),
-], gutter="xl")
+], gap="xl")
 
 GrammaticalItems = dmc.Container([dmc.Grid(children=[
             dmc.GridCol(children=[

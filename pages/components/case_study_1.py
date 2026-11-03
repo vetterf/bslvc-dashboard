@@ -51,7 +51,7 @@ This case study explores how similar participants are with respect to their rati
             dmc.GridCol([
                 html.Div(id="case-study-1-content", children=get_case_study_1_step_content(0, create_ui_location))
             ], span=9)
-        ], gutter="xl")
+        ], gap="xl")
     ])
 
 

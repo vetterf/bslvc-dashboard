@@ -24,7 +24,7 @@ layout = dmc.Container([
             "The Grammar Analysis module allows you to "
             "visualize participant similarity, explore feature distributions, and identify "
             "the most discriminative features between groups of informants. "
-            "The Lexical Analysis module allows you to investigate apparent time trends in the lexical part of theBSLVC data.",
+            "The Lexical Analysis module allows you to investigate apparent time trends in the lexical part of the BSLVC data.",
             size="md",
             mb="lg"
         ),

@@ -47,7 +47,7 @@ In this case study, we follow up on this finding, and investigate all features r
             dmc.GridCol([
                 html.Div(id="case-study-2-content", children=get_case_study_2_step_content(0, create_ui_location))
             ], span=9)
-        ], gutter="xl")
+        ], gap="xl")
     ])
 
 
