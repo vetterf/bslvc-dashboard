@@ -14,7 +14,7 @@ fi
 
 # shellcheck source=/dev/null
 source "$venv_dir/Scripts/activate"
-pip install --quiet --upgrade pip
-pip install --quiet -r packaging/requirements_desktop.txt
+python -m pip install --quiet --upgrade pip
+python -m pip install --quiet -r packaging/requirements_desktop.txt
 
 python packaging/build_desktop_bundle.py "$@"
