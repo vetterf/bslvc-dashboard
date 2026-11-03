@@ -172,12 +172,16 @@ def drawLexicalItemsTree(lexicalMeta):
 
 def normalize_lexical_tree_selection(checked_participants, checked_items, informants, all_items):
     """Expand top-level/'select all' tree selections into concrete IDs."""
-    if checked_participants in (['participantslexical'], None, []):
+    if not checked_participants:
+        participants = []
+    elif checked_participants == ['participantslexical']:
         participants = informants['InformantID'].tolist()
     else:
         participants = get_participants_from_tree_selection(checked_participants, informants)
 
-    if not checked_items or checked_items == ['lexicalitems']:
+    if not checked_items:
+        items = []
+    elif checked_items == ['lexicalitems']:
         items = list(all_items)
     else:
         items = [c for c in checked_items if c != 'lexicalitems']

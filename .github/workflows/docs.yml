@@ -8,6 +8,14 @@ on:
       - 'docs/**'
       - 'mkdocs.yml'
       - '.github/workflows/docs.yml'
+    # Path filters are not applied to tag pushes, so every mirrored release tag redeploys the docs
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: docs-deploy
+  cancel-in-progress: false
 
 permissions:
   contents: write

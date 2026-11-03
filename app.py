@@ -44,7 +44,7 @@ from version import __version__
 
 ############################################################################################################
 
-#_dash_renderer._set_react_version("18.2.0")
+dash._dash_renderer._set_react_version("19.2.4")
 launch_uid = uuid4()
 
 # Get database version
@@ -406,28 +406,28 @@ app.layout = dmc.MantineProvider(
          "primaryColor": "indigo",
          "colors":{
             "indigo": [
+                "#e9f1f8",
+                "#cee1ee",
+                "#aacbe2",
+                "#86b6d6",
+                "#62a0ca",
+                "#418bbf",
                 "#1f77b4",
-                "#1f77b4",
-                "#1f77b4",
-                "#1f77b4",
-                "#1f77b4",
-                "#1f77b4",
-                "#1f77b4",
-                "#1f77b4",
-                "#1f77b4",
-                "#1f77b4",
+                "#1b699e",
+                "#185a89",
+                "#144c73",
                 ],
             "blue": [
+                "#e9f1f8",
+                "#cee1ee",
+                "#aacbe2",
+                "#86b6d6",
+                "#62a0ca",
+                "#418bbf",
                 "#1f77b4",
-                "#1f77b4",
-                "#1f77b4",
-                "#1f77b4",
-                "#1f77b4",
-                "#1f77b4",
-                "#1f77b4",
-                "#1f77b4",
-                "#1f77b4",
-                "#1f77b4",
+                "#1b699e",
+                "#185a89",
+                "#144c73",
                 ]
          },
          "fontFamily": "'Inter', sans-serif",

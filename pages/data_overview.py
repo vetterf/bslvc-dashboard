@@ -1459,13 +1459,6 @@ layout = dmc.Container([
                 ),
                 dmc.AccordionPanel([
                     dmc.Stack([
-                        dmc.Alert(
-                            "The analysis functions for lexical data are still under development. This section provides a quick overview of the lexical items data only.",
-                            title="Note",
-                            color="blue",
-                            icon=DashIconify(icon="tabler:info-circle"),
-                            mb="md"
-                        ),
                         dmc.Title("Lexical Items - Heatmap", order=5, mb="sm"),
                         dmc.Text(
                             "Heatmap showing mean scores for all lexical items across varieties. Item labels include balanced means in parentheses (equal weight per variety). Hover to inspect participant counts and response distributions (-2 to +2, NX, Null). Colors range from yellow (American variant, -2) to blue (British variant, +2).",
