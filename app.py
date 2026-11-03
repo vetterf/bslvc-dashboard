@@ -223,28 +223,37 @@ navbar = dmc.AppShellNavbar(
             dmc.Divider(label="External resources", labelPosition="left", mt="md", mb="xs"),
             dmc.Anchor(
                 dmc.NavLink(
-                    label="BSLVC Project Homepage",
-                    leftSection=get_icon(icon="tabler:external-link"),
-                ),
-                href="https://www.uni-bamberg.de/en/eng-ling/forschung/the-bslvc-project-dfg-funded/",
-                target="_blank",
-                underline=False
-            ),
-            dmc.Anchor(
-                dmc.NavLink(
-                    label="OSF Repository",
-                    leftSection=get_icon(icon="tabler:code"),
-                ),
-                href="https://osf.io/4buef/",
-                target="_blank",
-                underline=False
-            ),
-            dmc.Anchor(
-                dmc.NavLink(
                     label="Documentation",
                     leftSection=get_icon(icon="tabler:book-2"),
                 ),
                 href="https://vetterf.github.io/bslvc-dashboard",
+                target="_blank",
+                underline=False
+            ),
+            dmc.Anchor(
+                dmc.NavLink(
+                    label="Github Repository",
+                    leftSection=get_icon(icon="tabler:code"),
+                ),
+                href="https://github.com/vetterf/bslvc-dashboard",
+                target="_blank",
+                underline=False
+            ),
+            dmc.Anchor(
+                dmc.NavLink(
+                    label="Zenodo",
+                    leftSection=get_icon(icon="tabler:folder"),
+                ),
+                href="https://zenodo.org/records/23916143",
+                target="_blank",
+                underline=False
+            ),
+            dmc.Anchor(
+                dmc.NavLink(
+                    label="BSLVC Project Homepage",
+                    leftSection=get_icon(icon="tabler:external-link"),
+                ),
+                href="https://www.uni-bamberg.de/en/eng-ling/forschung/the-bslvc-project-dfg-funded/",
                 target="_blank",
                 underline=False
             ),
