@@ -6,6 +6,9 @@ on:
       - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build (${{ matrix.os }})
@@ -16,10 +19,13 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            label: linux
             script: bash packaging/build-linux.sh
           - os: macos-latest
+            label: macos
             script: bash packaging/build-mac.sh
           - os: windows-latest
+            label: windows
             script: bash packaging/build-win.sh
 
     steps:
@@ -35,9 +41,46 @@ jobs:
         shell: bash
         run: ${{ matrix.script }}
 
+      - name: Package bundle (tar.gz, preserves macOS symlinks)
+        if: matrix.label != 'windows'
+        shell: bash
+        run: |
+          mkdir -p release
+          tar -czf "release/bslvc-dashboard-${{ matrix.label }}-${{ github.ref_name }}.tar.gz" -C dist .
+
+      - name: Package bundle (zip)
+        if: matrix.label == 'windows'
+        shell: bash
+        run: |
+          mkdir -p release
+          python -c "import shutil,sys; shutil.make_archive('release/bslvc-dashboard-windows-${{ github.ref_name }}', 'zip', 'dist')"
+
       - name: Upload bundle artifact
         uses: actions/upload-artifact@v4
         with:
-          name: bslvc-dashboard-${{ matrix.os }}
-          path: dist/
+          name: bslvc-dashboard-${{ matrix.label }}
+          path: release/*
           retention-days: 30
+
+  release:
+    name: Publish GitHub release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download bundles
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+          pattern: bslvc-dashboard-*
+          merge-multiple: true
+
+      - name: Create release and attach binaries
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true

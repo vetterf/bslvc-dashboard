@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+title: BSLVC Dashboard
+version: 0.2.8
+license: "MIT"
+type: software
+abstract: "Interactive data visualization dashboard for the Bamberg Survey of Language Variation and Change."
+message: "If you use this software, please cite it as below."
+authors:
+  - given-names: Fabian
+    family-names: Vetter
+    affiliation: University of Bamberg
+    orcid: "https://orcid.org/0000-0002-3654-5489"
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23916143
+date-released: 2026-03-11
+keywords:
+  - linguistics
+  - World Englishes
+  - BSLVC
+  - data visualization
+repository-code: "https://github.com/vetterf/bslvc-dashboard"

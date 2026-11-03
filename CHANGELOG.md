@@ -2,6 +2,16 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
+## [0.2.8] - 2026-11-03
+
+### Added
+- *CITATION.cff*: Added citation file for switch from OSF to Zenodo
+
+### Changed
+- *Updated packages*: Updated packages and requirements, updated docker image (python update, bookworm to trixie)
+- *Minor fixes*: Minor fixes related to the update of dash mantine components to 3.0.0
+- *Replaced OSF link*: Replaced OSF link with Zenodo link in sidebar
+
 ## [0.2.7] - 2026-09-03
 
 ### Added

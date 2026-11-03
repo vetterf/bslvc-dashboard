@@ -1,5 +1,8 @@
 # BSLVC Dashboard
 
+[![DOI](https://zenodo.org/badge/1098053419.svg)](https://doi.org/10.5281/zenodo.23916143)
+ [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 The BSLVC dashboard is an interactive visualization that allows researchers to explore the Bamberg Survey of Language Variation and Change (BSLVC; https://www.uni-bamberg.de/en/eng-ling/forschung/the-bslvc-project-dfg-funded/) data.
 
 ## Quick Start
@@ -21,7 +24,7 @@ If you use the BSLVC Dashboard or data from the BSLVC project in your research, 
 
 Dashboard Citation:
 
-Vetter, Fabian. 2026. _BSLVC Dashboard_ (Version 0.2.4). https://doi.org/10.17605/OSF.IO/4BUEF
+Vetter, Fabian. 2026. _BSLVC Dashboard_ (Version 0.2.8). https://doi.org/10.5281/zenodo.23916143
 
 Data Set Citation:
 
@@ -31,7 +34,7 @@ Krug, Manfred & Fabian Vetter. 2026. _The Bamberg Survey of Language Variation a
 
 The BSLVC Dashboard is written in Python and Dash and is designed to run as a docker container. Please consult the documentation of your systems docker/podman installation on how to create and run docker containers.
 
-To create a local desktop-style version of the app, run the build script on your target OS:
+To create a local desktop-style version of the app, run the build script on your target OS or use the precompiled binaries attached to the most recent release:
 
 - Linux: `bash packaging/build-linux.sh`
 - macOS: `bash packaging/build-mac.sh`
