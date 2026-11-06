@@ -14,7 +14,7 @@ ENV ENABLE_URL_CACHE_CLEAR=false
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY requirements_3.14.txt ./requirements.txt
+COPY requirements.txt ./requirements.txt
 RUN pip install --upgrade pip certifi && pip install --no-cache-dir -r ./requirements.txt
 COPY . ./
 
