@@ -3,6 +3,8 @@ from dash import register_page
 import pages.data.retrieve_data as retrieve_data
 from pages.data.grammarFunctions import *
 from pages.data.grammarFunctions import _participants_hash
+from pages.data.group_colors import tag_group_colors
+from pages.components.group_colors import color_controls
 from time import sleep
 
 import plotly.express as px
@@ -93,7 +95,7 @@ def get_grammar_items_cols_cached():
 def get_grammar_items_cols_pairs_cached():
     return retrieve_data.getGrammarItemsCols("item_pairs")
 
-def get_cached_rf_plot(data, importance_ratings, value_range, pairs, participants=None, split_by_variety=False, importance_label="RF importance"):
+def get_cached_rf_plot(data, importance_ratings, value_range, pairs, participants=None, split_by_variety=False, importance_label="RF importance", group_colors=None):
     """Get RF plot from cache or compute if not exists"""
     # Create cache key from parameters
     key_data = {
@@ -104,6 +106,7 @@ def get_cached_rf_plot(data, importance_ratings, value_range, pairs, participant
         'participants': sorted(participants) if participants is not None else None,
         'split_by_variety': split_by_variety,
         'importance_label': importance_label,
+        'group_colors': sorted(group_colors.items()) if group_colors else None,
         'data_hash': hashlib.md5(str(data.values.tolist() if hasattr(data, 'values') else str(data)).encode()).hexdigest()[:8]
     }
     cache_key = f"rf_{hashlib.md5(str(key_data).encode()).hexdigest()}"
@@ -120,6 +123,7 @@ def get_cached_rf_plot(data, importance_ratings, value_range, pairs, participant
         pairs=pairs,
         split_by_variety=split_by_variety,
         importance_label=importance_label,
+        group_colors=group_colors,
     )
     
     # Cache the result for 24 hours
@@ -1243,7 +1247,7 @@ umapSettingsAccordion = dmc.AccordionItem(
                         ),
                         dmc.Checkbox(
                             id="umap-kde-contours-checkbox",
-                            label="Show binned density contours (2D only)",
+                            label="Show binned density contours for varieties (2D)",
                             size="sm",
                             checked=False,
                             persistence=persist_UI, persistence_type=persistence_type
@@ -1504,6 +1508,8 @@ SettingsGrammarAnalysis = dmc.Card([
         radius="md",
         mb="md"),
     ]),  # Visible by default (UMAP is default now)
+
+    color_controls("grammar"),
     
     # Collapsible Advanced Actions Section (Moved to bottom)
     dmc.Accordion(
@@ -4135,10 +4141,12 @@ def clear_rf_plot_loading(figure, notification):
     State('use-imputed-data-switch', 'checked'),
     State('include-ai-param', 'data'),
     State('rf-ordering-method', 'value'),  # Variable ordering method
-    State('use-perceptual-scale-switch', 'checked')],  # Perceptual scale
+    State('use-perceptual-scale-switch', 'checked'),  # Perceptual scale
+    State('umap-color-dropdown', 'value'),
+    State('informants-store', 'data')],
     prevent_initial_call=True
 )
-def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants,render_settings,use_zscores,user_imputed_switch,include_ai,ordering_method,use_perceptual_scale):
+def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants,render_settings,use_zscores,user_imputed_switch,include_ai,ordering_method,use_perceptual_scale,umap_color_by=None,informants_data=None):
     # Set default value for split_by_variety since checkbox was removed
     split_by_variety = False
     
@@ -4220,8 +4228,26 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
         # pass this to trainRF
         # based on trainRF, get plots
         groupcol = df
+        group_colors = None
         if UMAPgroup == 0:
             groupcol['group'] = groupcol['name'] # group by variety.
+            if umap_color_by in ('Gender', 'Variety type'):
+                # Group by the UMAP's current color setting instead of variety
+                informants_df = pd.DataFrame(informants_data) if informants_data else Informants
+                column = 'Gender' if umap_color_by == 'Gender' else 'Variety_Type'
+                lookup = informants_df.set_index('InformantID')[column]
+                lookup = lookup[~lookup.index.duplicated()]
+                grouped = groupcol['ids'].map(lookup)
+                if umap_color_by == 'Variety type':
+                    grouped = grouped.astype(str).str.replace('AI-', '', regex=False)
+                grouped = grouped.where(grouped.notna() & ~grouped.isin(['nan', 'None', '']), 'Other')
+                groupcol['group'] = grouped
+            if 'color' in groupcol.columns:
+                # Reuse the colors currently shown in the UMAP (incl. user-chosen ones)
+                group_colors = (
+                    groupcol.dropna(subset=['color']).groupby('group')['color']
+                    .agg(lambda c: c.mode().iat[0]).to_dict()
+                )
         else:
             groupcol['group'] = groupcol['symbol'] # group by color
 
@@ -4628,6 +4654,7 @@ def renderRFPlot(BTN,groups,items,UMAPgroup,value_range,figure,umap_participants
             pairs=pairs,
             split_by_variety=split_by_variety,
             importance_label=importance_trace_label,
+            group_colors=group_colors,
         )
         return RFPlot, False, False, False, notification, 'rf-plot', "plot-view", oob_children, cm_children, top_features_children, f1_children, "plot-view"
     return no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update
@@ -4875,6 +4902,8 @@ def renderItemPlot(BTN,informants,items,groupby,sortby,plot_mode,pairs,use_imput
         # Check if split_by_variety mode is selected
         split_by_variety = (plot_mode == "split_by_variety")
         itemPlot = getItemPlot(informants, items,groupby=groupby,sortby=sortby,pairs=pairs,use_imputed=use_imputed,plot_mode=plot_mode,split_by_variety=split_by_variety,regional_mapping=regional_mapping,include_ai=include_ai,use_perceptual_scale=use_perceptual_scale)
+        if plot_mode in ("normal", "split_by_variety", "informant_boxplot"):
+            itemPlot = tag_group_colors(itemPlot, groupby)
         
         # Store settings used to generate this plot for download
         plot_settings = {
@@ -5653,139 +5682,6 @@ clientside_callback(
     """,
     Output("download-rf-f1-button", "n_clicks"),
     Input("download-rf-f1-button", "n_clicks"),
-    prevent_initial_call=True
-)
-
-# Deleted: Commented-out clientside callback for filtering by hoverinfo (unused)
-
-clientside_callback(
-    """
-    function(colorMode, fig, informants) {
-    if (!fig || !fig.data || !informants) {
-        return window.dash_clientside.no_update;
-    }
-
-    // Build info map
-    var infoMap = {};
-    informants.forEach(function(row) {
-        infoMap[row.InformantID] = row;
-    });
-
-    function getVarietyType(info) {
-        if (info && typeof info.Variety_Type === "string") {
-            var rawType = info.Variety_Type.trim();
-            if (rawType.startsWith("AI-")) {
-                rawType = rawType.substring(3);
-            }
-            if (["ENL", "ESL", "EFL"].includes(rawType)) {
-                return rawType;
-            }
-        }
-
-        var mainVariety = info ? info.MainVariety : null;
-        if (mainVariety && mainVariety.startsWith("AI-GPT-")) {
-            return getVarietyType({
-                MainVariety: mainVariety.substring(7),
-                Variety_Type: info ? info.Variety_Type : null,
-            });
-        }
-        if (["US","England","Scotland","Ireland"].includes(mainVariety)) return "ENL";
-        if (mainVariety && (mainVariety.startsWith("England_") || mainVariety.startsWith("England ("))) return "ENL";
-        if (mainVariety && mainVariety.startsWith("Ireland (")) return "ENL";
-        if (["Gibraltar","Malta","India","Puerto Rico"].includes(mainVariety)) return "ESL";
-        if (["Slovenia","Germany","Sweden","Spain (Balearic Islands)"].includes(mainVariety)) return "EFL";
-        return "Other";
-    }
-
-    var varietyColorMap = {
-        "England": "#1f77b4",
-        "England_North": "#4a90c4",
-        "England_South": "#0d5a8f",
-        "England_UNCLEAR": "#7bb3d9",
-        "England (North)": "#4a90c4",
-        "England (South)": "#0d5a8f",
-        "England (UNCLEAR)": "#7bb3d9",
-        "UNCLEAR": "#7bb3d9",
-        "Scotland": "#7B3394", 
-        "US": "#B22234",
-        "Ireland": "#169B62",
-        "Ireland (GB-NIR)": "#169B62",
-        "Ireland (IRL)": "#169B62",
-        "Gibraltar": "#d62728",
-        "Malta": "#9467bd",
-        "India": "#FF9933",
-        "Puerto Rico": "#00A693",
-        "Slovenia": "#7f7f7f",
-        "Germany": "#FFCE00",
-        "Sweden": "#006AA7",
-        "Spain (Balearic Islands)": "#393b79",
-        "Other": "#c49c94",
-        "AI-GPT-England": "#8fbbd9",
-        "AI-GPT-England_North": "#a5c8e2",
-        "AI-GPT-England_South": "#86adc7",
-        "AI-GPT-England_UNCLEAR": "#b8d5e8",
-        "AI-GPT-England (North)": "#a5c8e2",
-        "AI-GPT-England (South)": "#86adc7",
-        "AI-GPT-England (UNCLEAR)": "#b8d5e8",
-        "AI-GPT-Scotland": "#af84be",
-        "AI-GPT-US": "#d07a85",
-        "AI-GPT-Ireland": "#8acdb1",
-        "AI-GPT-Ireland (GB-NIR)": "#8acdb1",
-        "AI-GPT-Ireland (IRL)": "#8acdb1",
-        "AI-GPT-Gibraltar": "#eb9394",
-        "AI-GPT-Malta": "#cab3de",
-        "AI-GPT-India": "#ffc184",
-        "AI-GPT-Puerto Rico": "#66c9be",
-        "AI-GPT-Slovenia": "#bfbfbf",
-        "AI-GPT-Germany": "#ffe166",
-        "AI-GPT-Sweden": "#66a5ca",
-        "AI-GPT-Spain (Balearic Islands)": "#9c9dbc",
-        "AI-GPT-Other": "#e2ceca"
-    };
-
-    // Only copy traces that need updating
-    let changed = false;
-    let newFig = {...fig, data: fig.data.map(trace => ({...trace}))};
-
-    newFig.data.forEach(function(trace, i) {
-        if (trace.ids && Array.isArray(trace.ids)) {
-            let colors = trace.ids.map(function(id) {
-                var info = infoMap[id];
-                if (!info) return "#cccccc";
-                if (colorMode === "Variety") {
-                    return varietyColorMap[info.MainVariety] || "#cccccc";
-                } else if (colorMode === "Variety type") {
-                    var vType = getVarietyType(info);
-                    if (vType === "ENL") return "#1f77b4";
-                    if (vType === "ESL") return "#ff7f0e";
-                    if (vType === "EFL") return "#2ca02c";
-                    return "#cccccc";
-                } else if (colorMode === "Gender") {
-                    if (info.Gender === "Female" || info.Gender === "female") return "#e377c2";
-                    if (info.Gender === "Male" || info.Gender === "male") return "#1f77b4"; 
-                    if (info.Gender === "Non-binary" || info.Gender === "non-binary") return "#2ca02c";
-                    return "#cccccc";
-                }
-                return "#cccccc";
-            });
-            // Only update if changed
-            if (!trace.marker) trace.marker = {};
-            if (JSON.stringify(trace.marker.color) !== JSON.stringify(colors)) {
-                trace.marker.color = colors;
-                changed = true;
-            }
-        }
-    });
-
-    if (!changed) {
-        return window.dash_clientside.no_update;
-    }
-    return newFig;
-    }
-    """,
-    Output('UMAPfig', 'figure', allow_duplicate=True),
-    [Input('umap-color-dropdown', 'value')],
-    [State('UMAPfig', 'figure'),State('informants-store', 'data')],
     prevent_initial_call=True
 )
 

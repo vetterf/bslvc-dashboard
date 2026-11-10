@@ -2,6 +2,22 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
+## [0.2.9] - 2026-11-10
+
+### Added
+- **Group Colors**: New collapsible panel in the options bar of the Grammar and Lexical pages to choose colors for varieties, genders and (UMAP only) variety types. Applied client-side without re-rendering, remembered in the browser (localStorage), with a reset button. Available for UMAP (Variety / Variety type / Gender), grammar mean and participant-mean plots, and lexical plots grouped by variety or gender; disabled for other color settings.
+- **Group Colors for "Group by: Variety type"**: Item rating plots grouped by variety type can now be recolored too (defaults match the UMAP: ENL blue, ESL orange, EFL green).
+- **Lexical dot plot**: New default lexical plot type showing mean rating with 95% CI per item and group (Variety or Gender), pooled across age groups. American labels left, British labels on a mirrored right axis, x-axis -2 to +2 with a muted zero line.
+- **UMAP comparison**: Comparison plot reuses the UMAP colors (including custom ones). Without custom groups, groups follow the UMAP color setting when "Compare" is clicked (Variety, Variety type or Gender).
+
+### Changed
+- **Lexical switches client-side**: "Show 95% confidence bands" and "Fade markers by NX share" now toggle instantly in the browser instead of re-rendering; NX fade also works for the dot plot.
+- **Lexical defaults**: Confidence bands and NX marker fading are off by default; dot-plot confidence intervals remain visible.
+- **Lexical controls**: Controls that do not apply to the selected plot type (e.g. "No grouping", trend sort, time axis, facet columns for the dot plot) are hidden or disabled from the start.
+- **Lexical performance**: Vectorized aggregation and bulk array preparation for faceted plots, omitting empty traces; dot plots avoid repeated item scans and unnecessary full-dataframe copies.
+- **Comparison view**: Group Colors panel explains that colors can only be changed in the UMAP view.
+- **Privacy statement**: Documents the group color palette stored in localStorage.
+
 ## [0.2.8] - 2026-11-03
 
 ### Added

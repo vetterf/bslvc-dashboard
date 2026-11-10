@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 title: BSLVC Dashboard
-version: 0.2.8
+version: 0.2.9
 license: "MIT"
 type: software
 abstract: "Interactive data visualization dashboard for the Bamberg Survey of Language Variation and Change."
@@ -13,7 +13,7 @@ authors:
 identifiers:
   - type: doi
     value: 10.5281/zenodo.23916143
-date-released: 2026-03-11
+date-released: 2026-11-10
 keywords:
   - linguistics
   - World Englishes

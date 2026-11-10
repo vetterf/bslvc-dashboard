@@ -220,7 +220,7 @@ The UMAP Settings allow the user to tweak the UMAP hyperparameters, as well as t
 
 ![UMAP settings](img/UI_umap_settings.png)
 
-- **Color**: Select coloring variable (Variety, Variety type, Gender). This setting does not trigger a re-render of the plot and can be changed after rendering the plot.
+- **Color**: Select coloring variable (Variety, Variety type, Gender). This setting does not trigger a re-render of the plot and can be changed after rendering the plot. The colors shown in the UMAP (including custom ones) are reused in the Comparison plot when no custom groups are selected; if Gender or Variety type is selected here when clicking Compare, these are used as the comparison groups instead of varieties.
 - **Distance metric**: Choose metric (Cosine, Euclidean, Manhattan).
 - **Normalize participant ratings**: Dropdown to apply normalization to each participant's rating vector before computing UMAP or the distance matrix. Each option removes a different source of variance, so UMAP distances end up reflecting different aspects of the data. Options:
     - **No normalization** (default): Ratings are used as-is. Retains all information — item main effects, subject main effects, and their interaction — so distances can be dominated by overall response tendency (e.g. one group uses the scale less) or by items with systematically different means.
@@ -238,6 +238,12 @@ The UMAP Settings allow the user to tweak the UMAP hyperparameters, as well as t
 - **Show binned density contours**: Checkbox to overlay 2D density contours on the UMAP plot. The contours are generated with Plotly `Histogram2dContour` (bin-based density contours, not KDE). When enabled, filled contour regions are drawn behind the scatter points for each variety, visualizing where participant points are concentrated in the embedding space. Since standard UMAP does not explicitly preserve high-dimensional density, contour levels should be interpreted cautiously unless DensMAP is enabled. Contour visibility is linked to the legend: hiding a variety via the legend also hides its contours. This option can be toggled at any time without re-rendering the plot. In 4D mode, contours are shown in both subplots. Not available in 3D mode.
 - **Number of neighbours**: Slider for UMAP hyperparameter. Check the UMAP docs for more info.
 - **Minimal distance**: Slider for UMAP hyperparameter. Check the UMAP docs for more info.
+
+#### Group Colors
+
+Open **Group Colors** in the right-hand options bar after rendering a plot to change the colors of the varieties or genders present in it. The controls apply to UMAP points, grammar mean and participant-mean box plots, and lexical dot, faceted and average plots when grouped by variety or gender. Variety type (ENL/ESL/EFL) colors can be edited for the UMAP and for grammar item plots grouped by variety type, which now use the same ENL/ESL/EFL default colors. Other color encodings, including rating distributions and heatmaps, are not changed. For item and lexical plots, the controls reflect the settings used for the last rendered plot.
+
+Changes are applied in the browser without recomputing the data. Custom colors are shared between the Grammar and Lexical pages and remembered in the browser across visits. **Reset all group colors** removes all saved variety and gender overrides and restores each plot's original defaults. UMAP density contours always represent varieties; when points are colored by gender or variety type, their contour colors remain variety-based.
 
 #### UMAP Quality Metrics
 
@@ -419,7 +425,8 @@ Lexical items are listed in a flat, alphabetically sorted tree (by the British/A
 ![Plot settings](img/UI_lexical_plot_settings.png)
 
 - **Plot type**: Dropdown selector for choosing the visualization type:
-    - **Faceted by age group** (default): Faceted plot with one subplot per lexical item, showing ratings across age groups or birth cohorts. Use this to examine variation within each item and to compare trends across multiple items simultaneously.
+    - **Dot plot** (default): One dot per lexical item and group (Variety or Gender) showing the mean rating with a 95% confidence interval, pooled across all ages. Items are on the Y-axis (American label on the left, British label on the right), the X-axis is the rating from -2 (American) to +2 (British), and a muted line marks 0. "No grouping", the "Globalization Trend" sort and the time axis setting are not available for this plot.
+    - **Faceted by age group**: Faceted plot with one subplot per lexical item, showing ratings across age groups or birth cohorts. Use this to examine variation within each item and to compare trends across multiple items simultaneously.
     - **Averaged across items**: Single time-series line plot showing the overall mean rating **averaged equally across all selected lexical items** (item-level weighted average: each item contributes equally regardless of missing data).
     - **Heatmap**: Items (Y-axis) × Varieties (X-axis) two-mode heatmap.
       - **Mean value mode** (default): Pools all age groups together; cells are colored by absolute mean rating. Items sorted by average across varieties (ascending). Varieties sorted by average across items (ascending).
@@ -428,17 +435,17 @@ Lexical items are listed in a flat, alphabetically sorted tree (by the British/A
     - **Apparent time (age)**: Groups participants into fixed age bins (`<20`, `20-29`, `30-39`, `40-49`, `50-59`, `60-69`, `>69`), displayed **oldest (left) to youngest (right)**.
     - **Birth year cohorts**: Computes each participant's approximate birth year as `Year of data collection − Age`, then groups participants into 10-year cohorts (e.g. `1980-1989`). Cohorts are derived dynamically from the data actually present in the current selection and are displayed in chronological order (earliest cohort left).
 - **Exclude birth-year cohorts with fewer than 5 datapoints**: Only enabled when "Birth year cohorts" is selected. When checked, any birth-year cohort with fewer than 5 participants (in the current selection) is dropped from the x-axis entirely, for every item and every group, to avoid displaying unreliable single-participant cohorts.
-- **Sort facets by** (Faceted plot only): Controls the order in which item facets are arranged (left-to-right, top-to-bottom):
+- **Sort items by** (Dot and Faceted plots; the Dot plot has no trend sort and defaults to Average): Controls the order of the items (top-to-bottom in the dot plot; left-to-right, top-to-bottom in facets):
     - **Globalization Trend**: Fits a locally-weighted regression (LOESS) smoother of the mean rating against age/cohort (combining all genders and varieties, weighted by N), and sorts facets so the item with the steepest "oldest lowest, youngest highest" trend appears top-left.
     - **Average rating (weighted across groups)**: Sorts facets by each item's overall mean rating, pooling every selected participant's numeric rating regardless of age group, gender, or variety (larger subgroups naturally count proportionally more, since every participant contributes one value).
     - **Alphabetically**: Sorts facets alphabetically by the item's British/American label.
-- **Group data by** (Faceted and Average plots only): Controls whether/how each facet/line is split into multiple series:
+- **Group data by** (Dot, Faceted and Average plots; "No grouping" is unavailable for the Dot plot): Controls whether/how each facet/line is split into multiple series:
     - **No grouping**: A single line per facet, combining all selected participants.
     - **Gender**: Two lines per facet (Female / Male). The category "Non-Binary" is dropped as there's too little data.
-    - **Main Variety**: One line per main variety. Colors reuse the app-wide fixed variety color map where available; any variety without a fixed color is assigned a color from a large combined palette so that all varieties in the current selection remain visually distinct.
-- **Show 95% confidence bands** (Faceted and Average plots only): Adds a semi-transparent shaded band around each line showing the normal-approximation 95% confidence interval of the mean (only the band is shown — no markers are drawn at its edges).
-- **Fade markers by share of 'neither' (NX) responses** (Faceted and Average plots only): When enabled, marker opacity is scaled down as the share of NX/NXC ("uses neither") responses at that data point increases, following `opacity = max(20%, 100% − 2 × NX share)`. This visually de-emphasizes points where a large proportion of participants answered that they prefer neither variant.
-- **Facet columns** (Faceted plot only): Number of facet columns per row (1–8). Each facet has a fixed maximum width of 350px, so the resulting plot may need to be scrolled horizontally if many columns are selected.
+    - **Main Variety**: One line per main variety. Default colors reuse the app-wide variety color map where available; other varieties are assigned colors from a larger palette. Use [Group Colors](#group-colors) to customize them.
+- **Show 95% confidence bands** (Faceted and Average plots only; off by default, applied instantly in the browser without re-rendering): Adds a semi-transparent shaded band around each line showing the normal-approximation 95% confidence interval of the mean (only the band is shown — no markers are drawn at its edges). The dot plot's confidence intervals are always shown.
+- **Fade markers by share of 'neither' (NX) responses** (Dot, Faceted and Average plots; off by default, applied instantly in the browser without re-rendering): When enabled, marker opacity is scaled down as the share of NX/NXC ("uses neither") responses at that data point increases, following `opacity = max(20%, 100% − 2 × NX share)`. This visually de-emphasizes points where a large proportion of participants answered that they prefer neither variant.
+- **Facet columns** (Faceted plot only; hidden otherwise): Number of facet columns per row (1–8). Each facet has a fixed maximum width of 350px, so the resulting plot may need to be scrolled horizontally if many columns are selected.
 - **Color cells by trend** (Heatmap only): Toggle between mean-value mode (off) and trend-mode (on). When on, enables the "Sort items by Slope" option and activates the time axis selector.
 - **Sort items by** (Heatmap only): Controls the row order of lexical items in the heatmap:
     - **Alphabetically**: Sorts items alphabetically by their British/American label.
@@ -574,14 +581,15 @@ Persists across browser sessions (stored in browser's localStorage):
 ```python
 dcc.Store(id="saved-item-settings", storage_type="local")
 dcc.Store(id="saved-umap-settings", storage_type="local")
+dcc.Store(id="group-color-palette", storage_type="local")
 ```
 
 **Use Cases:**
-- User-saved settings
+- User-saved settings and custom group colors
 - Persistent user preferences
 - Long-term storage across sessions
 
 ---
 
-**Last Updated**: August 2026  
-**Version**: 0.2.6
+**Last Updated**: November 2026  
+**Version**: 0.2.9

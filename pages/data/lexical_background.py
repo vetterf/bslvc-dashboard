@@ -9,6 +9,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 import pages.data.retrieve_data as retrieve_data
+from pages.data.group_colors import tag_group_colors
 from pages.data.lexicalFunctions import (
     normalize_lexical_tree_selection,
     compute_lexical_data,
@@ -17,6 +18,9 @@ from pages.data.lexicalFunctions import (
     get_x_axis_config,
     compute_average_lexical_data,
     build_average_lexical_plot,
+    compute_dotplot_data,
+    build_lexical_dotplot,
+    order_items,
     compute_lexical_heatmap_by_item,
 )
 
@@ -41,8 +45,6 @@ LexicalItemMetaMap = LexicalMeta.set_index('column').to_dict('index')
      State('lexical-series-by', 'value'),
      State('lexical-time-axis-mode', 'value'),
      State('lexical-exclude-small-birth-cohorts-switch', 'checked'),
-     State('lexical-show-ci-switch', 'checked'),
-     State('lexical-nx-opacity-switch', 'checked'),
      State('lexical-sort-by', 'value'),
      State('lexical-facet-cols', 'value'),
      State('lexical-heatmap-color-by-trend-switch', 'checked'),
@@ -53,8 +55,8 @@ LexicalItemMetaMap = LexicalMeta.set_index('column').to_dict('index')
     running=[(Output('lexical_running', 'data'), True, False)],
 )
 def compute_lexical_plot_background(trigger_data, selected_participants, selected_items, plot_type,
-                                      series_by, time_axis_mode, exclude_small_cohorts, show_ci,
-                                      encode_nx_opacity, sort_by, facet_cols, color_by_trend,
+                                      series_by, time_axis_mode, exclude_small_cohorts,
+                                      sort_by, facet_cols, color_by_trend,
                                       sort_items, informants_data):
     """Compute the (potentially slow) lexical plot in a background process.
     
@@ -79,7 +81,26 @@ def compute_lexical_plot_background(trigger_data, selected_participants, selecte
         }])
         return fig
 
-    if plot_type == 'facets':
+    if plot_type == 'dotplot':
+        long_df, _ = prepare_lexical_long_data(
+            lexical_raw=LexicalRaw,
+            informants=current_informants,
+            participant_ids=participants,
+            items=items,
+            mode='apparent_time',
+        )
+        group_by = series_by if series_by in ('gender', 'variety') else 'variety'
+        agg_df = compute_dotplot_data(long_df, series_by=group_by)
+        item_sort = sort_by if sort_by in ('average', 'alphabetical') else 'average'
+        present_items = set(long_df['Item'].unique()) if not long_df.empty else set()
+        ordered_items = order_items(
+            [i for i in items if i in present_items],
+            sort_by=item_sort, item_meta_map=LexicalItemMetaMap, long_df=long_df,
+        )
+        fig = build_lexical_dotplot(agg_df, ordered_items, LexicalItemMetaMap, series_by=group_by)
+        return tag_group_colors(fig, group_by, use_legendgroup=True)
+
+    elif plot_type == 'facets':
         # Faceted plot: multiple subplots, one per item
         _, agg_df, ordered_items, x_config = compute_lexical_data(
             lexical_raw=LexicalRaw,
@@ -92,13 +113,12 @@ def compute_lexical_plot_background(trigger_data, selected_participants, selecte
             item_meta_map=LexicalItemMetaMap,
             exclude_small_cohorts=bool(exclude_small_cohorts),
         )
-        return build_lexical_facet_plot(
+        fig = build_lexical_facet_plot(
             agg_df, ordered_items, LexicalItemMetaMap, x_config,
             series_by=series_by,
             facet_cols=int(facet_cols) if facet_cols else 4,
-            show_ci=bool(show_ci),
-            encode_nx_opacity=bool(encode_nx_opacity),
         )
+        return tag_group_colors(fig, series_by, use_legendgroup=True)
     
     elif plot_type == 'average':
         # Average plot: single line showing mean across all items
@@ -119,11 +139,10 @@ def compute_lexical_plot_background(trigger_data, selected_participants, selecte
             return fig
         
         agg_df = compute_average_lexical_data(long_df, series_by=series_by)
-        return build_average_lexical_plot(
+        fig = build_average_lexical_plot(
             agg_df, x_config, series_by=series_by,
-            show_ci=bool(show_ci),
-            encode_nx_opacity=bool(encode_nx_opacity),
         )
+        return tag_group_colors(fig, series_by, use_legendgroup=True)
     
     elif plot_type == 'heatmap':
         # Heatmap: items on Y-axis, age groups on X-axis

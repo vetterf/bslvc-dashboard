@@ -398,6 +398,7 @@ app.layout = dmc.MantineProvider(
         dcc.Location(id="url", refresh=False),
         dcc.Store(id="cache-status", storage_type="session", data={"cleared": False}),
         dcc.Store(id="theme-store", storage_type="session", data="light"),
+        dcc.Store(id="group-color-palette", storage_type="local"),
         dcc.Store(id='GrammarData', data=[{'imputed':[],'normal':[]}],storage_type='memory'),
         dcc.Store(id='LexcialData', data=[{'imputed':[],'normal':[]}],storage_type='memory'),
         dcc.Store(id='SurveyCount', data=[],storage_type='memory'),

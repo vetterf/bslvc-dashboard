@@ -1064,7 +1064,7 @@ def computeKruskalWallisOrdering(items, data, datacols, groupcol, pairs=False):
     return feature_importances
 
 
-def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_variety=False, importance_label="RF importance"):
+def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_variety=False, importance_label="RF importance", group_colors=None):
     if not pairs:
         Rating_map = {'0':'No-one','1':'Few','2':'Some','3':'Many','4':'Most','5':'Everyone'}
     else:
@@ -1143,6 +1143,9 @@ def getRFplot(data, importanceRatings, value_range=[0,5],pairs=False, split_by_v
     known_varieties = get_ordered_varieties()
     if df['group'].isin(known_varieties).any():
         variety_color_map = retrieve_data.get_color_for_variety(type="grammar")
+    if group_colors:
+        # Colors taken over from the UMAP plot take precedence
+        variety_color_map = group_colors
     
     # Check for split by variety mode
     if split_by_variety:

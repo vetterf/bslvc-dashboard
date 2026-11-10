@@ -17,7 +17,7 @@ If you use the BSLVC Dashboard or data from the BSLVC project in your research, 
 
 Dashboard Citation:
 
-Vetter, Fabian. 2026. _BSLVC Dashboard_ (Version 0.2.8). https://doi.org/10.5281/zenodo.23916143
+Vetter, Fabian. 2026. _BSLVC Dashboard_ (Version 0.2.9). https://doi.org/10.5281/zenodo.23916143
 
 Data Set Citation:
 

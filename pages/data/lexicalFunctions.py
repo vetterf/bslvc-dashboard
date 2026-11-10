@@ -327,8 +327,11 @@ def prepare_lexical_long_data(lexical_raw, informants, items, participant_ids, m
         id_vars=['InformantID', 'Age', 'Gender', 'MainVariety', 'XGroup'],
         value_vars=items, var_name='Item', value_name='RawValue',
     )
-    long_df['ValueType'] = long_df['RawValue'].apply(_classify_lexical_value)
-    long_df['NumericValue'] = pd.to_numeric(long_df['RawValue'], errors='coerce')
+    # Classify the few distinct raw values once instead of once per row.
+    raw = long_df['RawValue']
+    type_map = {v: _classify_lexical_value(v) for v in raw.dropna().unique()}
+    long_df['ValueType'] = raw.map(type_map).fillna('missing')
+    long_df['NumericValue'] = pd.to_numeric(raw, errors='coerce')
     long_df.loc[long_df['ValueType'] != 'numeric', 'NumericValue'] = np.nan
     return long_df, x_config
 
@@ -358,26 +361,27 @@ def aggregate_lexical_facets(long_df, series_by='gender'):
     if df.empty:
         return pd.DataFrame(columns=out_cols)
 
-    rows = []
-    for keys, g in df.groupby(group_cols, observed=True):
-        item, x_group, series = keys
-        numeric_vals = g.loc[g['ValueType'] == 'numeric', 'NumericValue']
-        n = int(numeric_vals.count())
-        mean = numeric_vals.mean() if n > 0 else np.nan
-        if n > 1:
-            se = numeric_vals.std(ddof=1) / np.sqrt(n)
-            ci_lower, ci_upper = mean - 1.96 * se, mean + 1.96 * se
-        else:
-            ci_lower, ci_upper = np.nan, np.nan
-        nx_count = int((g['ValueType'] == 'nx').sum())
-        na_count = int((g['ValueType'] == 'missing').sum())
-        nx_share = nx_count / (n + nx_count) if (n + nx_count) > 0 else np.nan
-        rows.append({
-            'Item': item, 'XGroup': x_group, 'Series': series,
-            'Mean': mean, 'CILower': ci_lower, 'CIUpper': ci_upper,
-            'N': n, 'NXCount': nx_count, 'NACount': na_count, 'NXShare': nx_share,
-        })
-    return pd.DataFrame(rows)
+    stats = _group_stats(df, group_cols)
+    stats['NXShare'] = np.where((stats['N'] + stats['NXCount']) > 0,
+                                stats['NXCount'] / (stats['N'] + stats['NXCount']).replace(0, np.nan), np.nan)
+    return stats[out_cols].reset_index(drop=True)
+
+
+def _group_stats(df, group_cols):
+    """Vectorised per-group mean, 95% CI, N, NX count and missing count of a long-format frame."""
+    work = df[group_cols].copy()
+    is_num = df['ValueType'] == 'numeric'
+    work['_v'] = df['NumericValue'].where(is_num)
+    work['_nx'] = (df['ValueType'] == 'nx').astype(int)
+    work['_na'] = (df['ValueType'] == 'missing').astype(int)
+    grouped = work.groupby(group_cols, observed=True)
+    stats = grouped['_v'].agg(['count', 'mean', 'std']).rename(columns={'count': 'N', 'mean': 'Mean', 'std': 'SD'})
+    stats['NXCount'] = grouped['_nx'].sum()
+    stats['NACount'] = grouped['_na'].sum()
+    se = stats['SD'] / np.sqrt(stats['N'].where(stats['N'] > 1))
+    stats['CILower'] = stats['Mean'] - 1.96 * se
+    stats['CIUpper'] = stats['Mean'] + 1.96 * se
+    return stats.reset_index()
 
 
 ##############
@@ -466,7 +470,11 @@ def compute_item_overall_mean(long_df, item):
 
 def order_items_by_average(long_df, items, descending=True):
     """Sort items by their overall weighted-average rating (items with no data sort last)."""
-    averages = {item: compute_item_overall_mean(long_df, item) for item in items}
+    if long_df.empty:
+        averages = {item: np.nan for item in items}
+    else:
+        means = long_df.loc[long_df['ValueType'] == 'numeric'].groupby('Item')['NumericValue'].mean()
+        averages = {item: means.get(item, np.nan) for item in items}
     return sorted(
         items,
         key=lambda it: (np.isnan(averages[it]), -averages[it] if descending else averages[it]),
@@ -542,6 +550,11 @@ def _scale_nx_opacity(nx_share, min_opacity=0.2):
     return np.clip(opacity, min_opacity, 1.0)
 
 
+def _nx_opacity_list(nx_share):
+    """Per-point marker opacity for the 'fade by NX share' option, as a JSON-safe list."""
+    return [float(o) for o in _scale_nx_opacity(nx_share)]
+
+
 def _hex_to_rgba(hex_color, alpha):
     hex_color = hex_color.lstrip('#')
     r, g, b = (int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
@@ -550,7 +563,9 @@ def _hex_to_rgba(hex_color, alpha):
 
 def build_lexical_facet_plot(agg_df, items_ordered, item_meta_map, x_axis_config,
                               series_by='gender', facet_cols=4,
-                              show_ci=False, encode_nx_opacity=False):
+                              show_ci=True, encode_nx_opacity=True):
+    """Build the facet plot. CI bands and NX opacity are included by default and tagged in
+    trace meta so the browser can toggle them without a re-render."""
     group_order = x_axis_config['group_order']
     hover_label = x_axis_config['hover_label']
 
@@ -581,37 +596,61 @@ def build_lexical_facet_plot(agg_df, items_ordered, item_meta_map, x_axis_config
         series_list = ['All']
         series_color_map = {'All': '#1f77b4'}
     legend_shown = set()
+    # Fill all item/series/age-group arrays at once from the aggregated rows.
+    x_pos = {str(g): k for k, g in enumerate(group_order)}
+    n_x = len(group_order)
+    value_cols = ['Mean', 'CILower', 'CIUpper', 'N', 'NXCount', 'NACount', 'NXShare']
+    item_pos = agg_df['Item'].map({item: i for i, item in enumerate(items_ordered)})
+    series_pos = agg_df['Series'].map({series: i for i, series in enumerate(series_list)})
+    group_pos = agg_df['XGroup'].astype(str).map(x_pos)
+    valid_rows = item_pos.notna() & series_pos.notna() & group_pos.notna()
+    dense = np.full((n_items, len(series_list), n_x, len(value_cols)), np.nan)
+    dense[
+        item_pos[valid_rows].to_numpy(dtype=int),
+        series_pos[valid_rows].to_numpy(dtype=int),
+        group_pos[valid_rows].to_numpy(dtype=int),
+    ] = agg_df.loc[valid_rows, value_cols].to_numpy(dtype=float, na_value=np.nan)
+    series_has_points = ~np.isnan(dense[:, :, :, 0]).all(axis=(0, 2))
+    # Traces are built as plain dicts: validating thousands of go.Scatter objects dominates the runtime.
+    new_traces = []
+    axis_refs = {}
+    for r in range(1, nrows + 1):
+        for c in range(1, ncols + 1):
+            sp = fig.get_subplot(r, c)
+            if sp is not None:
+                axis_refs[(r, c)] = (sp.xaxis.plotly_name.replace('xaxis', 'x'), sp.yaxis.plotly_name.replace('yaxis', 'y'))
 
     for i, item in enumerate(items_ordered):
         row, col = i // ncols + 1, i % ncols + 1
-        item_df = agg_df[agg_df['Item'] == item]
+        xref, yref = axis_refs[(row, col)]
         meta = item_meta_map.get(item, {})
         american = meta.get('american', item)
         british = meta.get('british', item)
         axis_label = meta.get('axis_label', item)
 
-        for series in series_list:
-            g_df = (
-                item_df[item_df['Series'] == series]
-                .set_index('XGroup')
-                .reindex(group_order)
-            )
-            y = g_df['Mean'].values
-            n = g_df['N'].fillna(0).values
-            nx = g_df['NXCount'].fillna(0).values
-            na = g_df['NACount'].fillna(0).values
-            nx_share = g_df['NXShare'].values
+        for series_index, series in enumerate(series_list):
+            arr = dense[i, series_index]
+            y = arr[:, 0]
+            # Keep one empty trace only when a series has no plottable values anywhere,
+            # so its existing legend entry and color control remain available.
+            if np.isnan(y).all() and (series_has_points[series_index] or series in legend_shown):
+                continue
+            n = np.nan_to_num(arr[:, 3])
+            nx = np.nan_to_num(arr[:, 4])
+            na = np.nan_to_num(arr[:, 5])
+            nx_share = arr[:, 6]
             color = series_color_map.get(series, '#555555')
 
             if show_ci:
-                valid = g_df['Mean'].notna() & g_df['CILower'].notna() & g_df['CIUpper'].notna()
+                valid = ~(np.isnan(y) | np.isnan(arr[:, 1]) | np.isnan(arr[:, 2]))
                 if valid.any():
                     x_valid = [grp for grp, ok in zip(group_order, valid) if ok]
-                    lower_valid = g_df.loc[valid, 'CILower'].values
-                    upper_valid = g_df.loc[valid, 'CIUpper'].values
-                    fig.add_trace(go.Scatter(
+                    lower_valid = arr[valid, 1]
+                    upper_valid = arr[valid, 2]
+                    new_traces.append(dict(
+                        type='scatter', xaxis=xref, yaxis=yref,
                         x=x_valid + x_valid[::-1],
-                        y=np.concatenate([upper_valid, lower_valid[::-1]]),
+                        y=np.concatenate([upper_valid, lower_valid[::-1]]).tolist(),
                         mode='lines',  # no markers - keep the band, not dots at its edges
                         fill='toself',
                         fillcolor=_hex_to_rgba(color, 0.08),
@@ -619,19 +658,23 @@ def build_lexical_facet_plot(agg_df, items_ordered, item_meta_map, x_axis_config
                         hoverinfo='skip',
                         showlegend=False,
                         legendgroup=series,
-                    ), row=row, col=col)
+                        meta={'ci_band': True},
+                    ))
 
-            marker_opacity = _scale_nx_opacity(nx_share) if encode_nx_opacity else 0.9
+            nx_opacity = _nx_opacity_list(nx_share)
+            marker_opacity = nx_opacity if encode_nx_opacity else 0.9
             customdata = np.stack([n, nx, na, np.nan_to_num(nx_share, nan=0.0) * 100], axis=-1)
 
-            fig.add_trace(go.Scatter(
-                x=group_order, y=y, mode='lines+markers',
+            new_traces.append(dict(
+                type='scatter', xaxis=xref, yaxis=yref,
+                x=list(group_order), y=y.tolist(), mode='lines+markers',
                 name=series,
                 legendgroup=series,
+                legendrank=series_index,
                 showlegend=series not in legend_shown,
                 line=dict(color=color),
-                marker=dict(size=_scale_marker_sizes(n), color=color, opacity=marker_opacity),
-                customdata=customdata,
+                marker=dict(size=_scale_marker_sizes(n).tolist(), color=color, opacity=marker_opacity),
+                customdata=customdata.tolist(),
                 hovertemplate=(
                     f"<b>{axis_label}</b><br>"
                     f"American: {american}<br>British: {british}<br>"
@@ -642,7 +685,8 @@ def build_lexical_facet_plot(agg_df, items_ordered, item_meta_map, x_axis_config
                     "Missing (NA): %{customdata[2]:.0f}"
                     "<extra></extra>"
                 ),
-            ), row=row, col=col)
+                meta={'nx_opacity': nx_opacity},
+            ))
             legend_shown.add(series)
 
     fig.update_yaxes(
@@ -661,7 +705,9 @@ def build_lexical_facet_plot(agg_df, items_ordered, item_meta_map, x_axis_config
     )
     for annotation in fig['layout']['annotations']:
         annotation['font'] = dict(size=12)
-    return fig
+    figure = fig.to_dict()
+    figure['data'] = new_traces
+    return figure
 
 
 def compute_lexical_data(lexical_raw, informants, participant_ids, items, mode='apparent_time',
@@ -676,7 +722,8 @@ def compute_lexical_data(lexical_raw, informants, participant_ids, items, mode='
         return long_df, pd.DataFrame(), [], x_config
 
     agg_df = aggregate_lexical_facets(long_df, series_by=series_by)
-    present_items = [it for it in items if it in agg_df['Item'].unique()]
+    present_item_set = set(agg_df['Item'].unique())
+    present_items = [it for it in items if it in present_item_set]
     ordered_items = order_items(present_items, sort_by=sort_by, agg_df=agg_df,
                                  group_midpoints=x_config['group_midpoints'], item_meta_map=item_meta_map,
                                  long_df=long_df)
@@ -723,22 +770,7 @@ def compute_average_lexical_data(long_df, series_by='gender'):
     else:
         df['Series'] = 'All'
     
-    # First aggregate by Item x XGroup x Series
-    item_agg_cols = ['Item', 'XGroup', 'Series']
-    item_rows = []
-    for keys, g in df.groupby(item_agg_cols, observed=True):
-        item, x_group, series = keys
-        numeric_vals = g.loc[g['ValueType'] == 'numeric', 'NumericValue']
-        n = int(numeric_vals.count())
-        mean = numeric_vals.mean() if n > 0 else np.nan
-        nx_count = int((g['ValueType'] == 'nx').sum())
-        na_count = int((g['ValueType'] == 'missing').sum())
-        item_rows.append({
-            'Item': item, 'XGroup': x_group, 'Series': series,
-            'Mean': mean, 'N': n, 'NXCount': nx_count, 'NACount': na_count,
-        })
-    
-    item_agg_df = pd.DataFrame(item_rows)
+    item_agg_df = _group_stats(df, ['Item', 'XGroup', 'Series'])
     if item_agg_df.empty:
         return pd.DataFrame(columns=out_cols)
     
@@ -773,7 +805,7 @@ def compute_average_lexical_data(long_df, series_by='gender'):
     return pd.DataFrame(rows)
 
 
-def build_average_lexical_plot(agg_df, x_axis_config, series_by='gender', show_ci=False, encode_nx_opacity=False):
+def build_average_lexical_plot(agg_df, x_axis_config, series_by='gender', show_ci=True, encode_nx_opacity=True):
     """Build a single line plot of averaged lexical ratings across all items."""
     group_order = x_axis_config['group_order']
     hover_label = x_axis_config['hover_label']
@@ -820,9 +852,11 @@ def build_average_lexical_plot(agg_df, x_axis_config, series_by='gender', show_c
                     fillcolor=_hex_to_rgba(color, 0.08),
                     line=dict(width=0),
                     hoverinfo='skip', showlegend=False, legendgroup=series,
+                    meta={'ci_band': True},
                 ))
         
-        marker_opacity = _scale_nx_opacity(nx_share) if encode_nx_opacity else 0.9
+        nx_opacity = _nx_opacity_list(nx_share)
+        marker_opacity = nx_opacity if encode_nx_opacity else 0.9
         customdata = np.stack([n, nx, np.nan_to_num(nx_share, nan=0.0) * 100], axis=-1)
         
         fig.add_trace(go.Scatter(
@@ -840,6 +874,7 @@ def build_average_lexical_plot(agg_df, x_axis_config, series_by='gender', show_c
                 "Uses neither (NX): %{customdata[1]:.0f} (%{customdata[2]:.0f}%)"
                 "<extra></extra>"
             ),
+            meta={'nx_opacity': nx_opacity},
         ))
         legend_shown.add(series)
     
@@ -855,6 +890,125 @@ def build_average_lexical_plot(agg_df, x_axis_config, series_by='gender', show_c
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         xaxis_title=x_axis_config.get('axis_title', 'Age group'),
         yaxis_title='Mean rating (averaged across items)',
+    )
+    return fig
+
+
+##############
+## Dot plot: mean +- 95% CI per item, pooled across ages
+##############
+
+def compute_dotplot_data(long_df, series_by='variety'):
+    """Mean rating and 95% CI per Item x Series, pooled across all age groups."""
+    if long_df.empty:
+        return aggregate_lexical_facets(long_df, series_by=series_by)
+
+    if series_by == 'gender':
+        df = long_df.loc[long_df['Gender'].isin(['Female', 'Male']),
+                         ['Item', 'Gender', 'ValueType', 'NumericValue']].rename(columns={'Gender': 'Series'})
+    elif series_by == 'variety':
+        df = long_df[['Item', 'MainVariety', 'ValueType', 'NumericValue']].rename(columns={'MainVariety': 'Series'})
+    else:
+        df = long_df[['Item', 'ValueType', 'NumericValue']].copy()
+        df['Series'] = 'All'
+
+    if df.empty:
+        return aggregate_lexical_facets(pd.DataFrame(), series_by=series_by)
+
+    stats = _group_stats(df, ['Item', 'Series'])
+    stats['XGroup'] = 'All'
+    total = stats['N'] + stats['NXCount']
+    stats['NXShare'] = stats['NXCount'] / total.replace(0, np.nan)
+    return stats[['Item', 'XGroup', 'Series', 'Mean', 'CILower', 'CIUpper',
+                  'N', 'NXCount', 'NACount', 'NXShare']].reset_index(drop=True)
+
+
+def build_lexical_dotplot(agg_df, items_ordered, item_meta_map, series_by='variety'):
+    """
+    Dot plot with items on the Y-axis (American label left, British label on a
+    mirrored right axis) and the mean rating (-2 American .. +2 British) with
+    95% CI on the X-axis. A muted vertical line marks 0.
+    """
+    if not items_ordered or agg_df.empty:
+        fig = go.Figure()
+        fig.update_layout(template="simple_white", annotations=[{
+            "text": "No data available for the current selection.",
+            "xref": "paper", "yref": "paper", "showarrow": False, "font": {"size": 16},
+        }])
+        return fig
+
+    if series_by == 'gender':
+        series_list = ['Female', 'Male']
+        series_color_map = GENDER_COLORS
+    else:
+        series_list = sorted(agg_df['Series'].dropna().unique())
+        series_color_map = get_variety_color_map(series_list)
+
+    positions = {item: i for i, item in enumerate(items_ordered)}
+    american = [item_meta_map.get(it, {}).get('american', it) for it in items_ordered]
+    british = [item_meta_map.get(it, {}).get('british', it) for it in items_ordered]
+    tickvals = list(range(len(items_ordered)))
+
+    k = max(len(series_list), 1)
+    spread = 0.6
+    fig = go.Figure()
+    for j, series in enumerate(series_list):
+        s_df = agg_df[(agg_df['Series'] == series) & agg_df['Item'].isin(positions) & agg_df['Mean'].notna()]
+        if s_df.empty:
+            continue
+        offset = (j - (k - 1) / 2) * (spread / k) if k > 1 else 0
+        y = [positions[it] + offset for it in s_df['Item']]
+        color = series_color_map.get(series, '#555555')
+        has_ci = s_df['CILower'].notna() & s_df['CIUpper'].notna()
+        err_plus = np.where(has_ci, s_df['CIUpper'] - s_df['Mean'], 0.0)
+        err_minus = np.where(has_ci, s_df['Mean'] - s_df['CILower'], 0.0)
+        nx_opacity = _nx_opacity_list(s_df['NXShare'].values)
+        customdata = np.stack([
+            s_df['Item'].map(lambda it: item_meta_map.get(it, {}).get('american', it)).values,
+            s_df['Item'].map(lambda it: item_meta_map.get(it, {}).get('british', it)).values,
+            s_df['N'].values,
+            s_df['NXCount'].values,
+        ], axis=-1)
+        fig.add_trace(go.Scatter(
+            x=s_df['Mean'].values, y=y, mode='markers',
+            name=series, legendgroup=series,
+            marker=dict(color=color, size=9, opacity=nx_opacity),
+            error_x=dict(type='data', symmetric=False, array=err_plus, arrayminus=err_minus,
+                         color=color, thickness=1.5, width=3),
+            customdata=customdata,
+            meta={'nx_opacity': nx_opacity},
+            hovertemplate=(
+                f"<b>{series}</b><br>"
+                "American: %{customdata[0]}<br>British: %{customdata[1]}<br>"
+                "Mean rating: %{x:.2f}<br>"
+                "N: %{customdata[2]:.0f}<br>"
+                "Uses neither (NX): %{customdata[3]:.0f}"
+                "<extra></extra>"
+            ),
+        ))
+
+    # Invisible trace so the mirrored right-hand axis is rendered.
+    fig.add_trace(go.Scatter(
+        x=[None], y=[None], yaxis='y2', showlegend=False, hoverinfo='skip', mode='markers',
+    ))
+
+    y_range = [len(items_ordered) - 0.5, -0.5]  # first item at the top
+    fig.update_xaxes(
+        range=[-2 - Y_AXIS_PADDING, 2 + Y_AXIS_PADDING],
+        tickvals=[-2, -1, 0, 1, 2],
+        title="Rating (-2 = American, +2 = British)",
+        zeroline=False,
+    )
+    fig.add_vline(x=0, line_width=1.5, line_color='#bbbbbb', layer='below')
+    fig.update_yaxes(range=y_range, tickvals=tickvals, ticktext=american,
+                     showgrid=True, gridcolor='#f0f0f0', title="American")
+    fig.update_layout(
+        template="simple_white", autosize=True,
+        height=max(400, 40 * len(items_ordered) + 150),
+        margin=dict(t=40, b=40, l=40, r=40),
+        yaxis2=dict(overlaying='y', side='right', range=y_range, tickvals=tickvals,
+                    ticktext=british, showgrid=False, title="British"),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
     return fig
 
@@ -1239,6 +1393,3 @@ def create_export_log_lexical(export_kind, participants, items, result_df, mode=
         f"Columns: {result_df.shape[1]}",
     ])
     return "\n".join(lines)
-
-
-

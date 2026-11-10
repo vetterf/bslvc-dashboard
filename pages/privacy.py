@@ -53,15 +53,22 @@ layout = dmc.Container([
                 dmc.Title("Persistent data (kept until you clear your browser data)", order=4)
             ], gap="sm", mb="md"),
             dmc.Text(
-                "The Grammar module's \u201cSave Settings\u201d button (Advanced Actions) is the only feature in "
-                "the whole dashboard that writes to your browser's localStorage, where it remains until you clear "
-                "it or use \u201cRestore Settings\u201d. It stores:",
+                "Only two features write to your browser's localStorage, where the data remains until you clear "
+                "it. The first is the Grammar module's \u201cSave Settings\u201d button (Advanced Actions), which "
+                "keeps the data until you use \u201cRestore Settings\u201d. It stores:",
                 mb="sm"
             ),
             dmc.List([
                 dmc.ListItem("The participant codes and grammar item codes you had selected."),
                 dmc.ListItem("Your chosen plot settings (grouping, sorting, UMAP parameters, item-pairs/imputation toggles)."),
             ]),
+            dmc.Text(
+                "The second is the \u201cGroup Colors\u201d panel in the options bar of the Grammar and Lexical "
+                "modules. Once you pick a custom color, your chosen colors for varieties, genders and variety types "
+                "(color codes only, no participant data) are saved so they are applied on your next visit. "
+                "\u201cReset all group colors\u201d clears them. They are never sent anywhere else.",
+                mt="sm", size="sm"
+            ),
             dmc.Text(
                 "All other selections and switches across both the Grammar and Lexical modules (participant/item "
                 "trees, plot-type toggles, sort order, facet options, etc.) use Dash's in-memory persistence: they "

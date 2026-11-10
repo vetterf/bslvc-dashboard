@@ -2,6 +2,7 @@ import dash_mantine_components as dmc
 from dash import register_page, dcc, html, ctx, callback, Output, Input, State, no_update
 from dash.exceptions import PreventUpdate
 from dash_iconify import DashIconify
+from pages.components.group_colors import color_controls
 import dash_ag_grid as dag
 import pandas as pd
 import plotly.graph_objects as go
@@ -128,8 +129,9 @@ plotSettingsAccordion = dmc.AccordionItem(
                 dmc.Select(
                     label="Plot type:",
                     id="lexical-plot-type",
-                    value="facets",
+                    value="dotplot",
                     data=[
+                        {"value": "dotplot", "label": "Dot plot (mean \u00b1 95% CI per item)"},
                         {"value": "facets", "label": "Faceted by age group"},
                         {"value": "average", "label": "Averaged across items"},
                         {"value": "heatmap", "label": "Heatmap"},
@@ -140,6 +142,7 @@ plotSettingsAccordion = dmc.AccordionItem(
                 ),
                 dmc.SegmentedControl(
                     id="lexical-time-axis-mode",
+                    disabled=True,
                     fullWidth=True,
                     value="apparent_time",
                     data=[
@@ -165,11 +168,11 @@ plotSettingsAccordion = dmc.AccordionItem(
                     id='lexical-facets-only-controls',
                     children=[
                         dmc.Select(
-                            label="Sort facets by:",
+                            label="Sort items by:",
                             id="lexical-sort-by",
-                            value="trend",
+                            value="average",
                             data=[
-                                {"value": "trend", "label": "Globalization Trend"},
+                                {"value": "trend", "label": "Globalization Trend", "disabled": True},
                                 {"value": "average", "label": "Average rating (weighted across gender/variety)"},
                                 {"value": "alphabetical", "label": "Alphabetically"},
                             ],
@@ -177,15 +180,19 @@ plotSettingsAccordion = dmc.AccordionItem(
                             allowDeselect=False,
                             persistence=persist_UI, persistence_type=persistence_type,
                         ),
-                        dmc.NumberInput(
-                            label="Facet columns",
-                            id="lexical-facet-cols",
-                            value=4,
-                            min=1,
-                            max=8,
-                            step=1,
-                            size="xs",
-                            persistence=persist_UI, persistence_type=persistence_type,
+                        html.Div(
+                            id='lexical-facet-cols-wrapper',
+                            children=dmc.NumberInput(
+                                label="Facet columns",
+                                id="lexical-facet-cols",
+                                value=4,
+                                min=1,
+                                max=8,
+                                step=1,
+                                size="xs",
+                                persistence=persist_UI, persistence_type=persistence_type,
+                            ),
+                            style={"display": "none"},
                         ),
                     ],
                     style={"display": "block"}
@@ -199,7 +206,7 @@ plotSettingsAccordion = dmc.AccordionItem(
                             id="lexical-series-by",
                             value="variety",
                             data=[
-                                {"value": "none", "label": "No grouping"},
+                                {"value": "none", "label": "No grouping", "disabled": True},
                                 {"value": "gender", "label": "Gender"},
                                 {"value": "variety", "label": "Variety"},
                             ],
@@ -214,17 +221,21 @@ plotSettingsAccordion = dmc.AccordionItem(
                 html.Div(
                     id='lexical-facets-ci-controls',
                     children=[
-                        dmc.Switch(
-                            id='lexical-show-ci-switch',
-                            label="Show 95% confidence bands",
-                            checked=True,
-                            persistence=persist_UI, persistence_type=persistence_type,
+                        html.Div(
+                            id='lexical-ci-switch-wrapper',
+                            children=dmc.Switch(
+                                id='lexical-show-ci-switch',
+                                label="Show 95% confidence bands",
+                                checked=False,
+                                persistence=persist_UI, persistence_type=persistence_type,
+                            ),
+                            style={"display": "none"},
                         ),
                         dmc.Switch(
                             id='lexical-nx-opacity-switch',
                             label="Fade markers by share of 'neither' (NX) responses",
                             description="Higher NX share \u2192 more transparent marker",
-                            checked=True,
+                            checked=False,
                             persistence=persist_UI, persistence_type=persistence_type,
                         ),
                     ],
@@ -351,6 +362,8 @@ SettingsLexicalAnalysis = dmc.Card([
     radius="md",
     mb="md",
     value=["LoadDataLexical", "LoadItemsLexical"]),
+
+    color_controls("lexical"),
 
 ], withBorder=True, shadow="sm", radius="md", p="sm", style={"height": "calc(100vh - 110px)", "overflowY": "auto"})
 
@@ -785,30 +798,53 @@ def toggle_exclude_small_cohorts_switch(time_axis_mode):
 
 @callback(
     [Output('lexical-facets-only-controls', 'style'),
+     Output('lexical-facet-cols-wrapper', 'style'),
+     Output('lexical-ci-switch-wrapper', 'style'),
      Output('lexical-series-controls', 'style'),
      Output('lexical-facets-ci-controls', 'style'),
-     Output('lexical-heatmap-controls', 'style')],
+     Output('lexical-heatmap-controls', 'style'),
+     Output('lexical-series-by', 'data'),
+     Output('lexical-series-by', 'value'),
+     Output('lexical-sort-by', 'data'),
+     Output('lexical-sort-by', 'value')],
     Input('lexical-plot-type', 'value'),
+    [State('lexical-series-by', 'value'),
+     State('lexical-sort-by', 'value')],
 )
-def toggle_plot_type_controls(plot_type):
-    """Show/hide control groups based on selected plot type."""
-    # facets-only: Sort facets, Facet columns
-    facets_only_show = "block" if plot_type == "facets" else "none"
-    
-    # series controls: Group data by (shown for facets and average)
-    series_show = "block" if plot_type in ["facets", "average"] else "none"
-    
-    # CI and opacity: shown for facets and average
-    ci_show = "block" if plot_type in ["facets", "average"] else "none"
-    
-    # heatmap-specific: Color by trend
+def toggle_plot_type_controls(plot_type, series_by, sort_by):
+    """Show/hide control groups and restrict options based on the selected plot type."""
+    is_dot = plot_type == "dotplot"
+    facets_only_show = "block" if plot_type in ("facets", "dotplot") else "none"
+    facet_cols_show = "block" if plot_type == "facets" else "none"
+    series_show = "block" if plot_type in ["facets", "average", "dotplot"] else "none"
+    # The dot plot always shows its confidence intervals; only the NX fade switch applies.
+    ci_show = "block" if plot_type in ["facets", "average", "dotplot"] else "none"
     heatmap_show = "block" if plot_type == "heatmap" else "none"
-    
+
+    # The dot plot draws one dot per group and item, so "No grouping" would collapse to one dot per item.
+    series_data = [
+        {"value": "none", "label": "No grouping", "disabled": is_dot},
+        {"value": "gender", "label": "Gender"},
+        {"value": "variety", "label": "Variety"},
+    ]
+    series_value = "variety" if is_dot and series_by == "none" else no_update
+
+    # The trend sort needs a per-age-group trend, which the pooled dot plot does not compute.
+    sort_data = [
+        {"value": "trend", "label": "Globalization Trend", "disabled": is_dot},
+        {"value": "average", "label": "Average rating (weighted across gender/variety)"},
+        {"value": "alphabetical", "label": "Alphabetically"},
+    ]
+    sort_value = "average" if is_dot and sort_by == "trend" else no_update
+
     return (
         {"display": facets_only_show},
+        {"display": facet_cols_show},
+        {"display": "none" if is_dot else "block"},
         {"display": series_show},
         {"display": ci_show},
         {"display": heatmap_show},
+        series_data, series_value, sort_data, sort_value,
     )
 
 
@@ -825,6 +861,9 @@ def toggle_time_axis_mode_availability(plot_type, color_by_trend):
     - Heatmap without trend: disabled (we aggregate across all ages)
     - Heatmap with trend: enabled (trend is computed across age groups)
     """
+    if plot_type == "dotplot":
+        # Dot plot pools all ages
+        return True
     if plot_type != "heatmap":
         # Facets and average plots always use time axis
         return False
