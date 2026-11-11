@@ -2,6 +2,14 @@
 
 All notable changes to the BSLVC Dashboard will be documented in this file.
 
+## [0.3.0] - 2026-11-11
+
+### Changed
+- **Diverging stacked bars**: The white circle marks the 50th percentile of each item-group distribution. Hovering shows the numerical median and response count; the median includes all responses even when ratings are hidden in the legend.
+### Fixed
+- **Grammar item selection**: Updated row-selection configuration for AG Grid so highlighted table rows can be selected or deselected in the grammar item tree.
+- **Diverging stacked bars**: Corrected the neutral segment placement for item differences and the rating categories for perceptual-scale plots when displaying separate modes.
+
 ## [0.2.9] - 2026-11-10
 
 ### Added

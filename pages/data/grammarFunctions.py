@@ -2001,8 +2001,12 @@ def getMetaTable(data, pairs=False, preset_data=None):
                         "enableBrowserTooltips": True,
                         "tooltipShowDelay": 500,
                         "wrapHeaderText": True,
-                        "rowSelection": "multiple",
-                        "suppressRowClickSelection": False
+                        "rowSelection": {
+                            "mode": "multiRow",
+                            "checkboxes": False,
+                            "headerCheckbox": False,
+                            "enableClickSelection": True
+                        }
                     }
                     )
     
@@ -4137,36 +4141,6 @@ def create_diverging_stacked_bar_plot(df_orig, items, modes, groupby, variety_co
                 positive_ratings = [r for r in rating_range if r > 0]
                 neutral_rating = 0
                 
-                # Plot negative ratings (left side) - reversed order so -1 is closest to center
-                for rating in reversed(negative_ratings):  # This makes -1, -2, -3, -4, -5 order
-                    x_values = []
-                    y_values = []
-                    
-                    for item in sorted_items:
-                        for group in groups:
-                            group_item_data = mode_data[
-                                (mode_data['rating'] == rating) & 
-                                (mode_data['group'] == group) & 
-                                (mode_data['item'] == item)
-                            ]
-                            
-                            percentage = group_item_data['percentage'].iloc[0] if len(group_item_data) > 0 else 0
-                            x_values.append(-percentage)
-                            y_values.append(item_positions[item][group])
-                    
-                    fig.add_trace(go.Bar(
-                        x=x_values,
-                        y=y_values,
-                        name=f'Rating {rating}' if col == 1 else None,
-                        marker_color=rating_colors[rating],
-                        orientation='h',
-                        showlegend=(col == 1),
-                        hovertemplate=f'Rating {rating}: %{{customdata:.1f}}%<br>' +
-                                     f'{mode.title()}: %{{text}}<extra></extra>',
-                        customdata=[abs(x) for x in x_values],
-                        text=[f"{item} - {group}" for item in sorted_items for group in groups]
-                    ), row=1, col=col)
-                
                 # Plot neutral rating (split in half)
                 neutral_x_left = []
                 neutral_x_right = []
@@ -4200,6 +4174,36 @@ def create_diverging_stacked_bar_plot(df_orig, items, modes, groupby, variety_co
                     customdata=[abs(x) * 2 for x in neutral_x_left],
                     text=[f"{item} - {group}" for item in sorted_items for group in groups]
                 ), row=1, col=col)
+
+                # Stack negative ratings outward from the neutral segment.
+                for rating in reversed(negative_ratings):
+                    x_values = []
+                    y_values = []
+
+                    for item in sorted_items:
+                        for group in groups:
+                            group_item_data = mode_data[
+                                (mode_data['rating'] == rating) &
+                                (mode_data['group'] == group) &
+                                (mode_data['item'] == item)
+                            ]
+
+                            percentage = group_item_data['percentage'].iloc[0] if len(group_item_data) > 0 else 0
+                            x_values.append(-percentage)
+                            y_values.append(item_positions[item][group])
+
+                    fig.add_trace(go.Bar(
+                        x=x_values,
+                        y=y_values,
+                        name=f'Rating {rating}' if col == 1 else None,
+                        marker_color=rating_colors[rating],
+                        orientation='h',
+                        showlegend=(col == 1),
+                        hovertemplate=f'Rating {rating}: %{{customdata:.1f}}%<br>' +
+                                     f'{mode.title()}: %{{text}}<extra></extra>',
+                        customdata=[abs(x) for x in x_values],
+                        text=[f"{item} - {group}" for item in sorted_items for group in groups]
+                    ), row=1, col=col)
                 
                 # Add right half of neutral
                 fig.add_trace(go.Bar(
@@ -4245,8 +4249,8 @@ def create_diverging_stacked_bar_plot(df_orig, items, modes, groupby, variety_co
                     ), row=1, col=col)
             else:
                 # For normal ratings: 0-2 on left, 3-5 on right
-                left_ratings = [0, 1, 2]
-                right_ratings = [3, 4, 5]
+                left_ratings = rating_range[:3]
+                right_ratings = rating_range[3:]
                 
                 # Plot left side ratings (0-2) - reversed order so 2 is closest to center
                 for rating in reversed(left_ratings):  # This makes 2, 1, 0 order
@@ -4336,82 +4340,45 @@ def create_diverging_stacked_bar_plot(df_orig, items, modes, groupby, variety_co
             row=1, col=1
         )
     
-    # Add center reference lines for each individual bar
-    if len(modes) == 1:
-        # Add a thick black line at the center of each item-group bar
-        for item in sorted_items:
-            for group in groups:
-                # Get data to check if this combination exists
-                item_group_data = melted_df[
-                    (melted_df['item'] == item) & 
-                    (melted_df['group'] == group)
-                ]
-                
-                if len(item_group_data) > 0:
-                    y_pos = item_positions[item][group]
-                    
-                    # Calculate the total extent of this bar (left + right percentages)
-                    total_left = 0
-                    total_right = 0
-                    
-                    if pairs:
-                        # For pairs, calculate total extent differently
-                        for rating in rating_data['rating'].unique():
-                            rating_subset = rating_data[
-                                (rating_data['rating'] == rating) & 
-                                (rating_data['group'] == group) & 
-                                (rating_data['item'] == item)
-                            ]
-                            if len(rating_subset) > 0:
-                                percentage = rating_subset['percentage'].iloc[0]
-                                if rating < 0:
-                                    total_left += percentage
-                                else:
-                                    total_right += percentage
-                    else:
-                        # For normal ratings: left (0-2) and right (3-5)
-                        left_ratings = [0, 1, 2]
-                        right_ratings = [3, 4, 5]
-                        
-                        for rating in left_ratings:
-                            rating_subset = rating_data[
-                                (rating_data['rating'] == rating) & 
-                                (rating_data['group'] == group) & 
-                                (rating_data['item'] == item)
-                            ]
-                            if len(rating_subset) > 0:
-                                total_left += rating_subset['percentage'].iloc[0]
-                        
-                        for rating in right_ratings:
-                            rating_subset = rating_data[
-                                (rating_data['rating'] == rating) & 
-                                (rating_data['group'] == group) & 
-                                (rating_data['item'] == item)
-                            ]
-                            if len(rating_subset) > 0:
-                                total_right += rating_subset['percentage'].iloc[0]
-                    
-                    # Calculate the center position of this specific bar
-                    # The bar extends from -total_left to +total_right, so center is at:
-                    bar_center = (total_right - total_left) / 2
-                    
-                    # Add white circle marker at the center of this specific bar
-                    fig.add_trace(go.Scatter(
-                        x=[bar_center],
-                        y=[y_pos],
-                        mode='markers',
-                        marker=dict(
-                            symbol='circle',
-                            size=6,
-                            color='white',
-                            line=dict(
-                                color='black',
-                                width=1
-                            )
-                        ),
-                        showlegend=False,
-                        hoverinfo='skip'
-                    ))
+    split_modes = len(modes) > 1 and 'mode' in melted_df.columns
+    median_label = (
+        "Median difference (spoken - written)" if pairs else
+        "Median rating (perceptual %)" if use_perceptual_scale else
+        "Median rating"
+    )
+    for col, mode in enumerate(sorted(modes) if split_modes else [None], 1):
+        mode_data = melted_df[melted_df['mode'] == mode] if split_modes else melted_df
+        for (item, group), responses in mode_data.groupby(['item', 'group'], sort=False):
+            ratings = responses['rating']
+            if pairs:
+                left_count = (ratings < 0).sum() + (ratings == 0).sum() / 2
+            else:
+                left_count = (ratings < rating_range[3]).sum()
+            # The x-axis measures response share, so the 50th percentile is halfway
+            # across the bar, offset by the share drawn left of zero.
+            x_position = 50 - 100 * left_count / len(ratings)
+            mode_text = f"<br>Mode: {mode.title()}" if mode is not None else ""
+            trace = go.Scatter(
+                x=[x_position],
+                y=[item_positions[item][group]],
+                mode='markers',
+                marker=dict(symbol='circle', size=8, color='white',
+                            line=dict(color='black', width=1)),
+                customdata=[[item, group, f"{ratings.median():g}", len(ratings)]],
+                hovertemplate=(
+                    "50th percentile<br>"
+                    f"{median_label}: %{{customdata[2]}}<br>"
+                    "Item: %{customdata[0]}<br>Group: %{customdata[1]}"
+                    f"{mode_text}<br>Responses: %{{customdata[3]}}"
+                    "<br>Includes ratings hidden via the legend<extra></extra>"
+                ),
+                name="Median (50th percentile)",
+                showlegend=False,
+            )
+            if split_modes:
+                fig.add_trace(trace, row=1, col=col)
+            else:
+                fig.add_trace(trace)
     
     return fig
 

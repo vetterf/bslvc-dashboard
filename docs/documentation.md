@@ -261,7 +261,7 @@ After each UMAP render, three quality metrics are displayed below the plot. All 
 
     - **Mean (95% CI)**: Plot mean values of features with confidence intervals
     - **Mean (95% CI - split varieties)**: Plot mean values of features with confidence intervals. Each variety is represented separately on the y-axis. This helps to avoid overplotting, but also limits how many features and items can be displayed.
-    - **Diverging stacked bars**: Show the distribution of ratings for each feature in a diverging stacked barchart.
+    - **Diverging stacked bars**: Show the distribution of ratings for each feature in a diverging stacked barchart. The white circle marks the 50th percentile of each bar's responses; hover over it to see the numerical median and response count. The horizontal axis represents response percentages, not rating values, so the circle's position is not the numerical median. With an even number of responses, the median is the average of the two middle ratings and can fall between categories. When the perceptual scale is enabled, the median is calculated after converting the individual ratings to percentages. Hiding ratings via the legend does not change the median or marker position, which always represent all responses.
     - **Informant mean of selected features (boxplot)**: Calculates a mean rating across all selected features for each participant and displays the distribution of these means in a boxplot.
     - **Correlation matrix**: Displays a correlation matrix showing the pairwise correlations between the selected features.
     - **Missing values heatmap**: Displays a heatmap indicating the presence of missing values across the selected features.
@@ -592,4 +592,4 @@ dcc.Store(id="group-color-palette", storage_type="local")
 ---
 
 **Last Updated**: November 2026  
-**Version**: 0.2.9
+**Version**: 0.3.0

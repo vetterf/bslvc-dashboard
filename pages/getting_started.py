@@ -356,7 +356,7 @@ In this mode, you can control the plot type, how the data should be grouped, and
 - Plot mode: 
     - "Mean (95% CI)": Plot mean values of features with confidence intervals
     - "Mean (95% CI - split varieties)": Plot mean values of features with confidence intervals. Each variety is represented separately on the y-axis. This helps to avoid the overplotting.
-    - "Diverging stacked bars": Show the distribution of ratings for each feature in a diverging stacked barchart.
+    - "Diverging stacked bars": Show the distribution of ratings for each feature. The white circle marks the 50th percentile of responses; hover over it to see the numerical median.
     - "Informant mean of selected features (boxplot)": Calculates a mean rating across all selected features for each participant and displays the distribution of these means in a boxplot.
     - "Correlation matrix": Displays a correlation matrix showing the pairwise correlations between the selected features.
     - "Missing values heatmap": Displays a heatmap indicating the presence of missing values across the selected features.
