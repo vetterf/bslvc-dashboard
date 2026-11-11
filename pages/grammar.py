@@ -5041,6 +5041,8 @@ def download_umap_coordinates(
             'InformantID', 'MainVariety', 'MainVariety_Original', 'Age', 'Gender',
             'RatioMainVariety', 'YearsLivedInMainVariety', 'CountryCollection', 'Year', 'LeidenCluster'
         ],
+        12: UMAP_HOVER_COLUMNS + UMAP_LANGUAGE_COLUMNS,
+        13: UMAP_HOVER_COLUMNS + ['LeidenCluster'] + UMAP_LANGUAGE_COLUMNS,
     }
 
     # Build a lookup: legendgroup -> subplot2 trace (for 4D mode dim3/dim4 values)

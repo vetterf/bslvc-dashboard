@@ -10,6 +10,7 @@ import pandas as pd
 import pages.data.retrieve_data as retrieve_data
 from pages.data.grammarFunctions import (
     getUMAPplot,
+    UMAP_FIGURE_VERSION,
     getColorGroupingsFromFigure,
     expand_presets_to_items,
     generate_dynamic_presets,
@@ -55,6 +56,7 @@ labels_dict = build_preset_multiselect_data(item_presets)
 def create_plot_cache_key(participants, items, n_neighbours, min_dist, distance_metric, standardize, densemap, dens_lambda, pairs, regional_mapping=False, include_ai=False, umap_3d=False, umap_4d=False):
     """Create a unique cache key for plot parameters"""
     key_data = {
+        'figure_version': UMAP_FIGURE_VERSION,
         'participants': sorted(participants) if participants else 'all',
         'items': sorted(items) if items else 'all', 
         'n_neighbours': n_neighbours,

@@ -387,6 +387,19 @@ def compute_umap_quality_metrics(X, embedding, k=10):
         'k': k,
     }
 
+UMAP_FIGURE_VERSION = 4
+UMAP_HOVER_COLUMNS = [
+    'InformantID', 'MainVariety', 'MainVariety_Original', 'Age', 'Gender',
+    'RatioMainVariety', 'YearsLivedInMainVariety', 'CountryCollection', 'Year',
+]
+UMAP_LANGUAGE_COLUMNS = ['LanguageHome', 'LanguageMother', 'LanguageFather']
+UMAP_HOVER_LABELS = [
+    'InformantID', 'Main Variety', 'Main Variety (other)', 'Age', 'Gender',
+    'Ratio (Main Variety)', 'Years lived in (Main Variety)', 'CountryCollection', 'Year',
+]
+UMAP_LANGUAGE_LABELS = ['Languages used at home', "Language mother", "Language father"]
+
+
 def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='cosine',pairs=False, regional_mapping=False, umap_3d=False, umap_4d=False, **kwargs):
     """
     Generate UMAP plot for grammar data with Leiden clustering
@@ -470,7 +483,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
     regional_suffix = "_regional" if regional_mapping else ""
     dim_suffix = "_4d" if umap_4d else ("_3d" if umap_3d else "")
     # Include a style version so cached figures stay in sync with marker/contour styling updates.
-    style_suffix = "_stylev3"
+    style_suffix = f"_stylev{UMAP_FIGURE_VERSION}"
     preset_filename = f"umap_{umap_informants_hash}_{items_hash}_{n_neighbours}_{min_dist}_{distance_metric}_{standardize}_{densemap}_{dens_lambda if densemap else 'nd'}{regional_suffix}{dim_suffix}{style_suffix}.pkl"
     preset_path = os.path.join(preset_dir, preset_filename)
     if os.path.exists(preset_path) and not force_rerender:
@@ -540,6 +553,9 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
     embedding['RatioMainVariety'] = data['RatioMainVariety']
     embedding['YearsLivedInMainVariety'] = data['YearsLivedInMainVariety']
     embedding['Age'] = data['Age']
+    for column in UMAP_LANGUAGE_COLUMNS:
+        values = data[column].astype('string').str.strip()
+        embedding[column] = values.mask(values.eq(''), pd.NA).fillna('Not available')
 
 
     # Assign an ascending number to each unique value of column "CountryCollection"
@@ -560,9 +576,8 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
     embedding['color'] = embedding['MainVariety'].map(lambda x: variety_to_color.get(x, variety_to_color.get('Other', '#c49c94')))
     
     if leiden:
-        embedding['leiden_cluster'] = leiden_clusters
-            # Perform Leiden clustering
         leiden_clusters = performLeidenClustering(filtered_data, n_neighbors=n_neighbours, resolution=leiden_resolution)
+        embedding['leiden_cluster'] = leiden_clusters
         # Use Leiden clusters for symbols instead of varieties
         unique_clusters = sorted(set(leiden_clusters))
         symbol_sequence = symbols[:len(unique_clusters)]
@@ -678,6 +693,11 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                     fig.add_trace(contour_trace_dotted)
 
     # Add UMAP traces - sort varieties alphabetically for consistent legend order
+    hover_columns = UMAP_HOVER_COLUMNS + (['leiden_cluster'] if leiden and not umap_3d else []) + UMAP_LANGUAGE_COLUMNS
+    hover_labels = UMAP_HOVER_LABELS + (['Leiden Cluster'] if leiden and not umap_3d else []) + UMAP_LANGUAGE_LABELS
+    hovertemplate = '<br>'.join(
+        f'{label}: %{{customdata[{index}]}}' for index, label in enumerate(hover_labels)
+    )
     for c in sorted(embedding['MainVariety'].unique()):
         df_color = embedding[embedding['MainVariety'] == c]
         is_ai_variety = isinstance(c, str) and c.startswith('AI-')
@@ -698,18 +718,8 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                     ids=df_color['InformantID'],
                     marker=dict(color=df_color['color'], size=3, opacity=0.8, line=marker_line_style),
                     showlegend=True,
-                    customdata=df_color[['InformantID','MainVariety','MainVariety_Original','Age','Gender','RatioMainVariety','YearsLivedInMainVariety','CountryCollection','Year']],
-                    hovertemplate='<br>'.join([
-                        'InformantID: %{customdata[0]}',
-                        'Main Variety: %{customdata[1]}',
-                        'Main Variety (other): %{customdata[2]}',
-                        'Age: %{customdata[3]}',
-                        'Gender: %{customdata[4]}',
-                        'Ratio (Main Variety): %{customdata[5]}',
-                        'Years lived in (Main Variety): %{customdata[6]}',
-                        'CountryCollection: %{customdata[7]}',
-                        'Year: %{customdata[8]}',
-                    ]),
+                    customdata=df_color[hover_columns],
+                    hovertemplate=hovertemplate,
                 )
             )
         elif leiden:
@@ -724,35 +734,13 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                     ids=df_color['InformantID'],
                     marker=dict(color=df_color['color'], size=5, opacity=0.8, symbol=df_color['symbol'], line=marker_line_style), 
                     showlegend=True, 
-                    customdata=df_color[['InformantID','MainVariety','MainVariety_Original','Age','Gender','RatioMainVariety','YearsLivedInMainVariety','CountryCollection','Year','leiden_cluster']],
-                    hovertemplate='<br>'.join([
-                        'InformantID: %{customdata[0]}',
-                        'Main Variety: %{customdata[1]}',
-                        'Main Variety (other): %{customdata[2]}',
-                        'Age: %{customdata[3]}',
-                        'Gender: %{customdata[4]}',
-                        'Ratio (Main Variety): %{customdata[5]}',
-                        'Years lived in (Main Variety): %{customdata[6]}',
-                        'CountryCollection: %{customdata[7]}',
-                        'Year: %{customdata[8]}',
-                        'Leiden Cluster: %{customdata[9]}',
-                    ]), hoverinfo='text'
+                    customdata=df_color[hover_columns],
+                    hovertemplate=hovertemplate, hoverinfo='text'
                 ),
                 row=1, col=1
             )
         elif umap_4d:
-            _customdata = df_color[['InformantID','MainVariety','MainVariety_Original','Age','Gender','RatioMainVariety','YearsLivedInMainVariety','CountryCollection','Year']]
-            _hovertemplate = '<br>'.join([
-                'InformantID: %{customdata[0]}',
-                'Main Variety: %{customdata[1]}',
-                'Main Variety (other): %{customdata[2]}',
-                'Age: %{customdata[3]}',
-                'Gender: %{customdata[4]}',
-                'Ratio (Main Variety): %{customdata[5]}',
-                'Years lived in (Main Variety): %{customdata[6]}',
-                'CountryCollection: %{customdata[7]}',
-                'Year: %{customdata[8]}',
-            ])
+            _customdata = df_color[hover_columns]
             # Subplot 1: dimensions 1 & 2
             fig.add_trace(
                 go.Scatter(
@@ -766,7 +754,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                     marker=dict(color=df_color['color'], size=5, opacity=0.8, symbol=0, line=marker_line_style),
                     showlegend=True,
                     customdata=_customdata,
-                    hovertemplate=_hovertemplate,
+                    hovertemplate=hovertemplate,
                     hoverinfo='text',
                 ),
                 row=1, col=1
@@ -784,7 +772,7 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                     marker=dict(color=df_color['color'], size=5, opacity=0.8, symbol=0, line=marker_line_style),
                     showlegend=False,
                     customdata=_customdata,
-                    hovertemplate=_hovertemplate,
+                    hovertemplate=hovertemplate,
                     hoverinfo='text',
                     meta={'subplot': 2},
                 ),
@@ -802,18 +790,8 @@ def getUMAPplot(grammarData, GrammarItemsCols, leiden=False, distance_metric='co
                     ids=df_color['InformantID'],
                     marker=dict(color=df_color['color'], size=5, opacity=0.8, symbol=0, line=marker_line_style), 
                     showlegend=True, 
-                    customdata=df_color[['InformantID','MainVariety','MainVariety_Original','Age','Gender','RatioMainVariety','YearsLivedInMainVariety','CountryCollection','Year']],
-                    hovertemplate='<br>'.join([
-                        'InformantID: %{customdata[0]}',
-                        'Main Variety: %{customdata[1]}',
-                        'Main Variety (other): %{customdata[2]}',
-                        'Age: %{customdata[3]}',
-                        'Gender: %{customdata[4]}',
-                        'Ratio (Main Variety): %{customdata[5]}',
-                        'Years lived in (Main Variety): %{customdata[6]}',
-                        'CountryCollection: %{customdata[7]}',
-                        'Year: %{customdata[8]}',
-                    ]), hoverinfo='text'
+                    customdata=df_color[hover_columns],
+                    hovertemplate=hovertemplate, hoverinfo='text'
                 )
             )
     if leiden:
